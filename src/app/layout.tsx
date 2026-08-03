@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import '@/styles/globals.css'
+import TopNav from '@/components/layout/TopNav'
 
 export const metadata: Metadata = {
   title: 'Pocoloco — Experiențe reale de la călători reali',
@@ -12,11 +13,6 @@ export const metadata: Metadata = {
     siteName: 'Pocoloco',
     locale: 'ro_RO',
     type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Pocoloco',
-    description: 'Experiențe reale de la călători reali',
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -37,9 +33,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ro">
       <body>
-        <div className="mobile-container">
-          {children}
-        </div>
+        <TopNav />
+        {children}
       </body>
     </html>
   )

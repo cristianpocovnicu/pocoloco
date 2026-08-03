@@ -15,8 +15,8 @@ export default function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t border-[rgba(0,0,0,0.08)] z-50">
-      <div className="flex items-center justify-around px-2 pt-2.5 pb-6">
+    <nav className="bottom-nav-mobile fixed bottom-0 left-0 right-0 bg-white border-t border-[rgba(0,0,0,0.08)] z-50">
+      <div className="flex items-center justify-around px-2 pt-2.5 pb-6 max-w-[520px] mx-auto">
         {NAV_ITEMS.map(({ href, label, Icon }) => {
           const active = pathname === href
           return (
@@ -29,10 +29,7 @@ export default function BottomNav() {
               )}
             >
               <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
-              <span className={cn(
-                'text-[10px] font-outfit',
-                active ? 'font-semibold text-[#E8440A]' : 'text-[#9B9B9B]'
-              )}>
+              <span className={cn('text-[10px] font-outfit', active ? 'font-semibold text-[#E8440A]' : 'text-[#9B9B9B]')}>
                 {label}
               </span>
             </Link>
