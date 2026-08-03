@@ -1,21 +1,23 @@
+import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  let response = NextResponse.next({ request: { headers: request.headers } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookies) => {
+          cookies.forEach(({ name, value }) => {
+            request.cookies.set({ name, value })
+          })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          cookies.forEach(({ name, value }) => {
+            response.cookies.set({ name, value })
+          })
         },
       },
     }
@@ -23,9 +25,9 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protejăm rutele care necesită autentificare
+  // Rute protejate
   const protectedRoutes = ['/add-experience', '/profile', '/admin']
-  const isProtected = protectedRoutes.some(route => 
+  const isProtected = protectedRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
 
@@ -33,18 +35,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Admin doar pentru email-ul tău
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!user || user.email !== 'cristian@pocoloco.world') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
+  // Admin doar pentru tine
+  if (request.nextUrl.pathname.startsWith('/admin') && user?.email !== 'cristian@pocoloco.world') {
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
-  return supabaseResponse
+  return response
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
