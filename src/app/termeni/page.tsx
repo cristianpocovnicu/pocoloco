@@ -93,7 +93,7 @@ export default function TermeniPage() {
           <section className="mb-6">
             <h2 className="font-outfit text-[16px] font-semibold text-[#0F0F0F] mb-2">7. Disponibilitatea serviciului</h2>
             <p className="text-[14px] text-[#6B6B6B] leading-relaxed">
-              Pocoloco este oferit „ca atare". Putem modifica, suspenda sau întrerupe
+              Pocoloco este oferit „ca atare&rdquo;. Putem modifica, suspenda sau întrerupe
               funcționalități, cu anunț prealabil când e posibil. Nu răspundem pentru
               pierderi indirecte rezultate din folosirea platformei, în limitele permise de lege.
             </p>

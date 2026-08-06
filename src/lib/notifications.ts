@@ -21,7 +21,7 @@ export type NotificationItem = NotificationRow & {
   text: string
 }
 
-export const NOTIFICATION_TEXT: Record<NotificationType, string> = {
+const NOTIFICATION_TEXT: Record<NotificationType, string> = {
   upvote: 'ți-a apreciat experiența',
   follow: 'a început să te urmărească',
   comment: 'a comentat la experiența ta',
@@ -108,8 +108,3 @@ export async function markAllRead(supabase: SupabaseClient, userId: string): Pro
   return error?.message ?? null
 }
 
-export async function markRead(supabase: SupabaseClient, ids: string[]): Promise<string | null> {
-  if (ids.length === 0) return null
-  const { error } = await supabase.from('notifications').update({ read: true }).in('id', ids)
-  return error?.message ?? null
-}

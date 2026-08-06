@@ -5,10 +5,11 @@ import BottomNav from '@/components/layout/BottomNav'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { cn, CATEGORIES } from '@/lib/utils'
 import { fetchFollowingIds, type SuggestedUser } from '@/lib/follows'
 
-const CHIPS = ['Toate', 'Castele', 'Natură', 'Muzee', 'Restaurante', 'Trasee', 'Orașe']
+// aceeași listă de categorii ca în restul aplicației, nu una paralelă
+const CHIPS = ['Toate', ...CATEGORIES]
 
 type Tab = 'locations' | 'users'
 

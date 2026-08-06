@@ -107,7 +107,7 @@ export default function ConfidentialitatePage() {
             <ul className="text-[14px] text-[#6B6B6B] leading-relaxed list-disc pl-5 flex flex-col gap-1.5">
               <li>de acces la datele tale și de a primi o copie;</li>
               <li>de rectificare a datelor inexacte — o poți face singur din Setări;</li>
-              <li>de ștergere („dreptul de a fi uitat");</li>
+              <li>de ștergere („dreptul de a fi uitat&rdquo;);</li>
               <li>de restricționare a prelucrării și de opoziție;</li>
               <li>la portabilitatea datelor;</li>
               <li>de a-ți retrage consimțământul, acolo unde prelucrarea se bazează pe el.</li>

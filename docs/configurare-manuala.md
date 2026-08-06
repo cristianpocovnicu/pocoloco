@@ -40,6 +40,8 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 9 | `supabase/migrations/20260806_onboarding.sql` | `travel_styles`, `favorite_regions`, `onboarding_completed` pe `profiles` |
 | 10 | `supabase/migrations/20260806_experience_owner.sql` | politici ca autorul să-și poată edita și șterge experiențele |
 | 11 | `supabase/migrations/20260806_delete_user.sql` | funcția `delete_user()` — ștergerea contului din aplicație |
+| 12 | `supabase/migrations/20260806_badges.sql` | `badges`, `user_badges`, `check_and_award_badges()` + triggere |
+| 13 | `supabase/migrations/20260806_trip_featured.sql` | `trips.featured`, pentru promovarea din admin |
 
 Ordinea contează: migrările 2–7 folosesc `is_admin()` din prima, iar 6 atașează
 triggere pe tabelele create de 3, 4 și 5.
@@ -159,10 +161,6 @@ Authentication → URL Configuration.
 
 - **Apple Sign In** — butonul e dezactivat în interfață; necesită cont Apple
   Developer plătit.
-- **Insignele de pe profil** sunt calculate în client din numărul de
-  experiențe; nu există un sistem real de badge-uri.
-- **Moderarea călătoriilor în admin** — raportările de tip `trip` se rezolvă
-  din `/admin/reports`, dar nu există o listă `/admin/trips`.
 - **Textele legale** din `/termeni` și `/confidentialitate` sunt un punct de
   plecare scris pentru acest produs, nu verificat de un avocat. Completează
   denumirea firmei operatoare și pune la punct `contact@pocoloco.travel`.

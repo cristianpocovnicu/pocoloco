@@ -13,15 +13,22 @@ export type AdminProfile = {
   status: 'active' | 'suspended'
 }
 
+/** Constrângerea minimă pe un query Postgrest: doar ce folosim ca filtru. */
+type CountQuery = {
+  eq: (column: string, value: unknown) => CountQuery
+  gte: (column: string, value: unknown) => CountQuery
+  then: Promise<{ count: number | null }>['then']
+}
+
 /** Număr de rânduri, fără să aducă datele. Întoarce 0 dacă query-ul eșuează. */
 export async function countRows(
   supabase: SupabaseClient,
   table: string,
-  filter?: (q: any) => any // eslint-disable-line @typescript-eslint/no-explicit-any
+  filter?: (q: CountQuery) => CountQuery
 ): Promise<number> {
   try {
     // select('*') și nu select('id'): nu toate tabelele au coloana id
-    let q: any = supabase.from(table).select('*', { count: 'exact', head: true }) // eslint-disable-line @typescript-eslint/no-explicit-any
+    let q = supabase.from(table).select('*', { count: 'exact', head: true }) as unknown as CountQuery
     if (filter) q = filter(q)
     const { count } = await q
     return count ?? 0
@@ -31,7 +38,7 @@ export async function countRows(
 }
 
 /** Etichete + culori pentru statusuri, ca să arate la fel peste tot în admin. */
-export const STATUS_STYLES: Record<string, { label: string; className: string }> = {
+const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   active:    { label: 'Activ',          className: 'bg-[#ECFDF5] text-[#059669]' },
   approved:  { label: 'Aprobat',        className: 'bg-[#ECFDF5] text-[#059669]' },
   pending:   { label: 'În așteptare',   className: 'bg-[#FFFBEB] text-[#D97706]' },
