@@ -51,6 +51,8 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 13 | `supabase/migrations/20260806_trip_featured.sql` | `trips.featured`, pentru promovarea din admin |
 | 14 | `supabase/migrations/20260806_visits.sql` | `saves.status` — listele „Vreau să merg" / „Am fost" |
 | 15 | `supabase/migrations/20260806_nearby.sql` | funcția `nearby_locations()` pentru secțiunea „În apropiere" |
+| 16 | `supabase/migrations/20260806_trip_locations_fix.sql` | reconciliază `day` / `day_number`, altfel publicarea itinerariului crapă |
+| 17 | `supabase/migrations/20260807_vote_effects.sql` | `net_score`, voturi pe comentarii, trigger unificat de contoare |
 
 Ordinea contează: migrările 2–7 folosesc `is_admin()` din prima, iar 6 atașează
 triggere pe tabelele create de 3, 4 și 5.
@@ -130,6 +132,14 @@ where l.added_by is not null
 Extinde `saves`, tabelul folosit și pentru călătorii. Coloana nouă are default,
 deci rândurile existente rămân valide și devin „Vreau să merg" — exact ce erau.
 Triggerul de `save_count` pentru călătorii nu e atins.
+
+### Atenție la migrarea 17 (efectele voturilor)
+
+Înlocuiește triggerul de contoare de pe `votes` cu unul care știe și de
+comentarii, și rescrie `notify_on_vote` ca să ignore voturile pe comentarii în
+loc să crape pe un `experience_id` null. Rulează migrarea **înainte** de
+deploy: până atunci, sortarea „Populare" de pe homepage și secțiunea
+„Semnalate de comunitate" din admin nu au coloana `net_score` și rămân goale.
 
 ### Harta nu cere nimic
 
