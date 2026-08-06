@@ -46,9 +46,22 @@ export async function shareLink(url: string, title?: string): Promise<'shared' |
 }
 
 export const CATEGORIES = [
-  'Castele', 'Natură', 'Muzee', 'Restaurante', 
+  'Castele', 'Natură', 'Muzee', 'Restaurante',
   'Trasee', 'Orașe', 'Plaje', 'Sate', 'Biserici', 'Altele'
 ]
+
+export const CATEGORY_ICONS: Record<string, string> = {
+  'Castele': '🏰',
+  'Natură': '🌲',
+  'Muzee': '🏛️',
+  'Restaurante': '🍽️',
+  'Trasee': '🥾',
+  'Orașe': '🏙️',
+  'Plaje': '🏖️',
+  'Sate': '🏘️',
+  'Biserici': '⛪',
+  'Altele': '📍',
+}
 
 export const TRAVEL_STYLES = [
   { id: 'adventure', label: 'Aventurier', emoji: '🏕️', sub: 'Trekking, camping, off-road' },
