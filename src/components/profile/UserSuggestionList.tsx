@@ -5,7 +5,17 @@ import { colorFor, initialsOf } from '@/lib/profiles'
 import type { SuggestedUser } from '@/lib/follows'
 import FollowButton from './FollowButton'
 
-export default function UserSuggestionList({ users }: { users: SuggestedUser[] }) {
+type Props = {
+  users: SuggestedUser[]
+  /**
+   * Cine e deja urmărit. Sugestiile îi exclud pe cei urmăriți, deci acolo
+   * lipsește; la căutare e nevoie, altfel butonul zice „Urmărește" pentru
+   * cineva pe care îl urmărești deja.
+   */
+  followingIds?: string[]
+}
+
+export default function UserSuggestionList({ users, followingIds }: Props) {
   if (users.length === 0) {
     return (
       <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl py-10 text-center">
@@ -41,7 +51,12 @@ export default function UserSuggestionList({ users }: { users: SuggestedUser[] }
               </p>
             </div>
           </Link>
-          <FollowButton targetUserId={u.id} initialFollowing={false} size="sm" className="flex-shrink-0" />
+          <FollowButton
+            targetUserId={u.id}
+            initialFollowing={followingIds ? followingIds.includes(u.id) : false}
+            size="sm"
+            className="flex-shrink-0"
+          />
         </div>
       ))}
     </div>

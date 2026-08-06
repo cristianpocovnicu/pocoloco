@@ -1,12 +1,16 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, MapPin, Users } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
+import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { fetchFollowingIds, type SuggestedUser } from '@/lib/follows'
 
 const CHIPS = ['Toate', 'Castele', 'Natură', 'Muzee', 'Restaurante', 'Trasee', 'Orașe']
+
+type Tab = 'locations' | 'users'
 
 type Location = {
   id: string
@@ -20,9 +24,12 @@ type Location = {
 }
 
 export default function SearchPage() {
+  const [tab, setTab] = useState<Tab>('locations')
   const [query, setQuery] = useState('')
   const [activeChip, setActiveChip] = useState('Toate')
   const [results, setResults] = useState<Location[]>([])
+  const [users, setUsers] = useState<SuggestedUser[]>([])
+  const [followingIds, setFollowingIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,11 +53,66 @@ export default function SearchPage() {
     setLoading(false)
   }, [])
 
+  // pe cine urmăresc deja, ca butoanele din rezultate să pornească corect
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setFollowingIds(await fetchFollowingIds(supabase, user.id))
+    }
+    load()
+  }, [])
+
+  const searchUsers = useCallback(async (q: string) => {
+    setLoading(true)
+    const supabase = createClient()
+
+    let req = supabase
+      .from('profiles')
+      .select('id, username, full_name, avatar_url, is_guide, bio')
+      .order('xp', { ascending: false })
+      .limit(20)
+
+    // caută și în nume, și în username
+    const term = q.trim()
+    if (term) req = req.or(`full_name.ilike.%${term}%,username.ilike.%${term}%`)
+
+    const { data, error: searchError } = await req
+    if (searchError) {
+      setError('Nu am putut încărca userii. Încearcă din nou.')
+      setUsers([])
+      setLoading(false)
+      return
+    }
+
+    const profiles = (data || []) as Omit<SuggestedUser, 'experienceCount'>[]
+    setError(null)
+
+    // numărul de experiențe, dintr-un singur query pentru toți
+    const counts: Record<string, number> = {}
+    if (profiles.length > 0) {
+      const { data: exps } = await supabase
+        .from('experiences')
+        .select('author_id')
+        .eq('status', 'active')
+        .in('author_id', profiles.map(p => p.id))
+      for (const row of (exps || []) as { author_id: string }[]) {
+        counts[row.author_id] = (counts[row.author_id] || 0) + 1
+      }
+    }
+
+    setUsers(profiles.map(p => ({ ...p, experienceCount: counts[p.id] || 0 })))
+    setLoading(false)
+  }, [])
+
   // Rulează și la montare (query gol) — doSearch filtrează mereu status = 'approved'
   useEffect(() => {
-    const timer = setTimeout(() => doSearch(query, activeChip), 300)
+    const timer = setTimeout(
+      () => (tab === 'locations' ? doSearch(query, activeChip) : searchUsers(query)),
+      300
+    )
     return () => clearTimeout(timer)
-  }, [query, activeChip, doSearch])
+  }, [tab, query, activeChip, doSearch, searchUsers])
 
   return (
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
@@ -63,19 +125,43 @@ export default function SearchPage() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 className="flex-1 bg-transparent text-sm text-[#0F0F0F] outline-none placeholder:text-[#9B9B9B]"
-                placeholder="Caută locuri..."
+                placeholder={tab === 'locations' ? 'Caută locuri...' : 'Caută după nume sau @username...'}
                 autoFocus
               />
               {loading && <Loader2 size={14} className="animate-spin text-[#9B9B9B] flex-shrink-0" />}
             </div>
           </div>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {CHIPS.map(chip => (
-              <button key={chip} onClick={() => setActiveChip(chip)} className={cn('whitespace-nowrap px-3.5 py-1.5 rounded-full text-[12px] font-outfit font-medium border transition-all flex-shrink-0', activeChip === chip ? 'bg-[#E8440A] text-white border-[#E8440A]' : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]')}>
-                {chip}
+
+          {/* Locuri / Useri */}
+          <div className="flex gap-2 mb-3">
+            {([
+              { id: 'locations' as const, label: 'Locuri', Icon: MapPin },
+              { id: 'users' as const, label: 'Useri', Icon: Users },
+            ]).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-outfit font-semibold border transition-all',
+                  tab === id
+                    ? 'bg-[#0F0F0F] text-white border-[#0F0F0F]'
+                    : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'
+                )}
+              >
+                <Icon size={13} /> {label}
               </button>
             ))}
           </div>
+
+          {tab === 'locations' && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+              {CHIPS.map(chip => (
+                <button key={chip} onClick={() => setActiveChip(chip)} className={cn('whitespace-nowrap px-3.5 py-1.5 rounded-full text-[12px] font-outfit font-medium border transition-all flex-shrink-0', activeChip === chip ? 'bg-[#E8440A] text-white border-[#E8440A]' : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]')}>
+                  {chip}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="px-5 pt-4">
@@ -87,11 +173,16 @@ export default function SearchPage() {
 
           {!loading && !error && (
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[13px] text-[#9B9B9B]">{results.length} locuri găsite</span>
+              <span className="text-[13px] text-[#9B9B9B]">
+                {tab === 'locations'
+                  ? `${results.length} locuri găsite`
+                  : `${users.length} ${users.length === 1 ? 'user găsit' : 'useri găsiți'}`}
+              </span>
             </div>
           )}
 
-          {results.length === 0 && !loading && !error && (
+          {((tab === 'locations' && results.length === 0) || (tab === 'users' && users.length === 0))
+            && !loading && !error && (
             <div className="text-center py-12 bg-white rounded-2xl border border-[rgba(0,0,0,0.08)]">
               <div className="text-4xl mb-3">🔍</div>
               <p className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-1">Niciun rezultat</p>
@@ -99,7 +190,11 @@ export default function SearchPage() {
             </div>
           )}
 
-          <div className="flex flex-col gap-3">
+          {tab === 'users' && users.length > 0 && (
+            <UserSuggestionList users={users} followingIds={followingIds} />
+          )}
+
+          <div className={cn('flex-col gap-3', tab === 'locations' ? 'flex' : 'hidden')}>
             {results.map(loc => (
               <Link key={loc.id} href={`/location/${loc.id}`} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex hover:border-[rgba(0,0,0,0.15)] transition-colors">
                 <div className="w-24 flex-shrink-0 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center text-4xl">
