@@ -89,12 +89,12 @@ export default function AddExperiencePage() {
         .select('id')
         .ilike('name', locationName.trim())
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (existingLoc) {
         locationId = existingLoc.id
       } else {
-        const { data: newLoc } = await supabase
+        const { data: newLoc, error: locError } = await supabase
           .from('locations')
           .insert({
             name: locationName.trim(),
@@ -105,6 +105,7 @@ export default function AddExperiencePage() {
           })
           .select('id')
           .single()
+        if (locError) throw new Error(`Eroare locație: ${locError.message} (${locError.code})`)
         locationId = newLoc?.id || null
       }
 
