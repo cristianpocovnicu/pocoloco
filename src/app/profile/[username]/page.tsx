@@ -10,6 +10,8 @@ import { colorFor, initialsOf } from '@/lib/profiles'
 import { getFollowCounts, isFollowing } from '@/lib/follows'
 import { fetchBadges, type EarnedBadge } from '@/lib/badges'
 import BadgeGrid from '@/components/profile/BadgeGrid'
+import SavedLocationList from '@/components/profile/SavedLocationList'
+import { fetchSavedLocations, type SavedLocation } from '@/lib/saves'
 import { formatCount, timeAgo } from '@/lib/utils'
 import Image from 'next/image'
 
@@ -44,6 +46,7 @@ export default function PublicProfilePage() {
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [counts, setCounts] = useState({ followers: 0, following: 0 })
   const [badges, setBadges] = useState<EarnedBadge[]>([])
+  const [visited, setVisited] = useState<SavedLocation[]>([])
   const [followsThem, setFollowsThem] = useState<boolean | undefined>(undefined)
   const [isMe, setIsMe] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -68,7 +71,7 @@ export default function PublicProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       setIsMe(user?.id === publicProfile.id)
 
-      const [exps, followCounts, userBadges] = await Promise.all([
+      const [exps, followCounts, userBadges, been] = await Promise.all([
         supabase
           .from('experiences')
           .select('id, content, images, rating_experience, upvotes, comment_count, created_at, location:locations!location_id!inner(id, name, city, status)')
@@ -79,11 +82,13 @@ export default function PublicProfilePage() {
           .limit(50),
         getFollowCounts(supabase, publicProfile.id),
         fetchBadges(supabase, publicProfile.id),
+        fetchSavedLocations(supabase, publicProfile.id, 'visited'),
       ])
 
       setExperiences((exps.data || []) as unknown as Experience[])
       setCounts(followCounts)
       setBadges(userBadges.earned)
+      setVisited(been)
 
       if (user && user.id !== publicProfile.id) {
         setFollowsThem(await isFollowing(supabase, user.id, publicProfile.id))
@@ -197,6 +202,20 @@ export default function PublicProfilePage() {
               Insigne ({badges.length})
             </h2>
             <BadgeGrid earned={badges} />
+          </div>
+        )}
+
+        {/* Am fost — lista publică; „Vreau să merg" rămâne privată */}
+        {visited.length > 0 && (
+          <div className="px-5 pt-4">
+            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">
+              Am fost ({visited.length})
+            </h2>
+            <SavedLocationList
+              items={visited}
+              emptyTitle=""
+              emptyDescription=""
+            />
           </div>
         )}
 

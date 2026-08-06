@@ -7,8 +7,11 @@ import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import BadgeGrid from '@/components/profile/BadgeGrid'
+import SavedLocationList from '@/components/profile/SavedLocationList'
+import { fetchSavedLocations, setLocationSaveStatus, type SavedLocation } from '@/lib/saves'
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
 import { formatCount, timeAgo, shareLink } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -36,10 +39,11 @@ type Experience = {
   location: { id: string; name: string; city: string }
 }
 
-const TABS = ['Experiențe', 'Insigne']
+const TABS = ['Experiențe', 'Vreau să merg', 'Am fost', 'Insigne']
 
 export default function ProfilePage() {
   const router = useRouter()
+  const toast = useToast()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [counts, setCounts] = useState({ followers: 0, following: 0 })
@@ -48,6 +52,10 @@ export default function ProfilePage() {
   const [tab, setTab] = useState(0)
   const [shareNote, setShareNote] = useState('')
   const [editing, setEditing] = useState<EditableExperience | null>(null)
+  const [wantToGo, setWantToGo] = useState<SavedLocation[]>([])
+  const [visited, setVisited] = useState<SavedLocation[]>([])
+  const [savedLoading, setSavedLoading] = useState(true)
+  const [movingId, setMovingId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,12 +77,17 @@ export default function ProfilePage() {
 
       if (prof) setProfile(prof as Profile)
       if (exps) setExperiences(exps as unknown as Experience[])
-      const [followCounts, userBadges] = await Promise.all([
+      const [followCounts, userBadges, want, been] = await Promise.all([
         getFollowCounts(supabase, user.id),
         fetchBadges(supabase, user.id),
+        fetchSavedLocations(supabase, user.id, 'want_to_go'),
+        fetchSavedLocations(supabase, user.id, 'visited'),
       ])
       setCounts(followCounts)
       setBadges(userBadges)
+      setWantToGo(want)
+      setVisited(been)
+      setSavedLoading(false)
       setLoading(false)
     }
     fetchData()
@@ -97,6 +110,25 @@ export default function ProfilePage() {
       return
     }
     setExperiences(prev => prev.filter(e => e.id !== expId))
+  }
+
+  /** Mută o locație din „Vreau să merg" în „Am fost", fără să reîncarce pagina. */
+  const markVisited = async (locationId: string) => {
+    if (!profile) return
+    setMovingId(locationId)
+
+    const supabase = createClient()
+    const error = await setLocationSaveStatus(supabase, profile.id, locationId, 'visited')
+
+    if (error) {
+      toast('Nu am putut muta locația. Încearcă din nou.', 'error')
+    } else {
+      const moved = wantToGo.find(item => item.location.id === locationId)
+      setWantToGo(prev => prev.filter(item => item.location.id !== locationId))
+      if (moved) setVisited(prev => [{ ...moved, status: 'visited' }, ...prev])
+      toast('Mutat în „Am fost"')
+    }
+    setMovingId(null)
   }
 
   const handleShare = async () => {
@@ -208,7 +240,7 @@ export default function ProfilePage() {
         {/* Tabs */}
         <div className="flex bg-white border-b border-[rgba(0,0,0,0.08)] sticky top-[57px] z-20">
           {TABS.map((t, i) => (
-            <button key={t} onClick={() => setTab(i)} className={`flex-1 py-3 text-[13px] font-outfit font-medium border-b-2 transition-colors ${tab === i ? 'text-[#E8440A] border-[#E8440A]' : 'text-[#9B9B9B] border-transparent'}`}>
+            <button key={t} onClick={() => setTab(i)} className={`flex-1 py-3 text-[12px] md:text-[13px] font-outfit font-medium border-b-2 transition-colors whitespace-nowrap ${tab === i ? 'text-[#E8440A] border-[#E8440A]' : 'text-[#9B9B9B] border-transparent'}`}>
               {t}
             </button>
           ))}
@@ -285,6 +317,26 @@ export default function ProfilePage() {
           )}
 
           {tab === 1 && (
+            <SavedLocationList
+              items={wantToGo}
+              loading={savedLoading}
+              emptyTitle="Nimic pe listă încă"
+              emptyDescription={'Salvează locurile care te tentează cu „Vreau să merg" și le găsești aici.'}
+              onMarkVisited={markVisited}
+              busyId={movingId}
+            />
+          )}
+
+          {tab === 2 && (
+            <SavedLocationList
+              items={visited}
+              loading={savedLoading}
+              emptyTitle="Niciun loc bifat încă"
+              emptyDescription={'Bifează „Am fost" pe paginile locurilor pe care le-ai vizitat — se adună aici, ca un jurnal.'}
+            />
+          )}
+
+          {tab === 3 && (
             <div>
               <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">
                 Insigne câștigate {badges.earned.length > 0 && <span className="text-[#9B9B9B] font-normal">({badges.earned.length})</span>}

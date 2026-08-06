@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Bookmark, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo, shareLink } from '@/lib/utils'
 import { fetchMyVotes, type VoteType } from '@/lib/votes'
@@ -13,6 +13,8 @@ import FollowButton from '@/components/profile/FollowButton'
 import CommentThread, { type CommentViewer } from '@/components/experience/CommentThread'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import PhotoGallery from '@/components/location/PhotoGallery'
+import VisitPrompt from '@/components/location/VisitPrompt'
+import { getLocationSaveStatus, setLocationSaveStatus, type SaveStatus } from '@/lib/saves'
 import { useToast } from '@/components/ui/Toast'
 import Image from 'next/image'
 import CoverImage from '@/components/ui/CoverImage'
@@ -62,7 +64,9 @@ export default function LocationPage() {
   const [location, setLocation] = useState<Location | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [loading, setLoading] = useState(true)
-  const [saved, setSaved] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus | null>(null)
+  const [savePending, setSavePending] = useState(false)
+  const [showVisitPrompt, setShowVisitPrompt] = useState(false)
   const [myVotes, setMyVotes] = useState<Record<string, VoteType>>({})
   const [comments, setComments] = useState<Record<string, CommentWithAuthor[]>>({})
   const [viewer, setViewer] = useState<CommentViewer>(null)
@@ -103,13 +107,8 @@ export default function LocationPage() {
         isAdmin = prof?.role === 'admin'
         setViewer({ id: user.id, isAdmin })
 
-        // starea reală a butonului de salvare (o salvare per user per locație)
-        const { count } = await supabase
-          .from('saves')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('location_id', id)
-        setSaved((count ?? 0) > 0)
+        // în ce listă e locația: „vreau să merg", „am fost", sau în niciuna
+        setSaveStatus(await getLocationSaveStatus(supabase, user.id, id as string))
       }
 
       if (loc) {
@@ -162,18 +161,37 @@ export default function LocationPage() {
     fetch()
   }, [id])
 
-  const handleSave = async () => {
+  /**
+   * Cele două liste sunt exclusive: apeși pe una activă → o scoate, apeși pe
+   * cealaltă → mută locația acolo. Un singur rând în `saves`, oricum.
+   */
+  const handleSaveStatus = async (next: SaveStatus) => {
+    if (savePending) return
+
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
-    if (!saved) {
-      const { error } = await supabase.from('saves').insert({ user_id: user.id, location_id: id })
-      if (!error) { setSaved(true); toast('Salvat în „Vreau să merg"') }
+
+    const target = saveStatus === next ? null : next
+    const previous = saveStatus
+
+    setSavePending(true)
+    setSaveStatus(target)
+
+    const error = await setLocationSaveStatus(supabase, user.id, id as string, target)
+    if (error) {
+      setSaveStatus(previous)
+      toast('Nu am putut salva. Încearcă din nou.', 'error')
+    } else if (target === 'visited') {
+      // momentul cu amintirea proaspătă — aici se scriu experiențele
+      setShowVisitPrompt(true)
+    } else if (target === 'want_to_go') {
+      toast('Salvat în „Vreau să merg"')
     } else {
-      await supabase.from('saves').delete().eq('user_id', user.id).eq('location_id', id)
-      setSaved(false)
-      toast('Scos din salvate')
+      toast('Scos din listă')
     }
+
+    setSavePending(false)
   }
 
   const handleDeleteExperience = async (expId: string) => {
@@ -285,14 +303,38 @@ export default function LocationPage() {
             <MapPin size={12} /> {location.city}{location.country ? `, ${location.country}` : ''}
           </p>
           <div className="flex gap-2">
-            <button onClick={handleSave} className={`flex-1 font-outfit text-sm font-semibold rounded-full py-2.5 flex items-center justify-center gap-2 transition-colors ${saved ? 'bg-[#FFF0EB] text-[#E8440A] border border-[rgba(232,68,10,0.2)]' : 'bg-[#E8440A] text-white'}`}>
-              <Bookmark size={15} fill={saved ? '#E8440A' : 'none'} /> {saved ? 'Salvat' : 'Vreau să merg'}
+            <button
+              onClick={() => handleSaveStatus('want_to_go')}
+              disabled={savePending}
+              className={`flex-1 font-outfit text-sm font-semibold rounded-full py-2.5 flex items-center justify-center gap-2 transition-colors disabled:opacity-70 ${
+                saveStatus === 'want_to_go'
+                  ? 'bg-[#FFF0EB] text-[#E8440A] border border-[rgba(232,68,10,0.2)]'
+                  : 'bg-[#E8440A] text-white'
+              }`}
+            >
+              <Bookmark size={15} fill={saveStatus === 'want_to_go' ? '#E8440A' : 'none'} />
+              {saveStatus === 'want_to_go' ? 'Salvat' : 'Vreau să merg'}
             </button>
+
+            <button
+              onClick={() => handleSaveStatus('visited')}
+              disabled={savePending}
+              className={`flex-1 font-outfit text-sm font-semibold rounded-full py-2.5 flex items-center justify-center gap-2 transition-colors disabled:opacity-70 ${
+                saveStatus === 'visited'
+                  ? 'bg-[#ECFDF5] text-[#059669] border border-[rgba(5,150,105,0.2)]'
+                  : 'bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B]'
+              }`}
+            >
+              <CheckCircle size={15} fill={saveStatus === 'visited' ? '#059669' : 'none'} className={saveStatus === 'visited' ? 'text-white' : ''} />
+              Am fost
+            </button>
+
             <button
               onClick={handleShare}
-              className="bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-sm font-medium rounded-full px-4 py-2.5 flex items-center gap-2 flex-shrink-0"
+              className="bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-sm font-medium rounded-full px-3.5 py-2.5 flex items-center gap-2 flex-shrink-0"
+              aria-label="Distribuie"
             >
-              <Share2 size={15} /> {shareNote || 'Share'}
+              <Share2 size={15} /> <span className="hidden md:inline">{shareNote || 'Share'}</span>
             </button>
           </div>
         </div>
@@ -533,6 +575,14 @@ export default function LocationPage() {
           )}
         </div>
       </div>
+
+      {showVisitPrompt && (
+        <VisitPrompt
+          locationId={location.id}
+          locationName={location.name}
+          onClose={() => setShowVisitPrompt(false)}
+        />
+      )}
 
       {editing && (
         <ExperienceEditModal
