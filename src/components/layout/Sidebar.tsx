@@ -1,8 +1,10 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, Users, Plus, Bell, Settings } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Home, Search, Users, Plus, Bell, Settings, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase-client'
 import UserMenu from './UserMenu'
 
 const NAV_LINKS = [
@@ -19,6 +21,25 @@ const NAV_BOTTOM = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    // Linkul spre dashboard apare doar pentru conturile cu rol de admin
+    const supabase = createClient()
+    const checkAdmin = async (userId?: string) => {
+      if (!userId) { setIsAdmin(false); return }
+      const { data } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
+      setIsAdmin(data?.role === 'admin')
+    }
+    supabase.auth.getUser().then(({ data }) => checkAdmin(data.user?.id))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      checkAdmin(session?.user?.id)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Zona de admin are propriul sidebar
+  if (pathname.startsWith('/admin')) return null
 
   return (
     <aside className="hidden md:flex w-[220px] flex-shrink-0 flex-col bg-white border-r border-[rgba(0,0,0,0.08)] sticky top-0 h-screen">
@@ -68,6 +89,16 @@ export default function Sidebar() {
             </Link>
           )
         })}
+
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 px-6 py-3 font-outfit text-[15px] font-medium text-[#5B4FCF] hover:bg-[#EEEDFB] transition-all"
+          >
+            <ShieldCheck size={21} strokeWidth={1.8} />
+            Admin
+          </Link>
+        )}
       </nav>
 
       <div className="px-6 py-5 border-t border-[rgba(0,0,0,0.08)]">

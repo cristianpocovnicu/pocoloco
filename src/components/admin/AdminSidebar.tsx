@@ -1,44 +1,34 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, AlertTriangle, MapPin, Pencil, Route, Users, Star, Settings } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { ArrowLeft } from 'lucide-react'
+import { cn, getInitials } from '@/lib/utils'
+import { ADMIN_NAV, badgeValue, type AdminCounts } from './nav'
 
-const NAV = [
-  { label: 'Principal', items: [
-    { href: '/admin', label: 'Overview', Icon: LayoutDashboard },
-    { href: '/admin/reports', label: 'Raportări', Icon: AlertTriangle, badge: '7', badgeColor: 'bg-[#E8440A]' },
-  ]},
-  { label: 'Conținut', items: [
-    { href: '/admin/locations', label: 'Locații', Icon: MapPin, badge: '12', badgeColor: 'bg-[#D97706]' },
-    { href: '/admin/experiences', label: 'Experiențe', Icon: Pencil },
-    { href: '/admin/trips', label: 'Călătorii', Icon: Route },
-  ]},
-  { label: 'Comunitate', items: [
-    { href: '/admin/users', label: 'Useri', Icon: Users },
-    { href: '/admin/guides', label: 'Ghizi', Icon: Star, badge: '3', badgeColor: 'bg-[#D97706]' },
-  ]},
-  { label: 'Sistem', items: [
-    { href: '/admin/settings', label: 'Setări', Icon: Settings },
-  ]},
-]
+type Props = {
+  counts: AdminCounts
+  adminName: string
+  adminUsername: string | null
+}
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ counts, adminName, adminUsername }: Props) {
   const pathname = usePathname()
 
   return (
-    <aside className="w-52 bg-[#1A1410] min-h-screen flex flex-col flex-shrink-0">
+    <aside className="hidden md:flex w-52 bg-[#1A1410] min-h-screen flex-col flex-shrink-0 sticky top-0 h-screen">
       <div className="px-4 py-5 border-b border-white/10 mb-4">
-        <div className="font-outfit text-[18px] font-bold text-white">🧭 pocoloco</div>
+        <Link href="/" className="font-outfit text-[18px] font-bold text-white block">🧭 pocoloco</Link>
         <div className="text-[10px] text-white/35 mt-0.5">Admin Dashboard</div>
       </div>
 
-      <nav className="flex-1 px-0">
-        {NAV.map(section => (
+      <nav className="flex-1 overflow-y-auto">
+        {ADMIN_NAV.map(section => (
           <div key={section.label} className="mb-3">
             <div className="text-[9px] uppercase tracking-widest text-white/25 px-4 mb-1.5">{section.label}</div>
-            {section.items.map(({ href, label, Icon, badge, badgeColor }) => {
+            {section.items.map(item => {
+              const { href, label, Icon, badgeColor } = item
               const active = pathname === href
+              const badge = badgeValue(item, counts)
               return (
                 <Link
                   key={href}
@@ -53,7 +43,9 @@ export default function AdminSidebar() {
                   {active && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#E8440A] rounded-r" />}
                   <Icon size={16} />
                   <span className="flex-1">{label}</span>
-                  {badge && <span className={`${badgeColor} text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full`}>{badge}</span>}
+                  {badge > 0 && (
+                    <span className={`${badgeColor} text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full`}>{badge}</span>
+                  )}
                 </Link>
               )
             })}
@@ -62,11 +54,16 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="px-4 py-4 border-t border-white/10">
+        <Link href="/" className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/70 transition-colors mb-3">
+          <ArrowLeft size={12} /> Înapoi la site
+        </Link>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[12px] font-bold text-white">C</div>
-          <div>
-            <div className="text-[12px] font-semibold text-white">Cristian</div>
-            <div className="text-[10px] text-white/35">Super Admin</div>
+          <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
+            {getInitials(adminName)}
+          </div>
+          <div className="min-w-0">
+            <div className="text-[12px] font-semibold text-white truncate">{adminName}</div>
+            <div className="text-[10px] text-white/35 truncate">{adminUsername ? `@${adminUsername}` : 'Admin'}</div>
           </div>
         </div>
       </div>
