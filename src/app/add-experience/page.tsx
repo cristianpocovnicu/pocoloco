@@ -5,6 +5,7 @@ import { ArrowLeft, Camera, X, Star, Loader2, MapPin, Search, Plus } from 'lucid
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 import { useToast } from '@/components/ui/Toast'
+import CharCounter from '@/components/ui/CharCounter'
 import {
   PLACES_ENABLED, getPlaceDetails, newSessionToken, searchPlaces, type PlaceSuggestion,
 } from '@/lib/places'
@@ -467,16 +468,13 @@ function AddExperienceContent() {
               <p className="text-[14px] text-[#6B6B6B] mb-4">Ce ai trăit? Sfaturi practice, momente speciale.</p>
               <textarea
                 value={content}
-                onChange={e => setContent(e.target.value)}
+                onChange={e => setContent(e.target.value.slice(0, 20000))}
                 rows={6}
                 placeholder="Ex: Am ajuns dimineața devreme și practic n-am avut coadă..."
                 className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed"
               />
-              <div className="flex items-center justify-between mt-1.5 mb-5">
-                <span className="text-[11px] text-[#9B9B9B]">Minim 20 caractere</span>
-                <span className={`text-[11px] font-medium ${content.length >= 20 ? 'text-[#059669]' : 'text-[#9B9B9B]'}`}>
-                  {content.length} / 2000
-                </span>
+              <div className="mb-5">
+                <CharCounter value={content} max={20000} min={20} />
               </div>
               <div className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">
                 Tips rapide <span className="text-[12px] text-[#9B9B9B] font-normal">— opțional</span>

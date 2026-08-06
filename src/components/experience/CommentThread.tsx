@@ -216,7 +216,7 @@ export default function CommentThread({
             <div className="flex flex-col gap-2 mt-1">
               <textarea
                 value={editDraft}
-                onChange={e => setEditDraft(e.target.value.slice(0, 2000))}
+                onChange={e => setEditDraft(e.target.value.slice(0, 10000))}
                 rows={3}
                 autoFocus
                 className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#E8440A] transition-colors resize-none leading-relaxed"

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import CharCounter from '@/components/ui/CharCounter'
 import { useToast } from '@/components/ui/Toast'
 
 export type EditableExperience = {
@@ -125,15 +126,12 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
           <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Povestea ta</label>
           <textarea
             value={content}
-            onChange={e => setContent(e.target.value.slice(0, 2000))}
+            onChange={e => setContent(e.target.value.slice(0, 20000))}
             rows={6}
             className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] focus:bg-white transition-colors resize-none leading-relaxed"
           />
-          <div className="flex items-center justify-between mt-1.5 mb-4">
-            <span className="text-[11px] text-[#9B9B9B]">Minim 20 caractere</span>
-            <span className={`text-[11px] font-medium ${content.length >= 20 ? 'text-[#059669]' : 'text-[#9B9B9B]'}`}>
-              {content.length} / 2000
-            </span>
+          <div className="mb-4">
+            <CharCounter value={content} max={20000} min={20} />
           </div>
 
           <div className="bg-[#F8F7F5] rounded-2xl border border-[rgba(0,0,0,0.08)] px-4 py-1 mb-5">

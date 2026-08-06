@@ -8,6 +8,8 @@ import {
 import { createClient } from '@/lib/supabase-client'
 import { fetchItinerary, type Trip } from '@/lib/trips'
 import { TRANSPORT_TYPES } from '@/lib/utils'
+import CountryPicker from '@/components/trip/CountryPicker'
+import CharCounter from '@/components/ui/CharCounter'
 import { useToast } from '@/components/ui/Toast'
 
 type FoundLocation = { id: string; name: string; city: string | null }
@@ -39,7 +41,6 @@ export default function EditTripPage() {
   const [durationDays, setDurationDays] = useState(1)
   const [transportType, setTransportType] = useState('car')
   const [countries, setCountries] = useState<string[]>([])
-  const [countryDraft, setCountryDraft] = useState('')
   const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
@@ -143,12 +144,6 @@ export default function EditTripPage() {
     })
   }
 
-  const addCountry = () => {
-    const value = countryDraft.trim()
-    if (!value || countries.includes(value)) { setCountryDraft(''); return }
-    setCountries(prev => [...prev, value])
-    setCountryDraft('')
-  }
 
   const pickCover = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -305,10 +300,11 @@ export default function EditTripPage() {
               <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Descriere</label>
               <textarea
                 value={description}
-                onChange={e => setDescription(e.target.value.slice(0, 2000))}
+                onChange={e => setDescription(e.target.value.slice(0, 20000))}
                 rows={4}
                 className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] focus:bg-white transition-colors resize-none leading-relaxed"
               />
+              <CharCounter value={description} max={20000} />
             </div>
 
             <div>
@@ -339,28 +335,7 @@ export default function EditTripPage() {
 
             <div>
               <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Țări</label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  value={countryDraft}
-                  onChange={e => setCountryDraft(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCountry() } }}
-                  placeholder="Ex: România"
-                  className="flex-1 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] focus:bg-white transition-colors"
-                />
-                <button onClick={addCountry} className="w-11 h-11 rounded-xl bg-[#EEEDFB] text-[#5B4FCF] flex items-center justify-center flex-shrink-0" aria-label="Adaugă țara">
-                  <Plus size={18} />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {countries.map(c => (
-                  <span key={c} className="bg-[#EEEDFB] text-[#5B4FCF] text-[12px] font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                    {c}
-                    <button onClick={() => setCountries(prev => prev.filter(x => x !== c))} aria-label={`Șterge ${c}`}>
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
-              </div>
+              <CountryPicker value={countries} onChange={setCountries} />
             </div>
           </div>
         </section>
@@ -473,7 +448,7 @@ export default function EditTripPage() {
                   </select>
                   <input
                     value={row.note}
-                    onChange={e => updateRow(row.key, { note: e.target.value.slice(0, 200) })}
+                    onChange={e => updateRow(row.key, { note: e.target.value.slice(0, 1000) })}
                     placeholder="Notă (opțional)"
                     className="flex-1 min-w-0 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-lg px-3 py-2 text-[12px] outline-none focus:border-[#E8440A] transition-colors"
                   />

@@ -6,6 +6,7 @@ import { AlertTriangle, Camera, Check, Eye, EyeOff, Loader2, LogOut, Settings as
 import BottomNav from '@/components/layout/BottomNav'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
+import CharCounter from '@/components/ui/CharCounter'
 
 type Profile = {
   id: string
@@ -246,12 +247,12 @@ export default function SettingsPage() {
               <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Bio</label>
               <textarea
                 value={bio}
-                onChange={e => setBio(e.target.value.slice(0, 300))}
+                onChange={e => setBio(e.target.value.slice(0, 1000))}
                 rows={3}
                 placeholder="Câteva cuvinte despre tine și călătoriile tale"
                 className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] focus:bg-white transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed"
               />
-              <p className="text-[11px] text-[#9B9B9B] text-right mt-1">{bio.length} / 300</p>
+              <CharCounter value={bio} max={1000} />
             </div>
           </div>
 
