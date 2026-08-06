@@ -34,12 +34,15 @@ export default function TripPage() {
   const [savePending, setSavePending] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
-      const { data } = await supabase.from('trips').select('*').eq('id', id).maybeSingle()
+      const { data, error } = await supabase.from('trips').select('*').eq('id', id).maybeSingle()
 
+      // eroarea de rețea nu înseamnă că nu există călătoria
+      if (error) setLoadError(true)
       if (!data) { setLoading(false); return }
       const t = data as Trip
       setTrip(t)
@@ -106,8 +109,11 @@ export default function TripPage() {
 
   if (!trip || trip.status === 'removed') return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-3 px-6 text-center">
-      <div className="text-4xl">🧭</div>
-      <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">Călătoria nu a fost găsită</p>
+      <div className="text-4xl">{loadError ? '📡' : '🧭'}</div>
+      <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">
+        {loadError ? 'Nu am putut încărca călătoria' : 'Călătoria nu a fost găsită'}
+      </p>
+      {loadError && <p className="text-[13px] text-[#6B6B6B]">Verifică conexiunea și reîncarcă pagina.</p>}
       <Link href="/trips" className="text-[#E8440A] font-medium">← Vezi toate călătoriile</Link>
     </div>
   )

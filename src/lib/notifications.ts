@@ -52,7 +52,7 @@ export async function fetchNotifications(
   supabase: SupabaseClient,
   userId: string,
   limit = 50
-): Promise<NotificationItem[]> {
+): Promise<{ items: NotificationItem[]; error: string | null }> {
   const { data, error } = await supabase
     .from('notifications')
     .select('id, user_id, actor_id, type, entity_type, entity_id, read, created_at')
@@ -60,9 +60,10 @@ export async function fetchNotifications(
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  if (error) return []
+  // eroarea trebuie distinsă de „n-ai notificări", altfel pagina minte
+  if (error) return { items: [], error: error.message }
   const rows = (data || []) as NotificationRow[]
-  if (rows.length === 0) return []
+  if (rows.length === 0) return { items: [], error: null }
 
   const actors = await fetchProfilesMap(supabase, rows.map(r => r.actor_id))
 
@@ -81,7 +82,7 @@ export async function fetchNotifications(
     }
   }
 
-  return rows.map(row => {
+  const items = rows.map(row => {
     const actor = row.actor_id ? actors[row.actor_id] || null : null
 
     let href: string | null = null
@@ -94,6 +95,8 @@ export async function fetchNotifications(
 
     return { ...row, actor, href, text: NOTIFICATION_TEXT[row.type] }
   })
+
+  return { items, error: null }
 }
 
 export async function markAllRead(supabase: SupabaseClient, userId: string): Promise<string | null> {

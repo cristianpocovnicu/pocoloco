@@ -43,17 +43,20 @@ export default function PublicProfilePage() {
   const [followsThem, setFollowsThem] = useState<boolean | undefined>(undefined)
   const [isMe, setIsMe] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
 
-      const { data: prof } = await supabase
+      const { data: prof, error: profError } = await supabase
         .from('profiles')
         .select('id, username, full_name, bio, avatar_url, is_guide, guide_level, xp, created_at')
         .eq('username', username)
         .maybeSingle()
 
+      // eroarea de rețea nu înseamnă că userul nu există
+      if (profError) setLoadError(true)
       if (!prof) { setLoading(false); return }
       const publicProfile = prof as PublicProfile
       setProfile(publicProfile)
@@ -95,9 +98,13 @@ export default function PublicProfilePage() {
 
   if (!profile) return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-3 px-6 text-center">
-      <div className="text-4xl">🧭</div>
-      <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">Userul nu există</p>
-      <p className="text-[13px] text-[#6B6B6B]">Nu am găsit niciun profil cu @{username}.</p>
+      <div className="text-4xl">{loadError ? '📡' : '🧭'}</div>
+      <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">
+        {loadError ? 'Nu am putut încărca profilul' : 'Userul nu există'}
+      </p>
+      <p className="text-[13px] text-[#6B6B6B]">
+        {loadError ? 'Verifică conexiunea și reîncarcă pagina.' : `Nu am găsit niciun profil cu @${username}.`}
+      </p>
       <Link href="/" className="text-[#E8440A] font-medium">← Înapoi acasă</Link>
     </div>
   )

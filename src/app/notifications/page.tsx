@@ -20,6 +20,7 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true)
   const [loggedIn, setLoggedIn] = useState(true)
   const [marking, setMarking] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -27,8 +28,9 @@ export default function NotificationsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoggedIn(false); setLoading(false); return }
 
-      const list = await fetchNotifications(supabase, user.id)
+      const { items: list, error: loadError } = await fetchNotifications(supabase, user.id)
       setItems(list)
+      setError(loadError ? 'Nu am putut încărca notificările. Încearcă din nou.' : null)
       setLoading(false)
 
       // deschiderea paginii le marchează citite; evidențierea rămâne
@@ -73,6 +75,12 @@ export default function NotificationsPage() {
       </div>
 
       <div className="max-w-[680px] mx-auto px-5 pt-4">
+        {error && (
+          <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3 mb-3">
+            <p className="text-[13px] text-[#DC2626]">{error}</p>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 size={26} className="animate-spin text-[#E8440A]" />

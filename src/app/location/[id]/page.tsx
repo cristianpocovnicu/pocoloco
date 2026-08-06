@@ -55,17 +55,21 @@ export default function LocationPage() {
   // locațiile neaprobate sunt vizibile doar celui care le-a adăugat și adminilor
   const [canModerate, setCanModerate] = useState(false)
   const [blocked, setBlocked] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [shareNote, setShareNote] = useState('')
 
   useEffect(() => {
     const fetch = async () => {
       const supabase = createClient()
 
-      const { data: loc } = await supabase
+      const { data: loc, error: locError } = await supabase
         .from('locations')
         .select('*, adder:profiles!added_by(full_name, is_guide)')
         .eq('id', id)
         .maybeSingle()
+
+      // fără asta, o eroare de rețea arăta ca „locația nu există"
+      if (locError) setLoadError(true)
 
       const { data: exps } = await supabase
         .from('experiences')
@@ -159,7 +163,13 @@ export default function LocationPage() {
 
   if (!location) return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-3 px-6 text-center">
-      {blocked ? (
+      {loadError ? (
+        <>
+          <div className="text-4xl">📡</div>
+          <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">Nu am putut încărca locația</p>
+          <p className="text-[13px] text-[#6B6B6B] max-w-[320px]">Verifică conexiunea și reîncarcă pagina.</p>
+        </>
+      ) : blocked ? (
         <>
           <div className="text-4xl">⏳</div>
           <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">Locația așteaptă aprobare</p>
