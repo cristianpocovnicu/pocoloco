@@ -8,6 +8,8 @@ import FollowButton from '@/components/profile/FollowButton'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { getFollowCounts, isFollowing } from '@/lib/follows'
+import { fetchBadges, type EarnedBadge } from '@/lib/badges'
+import BadgeGrid from '@/components/profile/BadgeGrid'
 import { formatCount, timeAgo } from '@/lib/utils'
 
 type PublicProfile = {
@@ -40,6 +42,7 @@ export default function PublicProfilePage() {
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [counts, setCounts] = useState({ followers: 0, following: 0 })
+  const [badges, setBadges] = useState<EarnedBadge[]>([])
   const [followsThem, setFollowsThem] = useState<boolean | undefined>(undefined)
   const [isMe, setIsMe] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -64,7 +67,7 @@ export default function PublicProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       setIsMe(user?.id === publicProfile.id)
 
-      const [exps, followCounts] = await Promise.all([
+      const [exps, followCounts, userBadges] = await Promise.all([
         supabase
           .from('experiences')
           .select('id, content, images, rating_experience, upvotes, comment_count, created_at, location:locations!location_id!inner(id, name, city, status)')
@@ -74,10 +77,12 @@ export default function PublicProfilePage() {
           .order('created_at', { ascending: false })
           .limit(50),
         getFollowCounts(supabase, publicProfile.id),
+        fetchBadges(supabase, publicProfile.id),
       ])
 
       setExperiences((exps.data || []) as unknown as Experience[])
       setCounts(followCounts)
+      setBadges(userBadges.earned)
 
       if (user && user.id !== publicProfile.id) {
         setFollowsThem(await isFollowing(supabase, user.id, publicProfile.id))
@@ -180,6 +185,16 @@ export default function PublicProfilePage() {
             ))}
           </div>
         </div>
+
+        {/* Insigne */}
+        {badges.length > 0 && (
+          <div className="px-5 pt-4">
+            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">
+              Insigne ({badges.length})
+            </h2>
+            <BadgeGrid earned={badges} />
+          </div>
+        )}
 
         {/* Experiențe */}
         <div className="px-5 pt-4">

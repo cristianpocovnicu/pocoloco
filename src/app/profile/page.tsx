@@ -6,6 +6,8 @@ import { Settings, Share2, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut
 import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
+import BadgeGrid from '@/components/profile/BadgeGrid'
+import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
 import { formatCount, timeAgo, shareLink } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -40,6 +42,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [counts, setCounts] = useState({ followers: 0, following: 0 })
+  const [badges, setBadges] = useState<{ earned: EarnedBadge[]; locked: Badge[] }>({ earned: [], locked: [] })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState(0)
   const [shareNote, setShareNote] = useState('')
@@ -65,7 +68,12 @@ export default function ProfilePage() {
 
       if (prof) setProfile(prof as Profile)
       if (exps) setExperiences(exps as unknown as Experience[])
-      setCounts(await getFollowCounts(supabase, user.id))
+      const [followCounts, userBadges] = await Promise.all([
+        getFollowCounts(supabase, user.id),
+        fetchBadges(supabase, user.id),
+      ])
+      setCounts(followCounts)
+      setBadges(userBadges)
       setLoading(false)
     }
     fetchData()
@@ -116,12 +124,6 @@ export default function ProfilePage() {
       <Link href="/login" className="text-[#E8440A] font-medium">Intră în cont</Link>
     </div>
   )
-
-  const BADGES_EARNED = [
-    ...(experiences.length >= 1 ? [{ emoji: '✍️', name: 'Prima experiență', bg: '#EEEDFB' }] : []),
-    ...(experiences.length >= 10 ? [{ emoji: '🏆', name: '10 Experiențe', bg: '#FFF0EB' }] : []),
-    ...(profile.is_guide ? [{ emoji: '⭐', name: 'Ghid Experimentat', bg: '#FFFBEB' }] : []),
-  ]
 
   return (
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
@@ -281,21 +283,10 @@ export default function ProfilePage() {
 
           {tab === 1 && (
             <div>
-              <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">Insigne câștigate</h3>
-              {BADGES_EARNED.length === 0 ? (
-                <div className="text-center py-8 bg-white rounded-2xl border border-[rgba(0,0,0,0.08)]">
-                  <p className="text-[13px] text-[#9B9B9B]">Adaugă prima experiență pentru a câștiga prima insignă!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-4 gap-3">
-                  {BADGES_EARNED.map(b => (
-                    <div key={b.name} className="flex flex-col items-center gap-1.5">
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: b.bg, boxShadow: '0 0 0 2px #E8440A' }}>{b.emoji}</div>
-                      <span className="text-[10px] text-[#6B6B6B] text-center leading-tight font-medium">{b.name}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">
+                Insigne câștigate {badges.earned.length > 0 && <span className="text-[#9B9B9B] font-normal">({badges.earned.length})</span>}
+              </h3>
+              <BadgeGrid earned={badges.earned} locked={badges.locked} showLocked />
             </div>
           )}
         </div>
