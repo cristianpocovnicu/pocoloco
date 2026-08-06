@@ -22,6 +22,7 @@ type Post = {
     id: string
     name: string
     city: string
+    status: string
   }
 }
 
@@ -32,15 +33,18 @@ export default function PopularSection() {
   useEffect(() => {
     const fetchPosts = async () => {
       const supabase = createClient()
+      // !inner + filtrul pe location.status => experiențele din locații
+      // neaprobate (pending/rejected) nu apar deloc în feed
       const { data, error } = await supabase
         .from('experiences')
         .select(`
           id, content, images, rating_experience,
           upvotes, downvotes, comment_count, created_at,
           author:profiles!author_id(full_name, is_guide),
-          location:locations!location_id(id, name, city)
+          location:locations!location_id!inner(id, name, city, status)
         `)
         .eq('status', 'active')
+        .eq('location.status', 'approved')
         .order('created_at', { ascending: false })
         .limit(10)
 

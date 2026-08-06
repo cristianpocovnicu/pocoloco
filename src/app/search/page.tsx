@@ -23,7 +23,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState('')
   const [activeChip, setActiveChip] = useState('Toate')
   const [results, setResults] = useState<Location[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const doSearch = useCallback(async (q: string, cat: string) => {
     setLoading(true)
@@ -43,26 +43,11 @@ export default function SearchPage() {
     setLoading(false)
   }, [])
 
+  // Rulează și la montare (query gol) — doSearch filtrează mereu status = 'approved'
   useEffect(() => {
     const timer = setTimeout(() => doSearch(query, activeChip), 300)
     return () => clearTimeout(timer)
   }, [query, activeChip, doSearch])
-
-  // Load all on mount
-  useEffect(() => {
-    const loadAll = async () => {
-      setLoading(true)
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('locations')
-        .select('id, name, city, country, category, score, experience_count, cover_image')
-        .order('experience_count', { ascending: false })
-        .limit(30)
-      setResults(data || [])
-      setLoading(false)
-    }
-    loadAll()
-  }, [])
 
   return (
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">

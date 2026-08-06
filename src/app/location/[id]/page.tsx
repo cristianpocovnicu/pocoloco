@@ -17,6 +17,7 @@ type Location = {
   score: number
   experience_count: number
   trip_count: number
+  status: 'pending' | 'approved' | 'rejected'
   added_by: string
   adder?: { full_name: string; is_guide: boolean }
 }
@@ -44,6 +45,9 @@ export default function LocationPage() {
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [voted, setVoted] = useState<Record<string, 'up' | 'down' | null>>({})
+  // locațiile neaprobate sunt vizibile doar celui care le-a adăugat și adminilor
+  const [canModerate, setCanModerate] = useState(false)
+  const [blocked, setBlocked] = useState(false)
 
   useEffect(() => {
     const fetch = async () => {
@@ -53,7 +57,7 @@ export default function LocationPage() {
         .from('locations')
         .select('*, adder:profiles!added_by(full_name, is_guide)')
         .eq('id', id)
-        .single()
+        .maybeSingle()
 
       const { data: exps } = await supabase
         .from('experiences')
@@ -62,7 +66,29 @@ export default function LocationPage() {
         .eq('status', 'active')
         .order('created_at', { ascending: false })
 
-      if (loc) setLocation(loc as unknown as Location)
+      if (loc) {
+        const location = loc as unknown as Location
+
+        if (location.status !== 'approved') {
+          const { data: { user } } = await supabase.auth.getUser()
+          let allowed = false
+          if (user) {
+            if (location.added_by === user.id) {
+              allowed = true
+            } else {
+              const { data: prof } = await supabase
+                .from('profiles').select('role').eq('id', user.id).maybeSingle()
+              allowed = prof?.role === 'admin'
+            }
+          }
+          setCanModerate(allowed)
+          if (allowed) setLocation(location)
+          else setBlocked(true)
+        } else {
+          setLocation(location)
+        }
+      }
+
       if (exps) setExperiences(exps as unknown as Experience[])
       setLoading(false)
     }
@@ -114,8 +140,18 @@ export default function LocationPage() {
   )
 
   if (!location) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-      <p className="text-[#6B6B6B]">Locația nu a fost găsită.</p>
+    <div className="flex flex-col items-center justify-center min-h-screen gap-3 px-6 text-center">
+      {blocked ? (
+        <>
+          <div className="text-4xl">⏳</div>
+          <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">Locația așteaptă aprobare</p>
+          <p className="text-[13px] text-[#6B6B6B] max-w-[320px]">
+            Un administrator verifică locația înainte să devină publică. Revino puțin mai târziu.
+          </p>
+        </>
+      ) : (
+        <p className="text-[#6B6B6B]">Locația nu a fost găsită.</p>
+      )}
       <Link href="/" className="text-[#E8440A] font-medium">← Înapoi acasă</Link>
     </div>
   )
@@ -134,6 +170,23 @@ export default function LocationPage() {
       </div>
 
       <div className="max-w-[680px] mx-auto">
+        {/* Banner de moderare — doar pentru autor și admini */}
+        {canModerate && location.status !== 'approved' && (
+          <div className={`px-5 py-3 flex items-start gap-2.5 border-b ${location.status === 'rejected' ? 'bg-[#FEF2F2] border-[rgba(220,38,38,0.15)]' : 'bg-[#FFFBEB] border-[rgba(217,119,6,0.15)]'}`}>
+            <span className="text-lg leading-none mt-0.5">{location.status === 'rejected' ? '🚫' : '⏳'}</span>
+            <div>
+              <p className={`font-outfit text-[13px] font-semibold ${location.status === 'rejected' ? 'text-[#DC2626]' : 'text-[#D97706]'}`}>
+                {location.status === 'rejected' ? 'Locație respinsă' : 'Locație în așteptarea aprobării'}
+              </p>
+              <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+                {location.status === 'rejected'
+                  ? 'Un administrator a respins această locație, așa că nu apare public.'
+                  : 'Doar tu și administratorii vedeți această pagină până la aprobare. Nu apare în căutare sau în feed.'}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Cover image / gradient */}
         <div className="h-52 bg-gradient-to-br from-amber-200 to-amber-600 relative overflow-hidden">
           {location.cover_image

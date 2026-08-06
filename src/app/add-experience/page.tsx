@@ -227,6 +227,15 @@ function AddExperienceContent() {
                     className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
                   />
                 </div>
+                {!locationId && (
+                  <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.2)] rounded-xl px-4 py-3 flex items-start gap-2.5">
+                    <span className="text-base leading-none mt-0.5">⏳</span>
+                    <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+                      Dacă locul nu există încă pe Pocoloco, îl adăugăm noi — dar apare în căutare
+                      și în feed doar după ce un administrator îl aprobă. Experiența ta rămâne salvată.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
