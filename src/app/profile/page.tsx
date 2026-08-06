@@ -22,8 +22,6 @@ type Profile = {
   bio: string | null
   avatar_url: string | null
   is_guide: boolean
-  guide_level: number
-  xp: number
 }
 
 type Experience = {
@@ -211,29 +209,15 @@ export default function ProfilePage() {
           <div className="flex pt-4 border-t border-[rgba(0,0,0,0.08)]">
             {[
               { value: formatCount(experiences.length), label: 'experiențe' },
+              { value: formatCount(visited.length), label: 'locuri vizitate' },
               { value: formatCount(counts.followers), label: 'urmăritori' },
               { value: formatCount(counts.following), label: 'urmăresc' },
-              { value: formatCount(profile.xp), label: 'XP' },
             ].map((s, i, arr) => (
               <div key={s.label} className={`flex-1 text-center ${i < arr.length - 1 ? 'border-r border-[rgba(0,0,0,0.08)]' : ''}`}>
                 <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{s.value}</div>
-                <div className="text-[11px] text-[#9B9B9B]">{s.label}</div>
+                <div className="text-[11px] text-[#9B9B9B] leading-tight">{s.label}</div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* XP bar */}
-        <div className="bg-gradient-to-r from-[#EEEDFB] to-[#F0EEFF] px-5 py-3.5 flex items-center gap-3 border-b border-[rgba(0,0,0,0.08)]">
-          <div className="w-11 h-11 bg-[#5B4FCF] rounded-xl flex items-center justify-center text-xl flex-shrink-0">🧭</div>
-          <div className="flex-1">
-            <div className="font-outfit text-[14px] font-semibold text-[#5B4FCF]">
-              {profile.is_guide ? 'Ghid Experimentat' : 'Explorator'} · Nivel {profile.guide_level}
-            </div>
-            <div className="h-1.5 bg-[rgba(91,79,207,0.15)] rounded-full overflow-hidden mt-1.5">
-              <div className="h-full bg-[#5B4FCF] rounded-full" style={{ width: `${Math.min((profile.xp % 1000) / 10, 100)}%` }} />
-            </div>
-            <div className="text-[10px] text-[#5B4FCF] font-medium mt-0.5">{profile.xp} XP</div>
           </div>
         </div>
 

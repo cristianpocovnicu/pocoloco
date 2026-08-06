@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MessageCircle, Eye } from 'lucide-react'
@@ -30,38 +30,78 @@ type Post = {
   }
 }
 
+const PAGE_SIZE = 10
+
 export default function PopularSection() {
   const [posts, setPosts] = useState<Post[]>([])
   const [myVotes, setMyVotes] = useState<Record<string, VoteType>>({})
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const sentinel = useRef<HTMLDivElement>(null)
+
+  /** Cursor pe created_at, nu offset: postările noi nu decalează paginile. */
+  const loadPage = useCallback(async (before?: string) => {
+    const supabase = createClient()
+    // !inner + filtrul pe location.status => experiențele din locații
+    // neaprobate (pending/rejected) nu apar deloc în feed
+    let request = supabase
+      .from('experiences')
+      .select(`
+        id, content, images, rating_experience,
+        upvotes, downvotes, comment_count, created_at,
+        author:profiles!author_id(full_name, is_guide),
+        location:locations!location_id!inner(id, name, city, status)
+      `)
+      .eq('status', 'active')
+      .eq('location.status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(PAGE_SIZE)
+
+    if (before) request = request.lt('created_at', before)
+
+    const { data, error } = await request
+    if (error || !data) return { list: [] as Post[], done: true }
+
+    const list = data as unknown as Post[]
+    const votes = await fetchMyVotes(supabase, list.map(p => p.id))
+    setMyVotes(prev => ({ ...prev, ...votes }))
+
+    return { list, done: list.length < PAGE_SIZE }
+  }, [])
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      const supabase = createClient()
-      // !inner + filtrul pe location.status => experiențele din locații
-      // neaprobate (pending/rejected) nu apar deloc în feed
-      const { data, error } = await supabase
-        .from('experiences')
-        .select(`
-          id, content, images, rating_experience,
-          upvotes, downvotes, comment_count, created_at,
-          author:profiles!author_id(full_name, is_guide),
-          location:locations!location_id!inner(id, name, city, status)
-        `)
-        .eq('status', 'active')
-        .eq('location.status', 'approved')
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (!error && data) {
-        const list = data as unknown as Post[]
-        setPosts(list)
-        setMyVotes(await fetchMyVotes(supabase, list.map(p => p.id)))
-      }
+    const load = async () => {
+      const { list, done } = await loadPage()
+      setPosts(list)
+      setHasMore(!done)
       setLoading(false)
     }
-    fetchPosts()
-  }, [])
+    load()
+  }, [loadPage])
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || posts.length === 0) return
+    setLoadingMore(true)
+
+    const { list, done } = await loadPage(posts[posts.length - 1].created_at)
+    setPosts(prev => [...prev, ...list])
+    setHasMore(!done)
+    setLoadingMore(false)
+  }, [loadPage, loadingMore, hasMore, posts])
+
+  // încarcă următoarea pagină când santinela intră în ecran
+  useEffect(() => {
+    const node = sentinel.current
+    if (!node || !hasMore) return
+
+    const observer = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) loadMore() },
+      { rootMargin: '300px' }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [loadMore, hasMore])
 
   // schelet cu aceeași siluetă ca postările, ca pagina să nu sară la încărcare
   if (loading) return (
@@ -157,6 +197,20 @@ export default function PopularSection() {
           )
         })}
       </div>
+
+      {/* santinela pentru infinite scroll */}
+      {hasMore && <div ref={sentinel} className="h-1" />}
+
+      {loadingMore && (
+        <div className="flex flex-col gap-3 mt-3">
+          <ExperienceCardSkeleton />
+          <ExperienceCardSkeleton />
+        </div>
+      )}
+
+      {!hasMore && posts.length >= PAGE_SIZE && (
+        <p className="text-center text-[12px] text-[#9B9B9B] py-6">Ai ajuns la capăt.</p>
+      )}
     </section>
   )
 }

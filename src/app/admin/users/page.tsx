@@ -13,7 +13,6 @@ type UserRow = {
   role: 'user' | 'admin'
   status: 'active' | 'suspended'
   is_guide: boolean | null
-  xp: number | null
   created_at: string
 }
 
@@ -45,7 +44,7 @@ export default function AdminUsersPage() {
     const [profilesRes, expRes, followsRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, username, full_name, role, status, is_guide, xp, created_at')
+        .select('id, username, full_name, role, status, is_guide, created_at')
         .order('created_at', { ascending: false })
         .limit(200),
       supabase.from('experiences').select('author_id').limit(5000),

@@ -98,7 +98,7 @@ export default function SearchPage() {
     let req = supabase
       .from('profiles')
       .select('id, username, full_name, avatar_url, is_guide, bio')
-      .order('xp', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(20)
 
     // caută și în nume, și în username

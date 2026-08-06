@@ -22,8 +22,6 @@ type PublicProfile = {
   bio: string | null
   avatar_url: string | null
   is_guide: boolean | null
-  guide_level: number | null
-  xp: number | null
   created_at: string
 }
 
@@ -58,7 +56,7 @@ export default function PublicProfilePage() {
 
       const { data: prof, error: profError } = await supabase
         .from('profiles')
-        .select('id, username, full_name, bio, avatar_url, is_guide, guide_level, xp, created_at')
+        .select('id, username, full_name, bio, avatar_url, is_guide, created_at')
         .eq('username', username)
         .maybeSingle()
 
@@ -183,13 +181,13 @@ export default function PublicProfilePage() {
           <div className="flex pt-4 border-t border-[rgba(0,0,0,0.08)]">
             {[
               { value: experiences.length, label: 'experiențe' },
+              { value: visited.length, label: 'locuri vizitate' },
               { value: counts.followers, label: 'urmăritori' },
               { value: counts.following, label: 'urmărește' },
-              { value: profile.xp || 0, label: 'XP' },
             ].map((s, i, arr) => (
               <div key={s.label} className={`flex-1 text-center ${i < arr.length - 1 ? 'border-r border-[rgba(0,0,0,0.08)]' : ''}`}>
                 <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{formatCount(s.value)}</div>
-                <div className="text-[11px] text-[#9B9B9B]">{s.label}</div>
+                <div className="text-[11px] text-[#9B9B9B] leading-tight">{s.label}</div>
               </div>
             ))}
           </div>
