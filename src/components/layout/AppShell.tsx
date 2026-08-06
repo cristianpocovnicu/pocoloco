@@ -5,12 +5,16 @@ import Footer from './Footer'
 import PageTransition from './PageTransition'
 
 /**
- * Sidebar + conținut, ca un singur bloc centrat pe ecran: 220px de navigație
- * plus coloana de conținut, plafonate la 1000px. Pe ecrane mari spațiul rămâne
- * gol simetric, în loc să lase totul lipit de marginea stângă. Pe mobil
- * sidebar-ul e ascuns, deci blocul e pur și simplu lățimea ecranului.
+ * Structura pe desktop, ca la Instagram:
  *
- * Zona de admin are propriul layout, pe toată lățimea — nu o îngrădim aici.
+ *   [ gol ][ sidebar 220px | conținut ][ gol ]
+ *            \___ blocul centrat, max 1100px ___/
+ *
+ * Wrapperul exterior ține fundalul pe toată lățimea ecranului, iar cel
+ * interior centrează blocul. Pe mobil sidebar-ul e ascuns (hidden md:flex),
+ * deci rămâne doar conținutul, pe toată lățimea, cu bara de jos.
+ *
+ * Zona de admin are propriul layout, pe toată lățimea — o lăsăm în pace.
  */
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -18,11 +22,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname.startsWith('/admin')) return <>{children}</>
 
   return (
-    <div className="mx-auto flex w-full max-w-[1000px] min-h-screen">
-      <Sidebar />
-      <div className="flex-1 min-w-0">
-        <PageTransition>{children}</PageTransition>
-        <Footer />
+    <div className="min-h-screen w-full bg-[#F0EDE8]">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1100px]">
+        <Sidebar />
+        <div className="flex-1 min-w-0">
+          <PageTransition>{children}</PageTransition>
+          <Footer />
+        </div>
       </div>
     </div>
   )
