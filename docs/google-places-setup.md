@@ -111,3 +111,29 @@ Cererea pleacă abia de la 3 caractere, cu 300ms de debounce.
 Google are un nivel gratuit lunar; pentru un trafic mic nu ar trebui să
 depășești. Pune oricum un **budget alert** în Cloud Console → Billing, ca să nu
 afli dintr-o factură.
+
+---
+
+## 6. Poze de copertă din Google
+
+Când o locație e creată dintr-o sugestie Google (din `/add-experience` sau din
+itinerarul unei călătorii), aplicația cere prima poză a locului și o urcă în
+Storage la `locations/<location-id>/cover.jpg`. Totul se întâmplă în fundal,
+după ce locația a fost salvată: dacă locul n-are poze, cheia lipsește sau
+upload-ul eșuează, locația rămâne pur și simplu fără copertă și fluxul nu e
+afectat.
+
+Retroactiv, pentru locațiile mai vechi: **/admin/locations** → butonul
+„Adaugă poză din Google" pe fiecare rând fără copertă, sau „Poze pentru toate"
+din banner (secvențial, ca la geocodare). Dacă locația n-are încă
+`google_place_id`, e căutată întâi după nume + oraș + țară.
+
+Ordinea de afișare rămâne neschimbată: `cover_image` → prima poză dintr-o
+experiență → placeholder. Pe pagina locației, copertele venite din Google
+poartă discret eticheta „Foto: Google" — atribuirea e cerută de termenii
+Places.
+
+Poza se facturează separat de autocomplete (Place Details cu field mask
+`photos`, plus descărcarea propriu-zisă), o singură dată per locație. „Poze
+pentru toate" face câte două cereri pentru fiecare locație fără copertă —
+pornește-l cu banii în minte dacă ai sute de locații.

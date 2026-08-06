@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, MapPin, PenLine, Plus, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import { attachGoogleCover } from '@/lib/location-cover'
 import {
   PLACES_ENABLED, getPlaceDetails, newSessionToken, searchPlaces, type PlaceSuggestion,
 } from '@/lib/places'
@@ -144,6 +145,7 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
         country: details?.country || 'România',
         latitude: details?.latitude ?? null,
         longitude: details?.longitude ?? null,
+        google_place_id: place.placeId,
         status: 'pending',
         added_by: user.id,
       })
@@ -155,6 +157,9 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
       setCreating(null)
       return
     }
+
+    // coperta din Google: pornită în fundal, nu blochează alegerea locului
+    void attachGoogleCover(supabase, created.id, place.placeId)
 
     pick(created as Row, 'google')
     setCreating(null)

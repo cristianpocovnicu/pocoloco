@@ -24,6 +24,7 @@ export type PlaceDetails = {
   country: string
   latitude: number | null
   longitude: number | null
+  placeId: string
 }
 
 /** Token de sesiune: leagă tastările de alegerea finală, ca Google să le factureze împreună. */
@@ -88,6 +89,53 @@ export type GeocodeResult = {
   /** ce a găsit Google — util ca adminul să verifice că e locul potrivit */
   matchedName: string
   formattedAddress: string
+  placeId: string | null
+}
+
+/**
+ * Prima poză a unui loc, descărcată ca blob.
+ *
+ * Două cereri: una pentru numele resursei foto, alta pentru fișier.
+ * Field mask-ul cere doar `photos`, ca răspunsul să nu fie facturat la
+ * un nivel mai scump decât e nevoie.
+ */
+export async function fetchPlacePhoto(
+  placeId: string,
+  maxWidth = 800
+): Promise<Blob | null> {
+  if (!API_KEY || !placeId) return null
+
+  try {
+    const detailsRes = await fetch(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+      {
+        headers: {
+          'X-Goog-Api-Key': API_KEY,
+          'X-Goog-FieldMask': 'photos',
+        },
+      }
+    )
+
+    if (!detailsRes.ok) return null
+    const details = await detailsRes.json()
+
+    // numele arată ca „places/ChIJ.../photos/AeJbb3..."
+    const photoName = details.photos?.[0]?.name as string | undefined
+    if (!photoName) return null
+
+    const photoRes = await fetch(
+      `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidth}&key=${encodeURIComponent(API_KEY)}`
+    )
+
+    if (!photoRes.ok) return null
+    const blob = await photoRes.blob()
+
+    // răspuns gol sau non-imagine: mai bine fără poză decât cu un fișier stricat
+    if (!blob.type.startsWith('image/') || blob.size === 0) return null
+    return blob
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -104,7 +152,7 @@ export async function geocodePlace(query: string): Promise<GeocodeResult | null>
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.location,places.formattedAddress',
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.location,places.formattedAddress',
       },
       body: JSON.stringify({
         textQuery: query.trim(),
@@ -124,6 +172,7 @@ export async function geocodePlace(query: string): Promise<GeocodeResult | null>
       longitude: place.location.longitude,
       matchedName: place.displayName?.text || '',
       formattedAddress: place.formattedAddress || '',
+      placeId: place.id || null,
     }
   } catch {
     return null
@@ -161,6 +210,7 @@ export async function getPlaceDetails(
       country: pick('country') || 'România',
       latitude: data.location?.latitude ?? null,
       longitude: data.location?.longitude ?? null,
+      placeId,
     }
   } catch {
     return null

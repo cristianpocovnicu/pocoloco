@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 import { useToast } from '@/components/ui/Toast'
 import CharCounter from '@/components/ui/CharCounter'
+import { attachGoogleCover } from '@/lib/location-cover'
 import {
   PLACES_ENABLED, getPlaceDetails, newSessionToken, searchPlaces, type PlaceSuggestion,
 } from '@/lib/places'
@@ -65,6 +66,8 @@ function AddExperienceContent() {
   const [placeResults, setPlaceResults] = useState<PlaceSuggestion[]>([])
   const [searchingLocation, setSearchingLocation] = useState(false)
   const [pickedFromGoogle, setPickedFromGoogle] = useState(false)
+  // reținut ca să putem cere poza locului după ce salvăm locația
+  const [pickedPlaceId, setPickedPlaceId] = useState<string | null>(null)
   const sessionToken = useRef(newSessionToken())
   const [photos, setPhotos] = useState<File[]>([])
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
@@ -117,6 +120,7 @@ function AddExperienceContent() {
     setLocationCountry(loc.country || 'România')
     setCoords(null)
     setPickedFromGoogle(false)
+    setPickedPlaceId(null)
     setLocationQuery('')
   }
 
@@ -131,6 +135,7 @@ function AddExperienceContent() {
     setLocationCountry(details?.country || 'România')
     setCoords(details ? { lat: details.latitude, lng: details.longitude } : null)
     setPickedFromGoogle(true)
+    setPickedPlaceId(place.placeId)
     setLocationQuery('')
     setSearchingLocation(false)
   }
@@ -140,6 +145,7 @@ function AddExperienceContent() {
     setLocationName(locationQuery.trim())
     setCoords(null)
     setPickedFromGoogle(false)
+    setPickedPlaceId(null)
     setLocationQuery('')
   }
 
@@ -149,6 +155,7 @@ function AddExperienceContent() {
     setLocationCity('')
     setCoords(null)
     setPickedFromGoogle(false)
+    setPickedPlaceId(null)
   }
 
   const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,6 +221,7 @@ function AddExperienceContent() {
               // coordonatele vin de la Google, când locul a fost ales de acolo
               latitude: coords?.lat ?? null,
               longitude: coords?.lng ?? null,
+              google_place_id: pickedPlaceId,
               status: 'pending',
               added_by: user.id,
             })
@@ -221,6 +229,11 @@ function AddExperienceContent() {
             .single()
           if (locError) throw new Error(`Eroare locație: ${locError.message}`)
           finalLocationId = newLoc?.id || null
+
+          // coperta din Google: pornită în fundal, nu ține publicarea în loc
+          if (finalLocationId && pickedPlaceId) {
+            void attachGoogleCover(supabase, finalLocationId, pickedPlaceId)
+          }
         }
       }
 

@@ -1,12 +1,13 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair } from 'lucide-react'
+import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair, ImagePlus } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, statusStyle, type MiniProfile } from '@/lib/admin'
 import { cn, timeAgo } from '@/lib/utils'
 import AdminHeader from '@/components/admin/AdminHeader'
 import CoordinatesRow from '@/components/admin/CoordinatesRow'
 import CoverImage from '@/components/ui/CoverImage'
+import { attachGoogleCover } from '@/lib/location-cover'
 import { PLACES_ENABLED, geocodePlace } from '@/lib/places'
 
 type LocationRow = {
@@ -22,7 +23,10 @@ type LocationRow = {
   latitude: number | null
   longitude: number | null
   created_at: string
+  google_place_id?: string | null
 }
+
+const BASE_COLUMNS = 'id, name, city, country, category, status, added_by, experience_count, cover_image, latitude, longitude, created_at'
 
 type Filter = 'pending' | 'approved' | 'rejected' | 'all'
 
@@ -43,14 +47,25 @@ export default function AdminLocationsPage() {
   const [query, setQuery] = useState('')
   const [geocodingId, setGeocodingId] = useState<string | null>(null)
   const [bulk, setBulk] = useState<{ done: number; total: number; found: number } | null>(null)
+  const [photoId, setPhotoId] = useState<string | null>(null)
+  const [photoBulk, setPhotoBulk] = useState<{ done: number; total: number; found: number } | null>(null)
+  const [photosSupported, setPhotosSupported] = useState(true)
 
   const load = useCallback(async () => {
     const supabase = createClient()
-    const { data, error: fetchError } = await supabase
+    const query = (columns: string) => supabase
       .from('locations')
-      .select('id, name, city, country, category, status, added_by, experience_count, cover_image, latitude, longitude, created_at')
+      .select(columns)
       .order('created_at', { ascending: false })
       .limit(300)
+
+    // google_place_id vine din migrarea 20260807_location_photos; până e
+    // rulată, pagina merge mai departe fără butoanele de poză
+    let { data, error: fetchError } = await query(`${BASE_COLUMNS}, google_place_id`)
+    if (fetchError) {
+      setPhotosSupported(false)
+      ;({ data, error: fetchError } = await query(BASE_COLUMNS))
+    }
 
     if (fetchError) {
       setError(fetchError.message)
@@ -58,7 +73,7 @@ export default function AdminLocationsPage() {
       return
     }
 
-    const rows = (data || []) as LocationRow[]
+    const rows = (data || []) as unknown as LocationRow[]
     setLocations(rows)
     setAuthors(await fetchProfilesMap(supabase, rows.map(r => r.added_by)))
     setError(null)
@@ -104,14 +119,87 @@ export default function AdminLocationsPage() {
     return null
   }
 
-  /** Caută coordonatele după nume + oraș + țară și le salvează. */
+  /**
+   * Caută coordonatele după nume + oraș + țară și le salvează, împreună cu
+   * place id-ul — de el are nevoie mai târziu preluarea pozei.
+   */
   const geocodeOne = async (loc: LocationRow): Promise<boolean> => {
     const query = [loc.name, loc.city, loc.country].filter(Boolean).join(', ')
     const result = await geocodePlace(query)
     if (!result) return false
 
     const saveError = await saveCoords(loc.id, result.latitude, result.longitude)
-    return !saveError
+    if (saveError) return false
+
+    if (result.placeId) await savePlaceId(loc.id, result.placeId)
+    return true
+  }
+
+  const savePlaceId = async (id: string, placeId: string) => {
+    if (!photosSupported) return
+    const supabase = createClient()
+    const { error: updateError } = await supabase
+      .from('locations')
+      .update({ google_place_id: placeId })
+      .eq('id', id)
+
+    if (updateError) {
+      // coloana lipsește => migrarea nu e rulată; ascundem restul funcției
+      setPhotosSupported(false)
+      return
+    }
+    setLocations(prev => prev.map(l => (l.id === id ? { ...l, google_place_id: placeId } : l)))
+  }
+
+  /**
+   * Coperta din Google pentru o locație existentă. Dacă nu-i știm place
+   * id-ul (locațiile vechi n-au unul), îl căutăm întâi după nume.
+   */
+  const photoOne = async (loc: LocationRow): Promise<boolean> => {
+    let placeId = loc.google_place_id || null
+
+    if (!placeId) {
+      const query = [loc.name, loc.city, loc.country].filter(Boolean).join(', ')
+      const result = await geocodePlace(query)
+      placeId = result?.placeId || null
+      if (!placeId) return false
+      await savePlaceId(loc.id, placeId)
+    }
+
+    const supabase = createClient()
+    const url = await attachGoogleCover(supabase, loc.id, placeId)
+    if (!url) return false
+
+    setLocations(prev => prev.map(l => (l.id === loc.id ? { ...l, cover_image: url } : l)))
+    return true
+  }
+
+  const handlePhotoOne = async (loc: LocationRow) => {
+    setPhotoId(loc.id)
+    setError(null)
+    const ok = await photoOne(loc)
+    if (!ok) setError(`Nu am găsit o poză pentru „${loc.name}" în Google.`)
+    setPhotoId(null)
+  }
+
+  /** Ca la geocodare: secvențial, cu pauză, ca să nu lovim limita de rată. */
+  const handlePhotoAll = async () => {
+    const missing = locations.filter(l => !l.cover_image)
+    if (missing.length === 0) return
+    if (!window.confirm(`Caut poze pentru ${missing.length} locații fără copertă. Poate dura câteva minute. Continui?`)) return
+
+    setError(null)
+    setPhotoBulk({ done: 0, total: missing.length, found: 0 })
+
+    let found = 0
+    for (let i = 0; i < missing.length; i++) {
+      const ok = await photoOne(missing[i])
+      if (ok) found++
+      setPhotoBulk({ done: i + 1, total: missing.length, found })
+      if (i < missing.length - 1) await new Promise(r => setTimeout(r, 250))
+    }
+
+    setTimeout(() => setPhotoBulk(null), 4000)
   }
 
   const handleGeocodeOne = async (loc: LocationRow) => {
@@ -154,6 +242,7 @@ export default function AdminLocationsPage() {
   })
 
   const missingCoords = locations.filter(l => l.latitude == null || l.longitude == null).length
+  const missingCovers = locations.filter(l => !l.cover_image).length
 
   const counts = {
     pending: locations.filter(l => l.status === 'pending').length,
@@ -241,6 +330,42 @@ export default function AdminLocationsPage() {
           </div>
         )}
 
+        {/* Coperte din Google */}
+        {PLACES_ENABLED && photosSupported && missingCovers > 0 && (
+          <div className="bg-white border border-[rgba(91,79,207,0.25)] rounded-2xl px-4 py-3 mb-4 flex flex-col md:flex-row md:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-[#0F0F0F]">
+                {missingCovers} {missingCovers === 1 ? 'locație nu are copertă' : 'locații nu au copertă'}
+              </p>
+              <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+                Aducem prima poză a locului din Google. Unde nu există poză, locația rămâne
+                cu imaginea din experiențe.
+              </p>
+            </div>
+
+            {photoBulk ? (
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <div className="w-32 h-1.5 bg-[#F1F1F1] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#5B4FCF] rounded-full transition-all"
+                    style={{ width: `${(photoBulk.done / photoBulk.total) * 100}%` }}
+                  />
+                </div>
+                <span className="text-[12px] text-[#6B6B6B] whitespace-nowrap">
+                  {photoBulk.done}/{photoBulk.total} · {photoBulk.found} găsite
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={handlePhotoAll}
+                className="bg-[#5B4FCF] text-white font-outfit text-[12px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 flex-shrink-0"
+              >
+                <ImagePlus size={13} /> Poze pentru toate
+              </button>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <div className="py-16 flex justify-center">
             <Loader2 size={24} className="animate-spin text-[#E8440A]" />
@@ -279,14 +404,30 @@ export default function AdminLocationsPage() {
                       {loc.experience_count ? ` · ${loc.experience_count} experiențe` : ''}
                     </p>
 
-                    <CoordinatesRow
-                      latitude={loc.latitude}
-                      longitude={loc.longitude}
-                      geocoding={geocodingId === loc.id || !!bulk}
-                      placesEnabled={PLACES_ENABLED}
-                      onGeocode={() => handleGeocodeOne(loc)}
-                      onSave={(lat, lng) => saveCoords(loc.id, lat, lng)}
-                    />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <CoordinatesRow
+                        latitude={loc.latitude}
+                        longitude={loc.longitude}
+                        geocoding={geocodingId === loc.id || !!bulk}
+                        placesEnabled={PLACES_ENABLED}
+                        onGeocode={() => handleGeocodeOne(loc)}
+                        onSave={(lat, lng) => saveCoords(loc.id, lat, lng)}
+                      />
+
+                      {PLACES_ENABLED && photosSupported && !loc.cover_image && (
+                        <button
+                          onClick={() => handlePhotoOne(loc)}
+                          disabled={photoId === loc.id || !!photoBulk}
+                          title="Aduce prima poză a locului din Google"
+                          className="text-[11px] bg-[#EEEDFB] text-[#5B4FCF] px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {photoId === loc.id
+                            ? <Loader2 size={11} className="animate-spin" />
+                            : <ImagePlus size={11} />}
+                          Adaugă poză din Google
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex gap-1.5 flex-wrap md:justify-end flex-shrink-0">

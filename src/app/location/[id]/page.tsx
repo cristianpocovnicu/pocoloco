@@ -29,6 +29,8 @@ type Location = {
   country: string
   description: string | null
   cover_image: string | null
+  /** 'google' când coperta e preluată din Places — atunci dăm atribuirea */
+  cover_source?: string | null
   latitude: number | null
   longitude: number | null
   score: number
@@ -331,6 +333,11 @@ export default function LocationPage() {
           {location.score > 0 && (
             <span className="absolute top-3 right-3 bg-[#E8440A] text-white font-outfit text-sm font-bold px-3 py-1 rounded-full">
               {location.score.toFixed(1)} / 10
+            </span>
+          )}
+          {location.cover_image && location.cover_source === 'google' && (
+            <span className="absolute bottom-2 right-3 text-[10px] text-white/85 bg-black/35 px-2 py-0.5 rounded-full backdrop-blur-sm">
+              Foto: Google
             </span>
           )}
         </div>
