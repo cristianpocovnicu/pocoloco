@@ -58,6 +58,12 @@ export const TRAVEL_STYLES = [
   { id: 'photo', label: 'Fotografie', emoji: '📸', sub: 'Locuri vizuale, peisaje, arhitectură' },
 ]
 
+export const REGIONS = [
+  { id: 'romania', label: 'România', emoji: '🇷🇴', sub: 'Munți, sate, castele, Delta' },
+  { id: 'europa', label: 'Europa', emoji: '🌍', sub: 'City break-uri, coaste, trasee' },
+  { id: 'mondial', label: 'Mondial', emoji: '🧭', sub: 'Oriunde te duce curiozitatea' },
+]
+
 export const TRANSPORT_TYPES = [
   { id: 'car', label: 'Cu mașina', emoji: '🚗' },
   { id: 'walk', label: 'Pe jos', emoji: '🚶' },
