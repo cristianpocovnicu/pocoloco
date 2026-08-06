@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
 import CoverImage from '@/components/ui/CoverImage'
+import TripKindBadge from '@/components/trip/TripKindBadge'
 import Image from 'next/image'
 import { useToast } from '@/components/ui/Toast'
 import {
@@ -33,6 +34,7 @@ type Author = {
   username: string | null
   full_name: string | null
   is_guide: boolean | null
+  role: string | null
 }
 
 export default function TripPage() {
@@ -67,7 +69,7 @@ export default function TripPage() {
       setIsOwner(!!user && user.id === t.author_id)
 
       const [prof, stops, alreadySaved] = await Promise.all([
-        supabase.from('profiles').select('id, username, full_name, is_guide').eq('id', t.author_id).maybeSingle(),
+        supabase.from('profiles').select('id, username, full_name, is_guide, role').eq('id', t.author_id).maybeSingle(),
         fetchItinerary(supabase, t.id),
         user ? isTripSaved(supabase, user.id, t.id) : Promise.resolve(false),
       ])
@@ -186,7 +188,10 @@ export default function TripPage() {
         </div>
 
         <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-          <h1 className="font-outfit text-2xl font-bold text-[#0F0F0F] mb-2">{trip.title}</h1>
+          <div className="mb-2">
+            <TripKindBadge isGuide={trip.is_guide} className="mb-2" />
+            <h1 className="font-outfit text-2xl font-bold text-[#0F0F0F]">{trip.title}</h1>
+          </div>
 
           <div className="flex flex-wrap gap-2 mb-4">
             {trip.duration_days && (
@@ -250,9 +255,14 @@ export default function TripPage() {
                 {initialsOf(author.full_name || author.username)}
               </div>
               <div className="min-w-0">
-                <div className="text-[13px] font-semibold text-[#0F0F0F] truncate flex items-center gap-1.5">
+                <div className="text-[13px] font-semibold text-[#0F0F0F] truncate flex items-center gap-1.5 flex-wrap">
                   {author.full_name || author.username}
                   {author.is_guide && <Star size={11} className="text-[#5B4FCF] fill-[#5B4FCF]" />}
+                  {author.role === 'admin' && (
+                    <span className="text-[10px] font-outfit font-bold px-2 py-0.5 rounded-full bg-[#EEEDFB] text-[#5B4FCF]">
+                      ECHIPA POCOLOCO
+                    </span>
+                  )}
                 </div>
                 <div className="text-[11px] text-[#9B9B9B]">{timeAgo(trip.created_at)}</div>
               </div>

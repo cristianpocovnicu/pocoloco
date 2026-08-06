@@ -12,6 +12,7 @@ import {
   type SuggestedUser,
 } from '@/lib/follows'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
+import TripKindBadge from '@/components/trip/TripKindBadge'
 import CoverImage from '@/components/ui/CoverImage'
 
 export default function FollowingSection() {
@@ -126,9 +127,13 @@ export default function FollowingSection() {
                 {cover
                   ? <CoverImage src={cover} sizes="(max-width: 768px) 220px, 33vw" />
                   : <span>{item.kind === 'trip' ? '🧭' : '📍'}</span>}
-                <span className="absolute top-2 left-2 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase px-2 py-0.5 rounded-full">
-                  {item.kind === 'trip' ? 'Calatorie' : 'Experienta'}
-                </span>
+                {item.kind === 'trip' ? (
+                  <TripKindBadge isGuide={item.isGuide} onCover className="absolute top-2 left-2" />
+                ) : (
+                  <span className="absolute top-2 left-2 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase px-2 py-0.5 rounded-full">
+                    Experienta
+                  </span>
+                )}
               </div>
               <div className="p-3">
                 <div className="flex items-center gap-1.5 mb-1">

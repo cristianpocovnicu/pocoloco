@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Camera, Loader2, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Camera, Check, Loader2, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { TRANSPORT_TYPES } from '@/lib/utils'
 import CountryPicker from '@/components/trip/CountryPicker'
@@ -37,6 +37,8 @@ export default function NewTripPage() {
   const [durationDays, setDurationDays] = useState(3)
   const [transportType, setTransportType] = useState('car')
   const [countries, setCountries] = useState<string[]>([])
+  const [isGuide, setIsGuide] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   // pas 2
   const [items, setItems] = useState<ItineraryDraft[]>([])
@@ -47,8 +49,12 @@ export default function NewTripPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/login')
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { router.push('/login'); return }
+      // steagul de ghid e vizibil doar echipei
+      const { data: prof } = await supabase
+        .from('profiles').select('role').eq('id', data.user.id).maybeSingle()
+      setIsAdmin(prof?.role === 'admin')
     })
   }, [router])
 
@@ -109,6 +115,7 @@ export default function NewTripPage() {
           transport_type: transportType,
           countries,
           cover_image: coverUrl,
+          is_guide: isGuide,
           status: 'active',
         })
         .select('id')
@@ -275,6 +282,27 @@ export default function NewTripPage() {
                   <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Țări vizitate</label>
                   <CountryPicker value={countries} onChange={setCountries} />
                 </div>
+
+                {isAdmin && (
+                  <div className="bg-[#EEEDFB] border border-[rgba(91,79,207,0.2)] rounded-xl px-4 py-3 flex items-start gap-3">
+                    <button
+                      onClick={() => setIsGuide(!isGuide)}
+                      role="checkbox"
+                      aria-checked={isGuide}
+                      aria-label="Publică drept Ghid Pocoloco"
+                      className={`w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center mt-0.5 transition-colors ${isGuide ? 'bg-[#5B4FCF]' : 'bg-white border border-[rgba(91,79,207,0.3)]'}`}
+                    >
+                      {isGuide && <Check size={12} className="text-white" />}
+                    </button>
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#5B4FCF]">Publică drept Ghid Pocoloco</p>
+                      <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+                        Apare cu badge de ghid editorial, înaintea călătoriilor obișnuite.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
           )}

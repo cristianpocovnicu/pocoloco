@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Bookmark, Calendar, Globe, Loader2, MapPin, Plus, Route, Search } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import EmptyState from '@/components/ui/EmptyState'
+import TripKindBadge from '@/components/trip/TripKindBadge'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, colorFor, initialsOf, type MiniProfile } from '@/lib/profiles'
 import { cn, formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
@@ -11,6 +12,13 @@ import type { Trip } from '@/lib/trips'
 import CoverImage from '@/components/ui/CoverImage'
 
 type SortKey = 'popular' | 'recent'
+type KindFilter = 'all' | 'guides' | 'community'
+
+const KIND_FILTERS: { id: KindFilter; label: string }[] = [
+  { id: 'all', label: 'Toate' },
+  { id: 'guides', label: 'Ghiduri' },
+  { id: 'community', label: 'De la comunitate' },
+]
 
 const SORTS: { id: SortKey; label: string }[] = [
   { id: 'popular', label: 'Populare' },
@@ -24,11 +32,12 @@ export default function TripsPage() {
   const [authors, setAuthors] = useState<Record<string, MiniProfile>>({})
   const [stopCounts, setStopCounts] = useState<Record<string, number>>({})
   const [sort, setSort] = useState<SortKey>('popular')
+  const [kind, setKind] = useState<KindFilter>('all')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async (sortKey: SortKey, q: string) => {
+  const load = useCallback(async (sortKey: SortKey, q: string, kindFilter: KindFilter) => {
     setLoading(true)
     const supabase = createClient()
 
@@ -38,8 +47,11 @@ export default function TripsPage() {
       .eq('status', 'active')
       .limit(PAGE_SIZE)
 
+    if (kindFilter === 'guides') request = request.eq('is_guide', true)
+    if (kindFilter === 'community') request = request.eq('is_guide', false)
+
     request = sortKey === 'popular'
-      ? request.order('save_count', { ascending: false }).order('created_at', { ascending: false })
+      ? request.order('is_guide', { ascending: false }).order('save_count', { ascending: false }).order('created_at', { ascending: false })
       : request.order('created_at', { ascending: false })
 
     if (q.trim()) request = request.ilike('title', `%${q.trim()}%`)
@@ -67,9 +79,9 @@ export default function TripsPage() {
   }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => load(sort, query), 300)
+    const timer = setTimeout(() => load(sort, query, kind), 300)
     return () => clearTimeout(timer)
-  }, [sort, query, load])
+  }, [sort, query, kind, load])
 
   return (
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
@@ -113,6 +125,23 @@ export default function TripsPage() {
               />
             </div>
           </div>
+
+          <div className="flex items-center gap-2 mt-2 overflow-x-auto scrollbar-hide">
+            {KIND_FILTERS.map(f => (
+              <button
+                key={f.id}
+                onClick={() => setKind(f.id)}
+                className={cn(
+                  'text-[12px] px-3 py-1 rounded-full font-outfit font-medium border whitespace-nowrap flex-shrink-0',
+                  kind === f.id
+                    ? 'bg-[#5B4FCF] text-white border-[#5B4FCF]'
+                    : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -153,6 +182,7 @@ export default function TripsPage() {
                     {trip.cover_image
                       ? <CoverImage src={trip.cover_image} />
                       : <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">🧭</div>}
+                    <TripKindBadge isGuide={trip.is_guide} onCover className="absolute top-2.5 left-2.5" />
                     {(trip.save_count || 0) > 0 && (
                       <span className="absolute top-2.5 right-2.5 bg-black/45 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Bookmark size={9} /> {formatCount(trip.save_count || 0)}

@@ -11,6 +11,9 @@ export type Trip = {
   countries: string[] | null
   cover_image: string | null
   save_count: number | null
+  featured?: boolean | null
+  /** ghid editorial, scris de echipă — vezi 20260807_trip_guides.sql */
+  is_guide?: boolean | null
   status: string
   created_at: string
 }

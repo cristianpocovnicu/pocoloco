@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { Bookmark, Calendar, Globe } from 'lucide-react'
 import CoverImage from '@/components/ui/CoverImage'
+import TripKindBadge from '@/components/trip/TripKindBadge'
 import { formatCount } from '@/lib/utils'
 import type { SavedTrip } from '@/lib/saves'
 
@@ -29,6 +30,7 @@ export default function SavedTripList({ items }: { items: SavedTrip[] }) {
           </div>
 
           <div className="flex-1 p-3.5 min-w-0">
+            <TripKindBadge isGuide={trip.is_guide} className="mb-1" />
             <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight line-clamp-2 mb-1.5">
               {trip.title}
             </h3>

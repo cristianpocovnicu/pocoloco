@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Loader2, MapPin, Route, Users } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
+import TripKindBadge from '@/components/trip/TripKindBadge'
 import EmptyState from '@/components/ui/EmptyState'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
@@ -122,9 +123,13 @@ export default function FollowingPage() {
                             {item.author?.full_name || item.author?.username || 'User'}
                           </div>
                           <div className="flex items-center gap-1 text-[11px] text-[#9B9B9B]">
-                            <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
-                              {item.kind === 'trip' ? 'Calatorie' : 'Experienta'}
-                            </span>
+                            {item.kind === 'trip' ? (
+                              <TripKindBadge isGuide={item.isGuide} />
+                            ) : (
+                              <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
+                                Experienta
+                              </span>
+                            )}
                           </div>
                         </div>
                       </Link>

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Bookmark, ArrowUp, Loader2 } from 'lucide-re
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, colorFor, initialsOf, type MiniProfile } from '@/lib/profiles'
 import { formatCount } from '@/lib/utils'
+import TripKindBadge from '@/components/trip/TripKindBadge'
 import CoverImage from '@/components/ui/CoverImage'
 
 type FeaturedCard = {
@@ -16,6 +17,7 @@ type FeaturedCard = {
   metric: number
   author: MiniProfile | null
   href: string
+  isGuide?: boolean | null
 }
 
 const GRADIENTS = [
@@ -35,6 +37,7 @@ type TripRow = {
   duration_days: number | null
   save_count: number | null
   author_id: string
+  is_guide?: boolean | null
 }
 
 type ExperienceRow = {
@@ -60,9 +63,10 @@ export default function FeaturedSection() {
       // cele promovate de admin primele, apoi cele mai salvate
       const { data: trips } = await supabase
         .from('trips')
-        .select('id, title, cover_image, countries, duration_days, save_count, author_id')
+        .select('id, title, cover_image, countries, duration_days, save_count, author_id, is_guide')
         .eq('status', 'active')
         .order('featured', { ascending: false })
+        .order('is_guide', { ascending: false })
         .order('save_count', { ascending: false })
         .limit(6)
 
@@ -81,6 +85,7 @@ export default function FeaturedSection() {
           metric: t.save_count || 0,
           author: authors[t.author_id] || null,
           href: `/trip/${t.id}`,
+          isGuide: t.is_guide,
         })))
         setLoading(false)
         return
@@ -182,9 +187,13 @@ export default function FeaturedSection() {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
 
-            <span className="absolute top-2.5 left-2.5 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
-              {card.kind === 'trip' ? 'Calatorie' : 'Experienta'}
-            </span>
+            {card.kind === 'trip' ? (
+              <TripKindBadge isGuide={card.isGuide} onCover className="absolute top-2.5 left-2.5" />
+            ) : (
+              <span className="absolute top-2.5 left-2.5 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
+                Experienta
+              </span>
+            )}
             {card.metric > 0 && (
               <span className="absolute top-2.5 right-2.5 bg-black/45 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
                 {card.kind === 'trip' ? <Bookmark size={9} /> : <ArrowUp size={9} />} {formatCount(card.metric)}

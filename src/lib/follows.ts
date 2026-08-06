@@ -107,6 +107,7 @@ export type FeedItem = {
   cover_image?: string | null
   countries?: string[]
   duration_days?: number | null
+  isGuide?: boolean | null
   href: string
 }
 
@@ -128,6 +129,7 @@ type TripRow = {
   duration_days: number | null
   created_at: string
   author_id: string
+  is_guide: boolean | null
 }
 
 /**
@@ -153,7 +155,7 @@ export async function fetchFollowingFeed(
 
   let tripQuery = supabase
     .from('trips')
-    .select('id, title, description, cover_image, countries, duration_days, created_at, author_id')
+    .select('id, title, description, cover_image, countries, duration_days, created_at, author_id, is_guide')
     .in('author_id', authorIds)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -197,6 +199,7 @@ export async function fetchFollowingFeed(
       cover_image: t.cover_image,
       countries: t.countries || [],
       duration_days: t.duration_days,
+      isGuide: t.is_guide,
       href: `/trip/${t.id}`,
     })),
   ]

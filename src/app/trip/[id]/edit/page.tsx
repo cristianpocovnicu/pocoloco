@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, ArrowDown, ArrowUp, Camera, Loader2, MapPin, Plus, Search, Trash2, X,
+  ArrowLeft, ArrowDown, ArrowUp, Camera, Check, Loader2, Trash2, X,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { fetchItinerary, type Trip } from '@/lib/trips'
@@ -40,6 +40,8 @@ export default function EditTripPage() {
   const [durationDays, setDurationDays] = useState(1)
   const [transportType, setTransportType] = useState('car')
   const [countries, setCountries] = useState<string[]>([])
+  const [isGuide, setIsGuide] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
@@ -58,9 +60,11 @@ export default function EditTripPage() {
 
       const { data: { user } } = await supabase.auth.getUser()
       let canEdit = !!user && user.id === trip.author_id
-      if (user && !canEdit) {
+      if (user) {
         const { data: prof } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-        canEdit = prof?.role === 'admin'
+        const admin = prof?.role === 'admin'
+        setIsAdmin(admin)
+        if (!canEdit) canEdit = admin
       }
       setAllowed(canEdit)
 
@@ -71,6 +75,7 @@ export default function EditTripPage() {
         setTransportType(trip.transport_type || 'car')
         setCountries(trip.countries || [])
         setCoverUrl(trip.cover_image)
+        setIsGuide(!!trip.is_guide)
 
         const itinerary = await fetchItinerary(supabase, trip.id)
         setRows(itinerary.map(item => ({
@@ -156,6 +161,7 @@ export default function EditTripPage() {
           transport_type: transportType,
           countries,
           cover_image: finalCover,
+          ...(isAdmin ? { is_guide: isGuide } : {}),
         })
         .eq('id', id)
 
@@ -311,6 +317,26 @@ export default function EditTripPage() {
               <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Țări</label>
               <CountryPicker value={countries} onChange={setCountries} />
             </div>
+            {isAdmin && (
+              <div className="bg-[#EEEDFB] border border-[rgba(91,79,207,0.2)] rounded-xl px-4 py-3 flex items-start gap-3">
+                <button
+                  onClick={() => setIsGuide(!isGuide)}
+                  role="checkbox"
+                  aria-checked={isGuide}
+                  aria-label="Publică drept Ghid Pocoloco"
+                  className={`w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center mt-0.5 transition-colors ${isGuide ? 'bg-[#5B4FCF]' : 'bg-white border border-[rgba(91,79,207,0.3)]'}`}
+                >
+                  {isGuide && <Check size={12} className="text-white" />}
+                </button>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#5B4FCF]">Publică drept Ghid Pocoloco</p>
+                  <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+                    Apare cu badge de ghid editorial, înaintea călătoriilor obișnuite.
+                  </p>
+                </div>
+              </div>
+            )}
+
           </div>
         </section>
 
