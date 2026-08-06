@@ -9,6 +9,7 @@ import { cn, CATEGORIES, CATEGORY_ICONS } from '@/lib/utils'
 import { fetchFollowingIds, type SuggestedUser } from '@/lib/follows'
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches'
 import { LocationRowSkeleton } from '@/components/ui/Skeleton'
+import { fetchLocationCovers } from '@/lib/covers'
 import DynamicMap from '@/components/map/DynamicMap'
 import CoverImage from '@/components/ui/CoverImage'
 
@@ -46,6 +47,7 @@ export default function SearchPage() {
   const [activeChip, setActiveChip] = useState('Toate')
   const [minScore, setMinScore] = useState(0)
   const [results, setResults] = useState<Location[]>([])
+  const [covers, setCovers] = useState<Record<string, string>>({})
   const [users, setUsers] = useState<SuggestedUser[]>([])
   const [followingIds, setFollowingIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,7 +89,15 @@ export default function SearchPage() {
     const { data, error: searchError } = await req
     // fără asta, o căutare picată arată identic cu „niciun rezultat"
     setError(searchError ? 'Nu am putut încărca locurile. Verifică conexiunea și încearcă din nou.' : null)
-    setResults(data || [])
+    const rows = (data || []) as Location[]
+    setResults(rows)
+
+    const missing = rows.filter(l => !l.cover_image).map(l => l.id)
+    if (missing.length > 0) {
+      const found = await fetchLocationCovers(supabase, missing)
+      setCovers(prev => ({ ...prev, ...found }))
+    }
+
     setLoading(false)
   }, [])
 
@@ -442,8 +452,8 @@ export default function SearchPage() {
             {results.map(loc => (
               <Link key={loc.id} href={`/location/${loc.id}`} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex hover:border-[rgba(0,0,0,0.15)] transition-colors">
                 <div className="relative w-24 flex-shrink-0 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center text-4xl">
-                  {loc.cover_image
-                    ? <CoverImage src={loc.cover_image} alt={loc.name} sizes="96px" />
+                  {loc.cover_image || covers[loc.id]
+                    ? <CoverImage src={(loc.cover_image || covers[loc.id]) as string} alt={loc.name} sizes="96px" />
                     : (CATEGORY_ICONS[loc.category || ''] || '📍')
                   }
                 </div>

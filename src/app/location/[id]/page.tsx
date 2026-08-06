@@ -16,6 +16,7 @@ import PhotoGallery from '@/components/location/PhotoGallery'
 import VisitPrompt from '@/components/location/VisitPrompt'
 import DynamicMap from '@/components/map/DynamicMap'
 import { getLocationSaveStatus, setLocationSaveStatus, type SaveStatus } from '@/lib/saves'
+import { fetchLocationCovers } from '@/lib/covers'
 import { useToast } from '@/components/ui/Toast'
 import Image from 'next/image'
 import CoverImage from '@/components/ui/CoverImage'
@@ -91,6 +92,7 @@ export default function LocationPage() {
   const [editing, setEditing] = useState<EditableExperience | null>(null)
   const [relatedTrips, setRelatedTrips] = useState<RelatedTrip[]>([])
   const [nearby, setNearby] = useState<NearbyLocation[]>([])
+  const [nearbyCovers, setNearbyCovers] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const fetch = async () => {
@@ -180,7 +182,11 @@ export default function LocationPage() {
           p_exclude_id: id,
           p_limit: 6,
         })
-        setNearby((near || []) as NearbyLocation[])
+        const places = (near || []) as NearbyLocation[]
+        setNearby(places)
+
+        const missing = places.filter(pl => !pl.cover_image).map(pl => pl.id)
+        if (missing.length > 0) setNearbyCovers(await fetchLocationCovers(supabase, missing))
       }
 
       setLoading(false)
@@ -633,8 +639,8 @@ export default function LocationPage() {
                   className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(0,0,0,0.15)] transition-colors"
                 >
                   <div className="relative h-20 bg-[#F8F7F5] flex items-center justify-center text-2xl">
-                    {place.cover_image
-                      ? <CoverImage src={place.cover_image} sizes="(max-width: 768px) 50vw, 240px" />
+                    {place.cover_image || nearbyCovers[place.id]
+                      ? <CoverImage src={(place.cover_image || nearbyCovers[place.id]) as string} sizes="(max-width: 768px) 50vw, 240px" />
                       : (CATEGORY_ICONS[place.category || ''] || '📍')}
                     {(place.score || 0) > 0 && (
                       <span className="absolute top-1.5 right-1.5 bg-[#E8440A] text-white font-outfit text-[10px] font-bold px-1.5 py-0.5 rounded-lg">

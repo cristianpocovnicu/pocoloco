@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { CATEGORY_ICONS } from '@/lib/utils'
+import { fetchLocationCovers } from '@/lib/covers'
 import CoverImage from '@/components/ui/CoverImage'
 
 type PopularLocation = {
@@ -19,6 +20,7 @@ type PopularLocation = {
 
 export default function PopularLocationsSection() {
   const [locations, setLocations] = useState<PopularLocation[]>([])
+  const [covers, setCovers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -32,7 +34,13 @@ export default function PopularLocationsSection() {
         .order('score', { ascending: false })
         .limit(6)
 
-      setLocations((data || []) as PopularLocation[])
+      const rows = (data || []) as PopularLocation[]
+      setLocations(rows)
+
+      // pentru cardurile fără cover, luăm prima poză din experiențe
+      const missing = rows.filter(l => !l.cover_image).map(l => l.id)
+      if (missing.length > 0) setCovers(await fetchLocationCovers(supabase, missing))
+
       setLoading(false)
     }
     load()
@@ -64,8 +72,8 @@ export default function PopularLocationsSection() {
             className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(0,0,0,0.15)] transition-colors"
           >
             <div className="h-24 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center relative">
-              {loc.cover_image
-                ? <CoverImage src={loc.cover_image} sizes="(max-width: 768px) 50vw, 340px" />
+              {loc.cover_image || covers[loc.id]
+                ? <CoverImage src={(loc.cover_image || covers[loc.id]) as string} sizes="(max-width: 768px) 50vw, 340px" />
                 : <span className="text-3xl opacity-70">{CATEGORY_ICONS[loc.category || ''] || '📍'}</span>}
               {(loc.score || 0) > 0 && (
                 <span className="absolute top-2 right-2 bg-[#E8440A] text-white font-outfit text-[10px] font-bold px-1.5 py-0.5 rounded-lg">
