@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CornerDownRight, Loader2, Send, Trash2 } from 'lucide-react'
+import { CornerDownRight, Loader2, Pencil, Send, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import {
@@ -10,6 +10,7 @@ import {
   buildThread,
   deleteComment,
   fetchCommentsFor,
+  updateComment,
   type CommentWithAuthor,
 } from '@/lib/comments'
 import { cn, timeAgo } from '@/lib/utils'
@@ -38,6 +39,8 @@ export default function CommentThread({
   const [draft, setDraft] = useState('')
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [replyDraft, setReplyDraft] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -116,8 +119,38 @@ export default function CommentThread({
     onCountChange?.(-removedIds.size)
   }
 
+  const saveEdit = async (comment: CommentWithAuthor) => {
+    if (!editDraft.trim() || sending) return
+
+    setSending(true)
+    setError(null)
+
+    const supabase = createClient()
+    const { updatedAt, error: updateError } = await updateComment(supabase, comment.id, editDraft)
+
+    if (updateError) {
+      setError(updateError)
+    } else {
+      setComments(prev => prev.map(c =>
+        c.id === comment.id
+          ? { ...c, content: editDraft.trim(), updated_at: updatedAt ?? c.updated_at }
+          : c
+      ))
+      setEditingId(null)
+      setEditDraft('')
+    }
+    setSending(false)
+  }
+
   const canDelete = (comment: CommentWithAuthor) =>
     !!viewer && (viewer.id === comment.author_id || viewer.isAdmin)
+
+  // editarea rămâne strict a autorului: adminul poate șterge, nu rescrie
+  const canEdit = (comment: CommentWithAuthor) => !!viewer && viewer.id === comment.author_id
+
+  /** Comentariul a fost modificat după publicare? */
+  const wasEdited = (comment: CommentWithAuthor) =>
+    !!comment.updated_at && new Date(comment.updated_at).getTime() - new Date(comment.created_at).getTime() > 2000
 
   const renderComment = (comment: CommentWithAuthor, isReply: boolean) => (
     <div key={comment.id} className={cn('flex gap-2', isReply && 'pl-4 border-l-2 border-[rgba(0,0,0,0.06)]')}>
@@ -141,31 +174,71 @@ export default function CommentThread({
             ) : (
               <span className="text-[12px] font-semibold text-[#0F0F0F]">User șters</span>
             )}
-            <span className="text-[10px] text-[#9B9B9B]">{timeAgo(comment.created_at)}</span>
+            <span className="text-[10px] text-[#9B9B9B]">
+              {timeAgo(comment.created_at)}{wasEdited(comment) ? ' · editat' : ''}
+            </span>
           </div>
-          <p className="text-[13px] text-[#6B6B6B] leading-relaxed whitespace-pre-line break-words">{comment.content}</p>
-        </div>
 
-        <div className="flex items-center gap-3 mt-1 px-1">
-          <button
-            onClick={() => {
-              // răspunsul la un răspuns rămâne pe nivelul 2, sub același părinte
-              setReplyTo(comment.parent_id || comment.id)
-              setReplyDraft(isReply && comment.author?.username ? `@${comment.author.username} ` : '')
-            }}
-            className="text-[11px] text-[#9B9B9B] font-medium hover:text-[#5B4FCF] transition-colors"
-          >
-            Răspunde
-          </button>
-          {canDelete(comment) && (
-            <button
-              onClick={() => remove(comment)}
-              className="text-[11px] text-[#9B9B9B] font-medium hover:text-[#DC2626] transition-colors flex items-center gap-0.5"
-            >
-              <Trash2 size={10} /> Șterge
-            </button>
+          {editingId === comment.id ? (
+            <div className="flex flex-col gap-2 mt-1">
+              <textarea
+                value={editDraft}
+                onChange={e => setEditDraft(e.target.value.slice(0, 2000))}
+                rows={3}
+                autoFocus
+                className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#E8440A] transition-colors resize-none leading-relaxed"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => saveEdit(comment)}
+                  disabled={sending || !editDraft.trim()}
+                  className="text-[11px] bg-[#E8440A] text-white px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"
+                >
+                  {sending ? <Loader2 size={11} className="animate-spin" /> : null} Salvează
+                </button>
+                <button
+                  onClick={() => { setEditingId(null); setEditDraft('') }}
+                  className="text-[11px] text-[#9B9B9B] px-2 py-1.5 font-medium"
+                >
+                  Anulează
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[13px] text-[#6B6B6B] leading-relaxed whitespace-pre-line break-words">{comment.content}</p>
           )}
         </div>
+
+        {editingId !== comment.id && (
+          <div className="flex items-center gap-3 mt-1 px-1">
+            <button
+              onClick={() => {
+                // răspunsul la un răspuns rămâne pe nivelul 2, sub același părinte
+                setReplyTo(comment.parent_id || comment.id)
+                setReplyDraft(isReply && comment.author?.username ? `@${comment.author.username} ` : '')
+              }}
+              className="text-[11px] text-[#9B9B9B] font-medium hover:text-[#5B4FCF] transition-colors"
+            >
+              Răspunde
+            </button>
+            {canEdit(comment) && (
+              <button
+                onClick={() => { setEditingId(comment.id); setEditDraft(comment.content); setReplyTo(null) }}
+                className="text-[11px] text-[#9B9B9B] font-medium hover:text-[#5B4FCF] transition-colors flex items-center gap-0.5"
+              >
+                <Pencil size={10} /> Editează
+              </button>
+            )}
+            {canDelete(comment) && (
+              <button
+                onClick={() => remove(comment)}
+                className="text-[11px] text-[#9B9B9B] font-medium hover:text-[#DC2626] transition-colors flex items-center gap-0.5"
+              >
+                <Trash2 size={10} /> Șterge
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

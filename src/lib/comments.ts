@@ -8,6 +8,7 @@ export type CommentWithAuthor = {
   parent_id: string | null
   content: string
   created_at: string
+  updated_at: string | null
   author: MiniProfile | null
 }
 
@@ -27,7 +28,7 @@ export async function fetchCommentsFor(
 
   const { data, error } = await supabase
     .from('comments')
-    .select('id, experience_id, author_id, parent_id, content, created_at')
+    .select('id, experience_id, author_id, parent_id, content, created_at, updated_at')
     .in('experience_id', ids)
     .order('created_at', { ascending: true })
 
@@ -85,7 +86,7 @@ export async function addComment(
       parent_id: input.parentId,
       content,
     })
-    .select('id, experience_id, author_id, parent_id, content, created_at')
+    .select('id, experience_id, author_id, parent_id, content, created_at, updated_at')
     .single()
 
   if (error || !data) return { comment: null, error: error?.message ?? 'Nu am putut salva comentariul.' }
@@ -103,4 +104,24 @@ export async function deleteComment(
 ): Promise<string | null> {
   const { error } = await supabase.from('comments').delete().eq('id', commentId)
   return error?.message ?? null
+}
+
+/** Modifică textul unui comentariu. updated_at e pus de trigger în DB. */
+export async function updateComment(
+  supabase: SupabaseClient,
+  commentId: string,
+  content: string
+): Promise<{ updatedAt: string | null; error: string | null }> {
+  const trimmed = content.trim()
+  if (!trimmed) return { updatedAt: null, error: 'Comentariul nu poate rămâne gol.' }
+
+  const { data, error } = await supabase
+    .from('comments')
+    .update({ content: trimmed })
+    .eq('id', commentId)
+    .select('updated_at')
+    .single()
+
+  if (error) return { updatedAt: null, error: error.message }
+  return { updatedAt: (data as { updated_at: string | null })?.updated_at ?? null, error: null }
 }
