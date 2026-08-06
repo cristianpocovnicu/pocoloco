@@ -80,12 +80,29 @@ export default function RegisterPage() {
             </div>
           </div>
         </div>
-        <button onClick={() => setAgreed(!agreed)} className="w-full flex items-start gap-3 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-3.5 py-3 mb-5 text-left">
-          <div className={`w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center mt-0.5 transition-colors ${agreed ? 'bg-[#E8440A]' : 'bg-white border border-[rgba(0,0,0,0.15)]'}`}>
+        {/* checkbox și text sunt frați: linkurile n-au voie într-un <button> */}
+        <div className="w-full flex items-start gap-3 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-3.5 py-3 mb-5">
+          <button
+            onClick={() => setAgreed(!agreed)}
+            role="checkbox"
+            aria-checked={agreed}
+            aria-label="Accept termenii și politica de confidențialitate"
+            className={`w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center mt-0.5 transition-colors ${agreed ? 'bg-[#E8440A]' : 'bg-white border border-[rgba(0,0,0,0.15)]'}`}
+          >
             {agreed && <Check size={12} className="text-white" />}
-          </div>
-          <p className="text-[12px] text-[#6B6B6B] leading-relaxed">Accept <span className="text-[#E8440A] font-medium">Termenii și condițiile</span> și <span className="text-[#E8440A] font-medium">Politica de confidențialitate</span> Pocoloco.</p>
-        </button>
+          </button>
+          <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+            Accept{' '}
+            <Link href="/termeni" target="_blank" className="text-[#E8440A] font-medium underline">
+              Termenii și condițiile
+            </Link>{' '}
+            și{' '}
+            <Link href="/confidentialitate" target="_blank" className="text-[#E8440A] font-medium underline">
+              Politica de confidențialitate
+            </Link>{' '}
+            Pocoloco.
+          </p>
+        </div>
         <button onClick={handleRegister} disabled={loading} className="w-full bg-[#E8440A] text-white font-outfit text-[15px] font-bold py-4 rounded-full text-center mb-4 flex items-center justify-center gap-2 disabled:opacity-70">
           {loading && <Loader2 size={18} className="animate-spin" />}
           {loading ? 'Se creează contul...' : 'Creează cont gratuit'}

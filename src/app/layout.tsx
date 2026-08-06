@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import '@/styles/globals.css'
 import Sidebar from '@/components/layout/Sidebar'
+import Footer from '@/components/layout/Footer'
 
 export const metadata: Metadata = {
   title: 'Pocoloco — Experiențe reale de la călători reali',
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex-1 min-w-0 flex flex-col items-center">
             <div className="w-full">
               {children}
+              <Footer />
             </div>
           </div>
         </div>
