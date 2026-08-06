@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   const handleLogin = async () => {
     if (!email || !password) { setError('Completează email și parola.'); return }
@@ -21,6 +22,22 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError('Email sau parolă incorectă.'); setLoading(false) }
     else { router.push('/'); router.refresh() }
+  }
+
+  // linkul de recuperare duce în /auth/callback, care deschide sesiunea;
+  // de acolo parola nouă se pune din /settings
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Scrie întâi adresa de email, apoi apasă „Ai uitat parola?".')
+      return
+    }
+    setError(''); setNotice('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=/settings`,
+    })
+    if (error) setError(error.message)
+    else setNotice(`Ți-am trimis un link de resetare la ${email.trim()}. Deschide-l și pune parola nouă din Setări.`)
   }
 
   return (
@@ -41,6 +58,7 @@ export default function LoginPage() {
           <div className="flex-1 h-px bg-[rgba(0,0,0,0.08)]" />
         </div>
         {error && <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3 mb-4"><p className="text-[13px] text-[#DC2626]">{error}</p></div>}
+        {notice && <div className="bg-[#ECFDF5] border border-[rgba(5,150,105,0.2)] rounded-xl px-4 py-3 mb-4"><p className="text-[13px] text-[#059669]">{notice}</p></div>}
         <div className="flex flex-col gap-4 mb-5">
           <div>
             <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Email</label>
@@ -54,7 +72,9 @@ export default function LoginPage() {
                 {showPass ? <EyeOff size={16} className="text-[#9B9B9B]" /> : <Eye size={16} className="text-[#9B9B9B]" />}
               </button>
             </div>
-            <div className="text-right mt-1.5"><button className="text-[12px] text-[#E8440A] font-medium">Ai uitat parola?</button></div>
+            <div className="text-right mt-1.5">
+              <button onClick={handleForgotPassword} className="text-[12px] text-[#E8440A] font-medium">Ai uitat parola?</button>
+            </div>
           </div>
         </div>
         <button onClick={handleLogin} disabled={loading} className="w-full bg-[#E8440A] text-white font-outfit text-[15px] font-bold py-4 rounded-full text-center mb-4 flex items-center justify-center gap-2 disabled:opacity-70">

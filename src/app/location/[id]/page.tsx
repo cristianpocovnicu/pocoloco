@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Globe } from 'lucide-react'
+import { ArrowLeft, Bookmark, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
-import { formatCount, timeAgo } from '@/lib/utils'
+import { formatCount, timeAgo, shareLink } from '@/lib/utils'
 import { fetchMyVotes, type VoteType } from '@/lib/votes'
 import { fetchCommentsFor, type CommentWithAuthor } from '@/lib/comments'
 import BottomNav from '@/components/layout/BottomNav'
@@ -55,6 +55,7 @@ export default function LocationPage() {
   // locațiile neaprobate sunt vizibile doar celui care le-a adăugat și adminilor
   const [canModerate, setCanModerate] = useState(false)
   const [blocked, setBlocked] = useState(false)
+  const [shareNote, setShareNote] = useState('')
 
   useEffect(() => {
     const fetch = async () => {
@@ -134,6 +135,14 @@ export default function LocationPage() {
     }
   }
 
+  const handleShare = async () => {
+    const result = await shareLink(window.location.href, location?.name)
+    if (result === 'copied') {
+      setShareNote('Link copiat')
+      setTimeout(() => setShareNote(''), 2000)
+    }
+  }
+
   const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
 
   const avgRating = (key: 'rating_experience' | 'rating_access' | 'rating_crowd') => {
@@ -173,9 +182,7 @@ export default function LocationPage() {
           <ArrowLeft size={16} className="text-[#6B6B6B]" />
         </button>
         <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F] truncate mx-3 flex-1 text-center">{location.name}</span>
-        <button className="w-8 h-8 rounded-full bg-[#EEEDFB] flex items-center justify-center">
-          <Globe size={16} className="text-[#5B4FCF]" />
-        </button>
+        <div className="w-8 flex-shrink-0" />
       </div>
 
       <div className="max-w-[680px] mx-auto">
@@ -219,11 +226,11 @@ export default function LocationPage() {
             <button onClick={handleSave} className={`flex-1 font-outfit text-sm font-semibold rounded-full py-2.5 flex items-center justify-center gap-2 transition-colors ${saved ? 'bg-[#FFF0EB] text-[#E8440A] border border-[rgba(232,68,10,0.2)]' : 'bg-[#E8440A] text-white'}`}>
               <Bookmark size={15} fill={saved ? '#E8440A' : 'none'} /> {saved ? 'Salvat' : 'Vreau să merg'}
             </button>
-            <button className="bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-sm font-medium rounded-full px-4 py-2.5 flex items-center gap-2">
-              <CheckCircle size={15} /> Am fost
-            </button>
-            <button className="w-10 h-10 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0">
-              <Share2 size={16} className="text-[#6B6B6B]" />
+            <button
+              onClick={handleShare}
+              className="bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-sm font-medium rounded-full px-4 py-2.5 flex items-center gap-2 flex-shrink-0"
+            >
+              <Share2 size={15} /> {shareNote || 'Share'}
             </button>
           </div>
         </div>

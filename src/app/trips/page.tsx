@@ -24,6 +24,7 @@ export default function TripsPage() {
   const [sort, setSort] = useState<SortKey>('popular')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async (sortKey: SortKey, q: string) => {
     setLoading(true)
@@ -41,7 +42,8 @@ export default function TripsPage() {
 
     if (q.trim()) request = request.ilike('title', `%${q.trim()}%`)
 
-    const { data } = await request
+    const { data, error: loadError } = await request
+    setError(loadError ? 'Nu am putut încărca călătoriile. Încearcă din nou.' : null)
     const rows = (data || []) as Trip[]
     setTrips(rows)
 
@@ -113,6 +115,12 @@ export default function TripsPage() {
       </div>
 
       <div className="max-w-[680px] mx-auto px-5 pt-4">
+        {error && (
+          <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3 mb-3">
+            <p className="text-[13px] text-[#DC2626]">{error}</p>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 size={26} className="animate-spin text-[#E8440A]" />

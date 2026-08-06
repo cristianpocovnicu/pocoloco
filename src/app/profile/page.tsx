@@ -1,12 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import TopBar from '@/components/layout/TopBar'
 import BottomNav from '@/components/layout/BottomNav'
 import { Settings, Share2, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
-import { formatCount, timeAgo } from '@/lib/utils'
+import { formatCount, timeAgo, shareLink } from '@/lib/utils'
 import Link from 'next/link'
 
 type Profile = {
@@ -40,6 +39,7 @@ export default function ProfilePage() {
   const [counts, setCounts] = useState({ followers: 0, following: 0 })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState(0)
+  const [shareNote, setShareNote] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,6 +74,18 @@ export default function ProfilePage() {
     router.refresh()
   }
 
+  const handleShare = async () => {
+    if (!profile) return
+    const result = await shareLink(
+      `${window.location.origin}/profile/${profile.username}`,
+      `${profile.full_name} pe Pocoloco`
+    )
+    if (result === 'copied') {
+      setShareNote('Link copiat')
+      setTimeout(() => setShareNote(''), 2000)
+    }
+  }
+
   const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
 
   if (loading) return (
@@ -103,9 +115,9 @@ export default function ProfilePage() {
           <button onClick={handleLogout} className="w-8 h-8 rounded-full bg-[#FEF2F2] border border-[rgba(220,38,38,0.1)] flex items-center justify-center">
             <LogOut size={16} className="text-[#DC2626]" />
           </button>
-          <button className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center">
+          <Link href="/settings" className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center" aria-label="Setări">
             <Settings size={16} className="text-[#6B6B6B]" />
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -132,8 +144,11 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-            <button className="bg-[#EEEDFB] text-[#5B4FCF] font-outfit text-[12px] font-semibold px-3 py-2 rounded-full flex items-center gap-1">
-              <Share2 size={13} /> Share
+            <button
+              onClick={handleShare}
+              className="bg-[#EEEDFB] text-[#5B4FCF] font-outfit text-[12px] font-semibold px-3 py-2 rounded-full flex items-center gap-1"
+            >
+              <Share2 size={13} /> {shareNote || 'Share'}
             </button>
           </div>
           <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F]">{profile.full_name}</h1>

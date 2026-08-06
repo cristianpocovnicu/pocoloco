@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { Search, SlidersHorizontal, LayoutList, Map, Loader2 } from 'lucide-react'
+import { Search, Loader2 } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
@@ -24,6 +24,7 @@ export default function SearchPage() {
   const [activeChip, setActiveChip] = useState('Toate')
   const [results, setResults] = useState<Location[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const doSearch = useCallback(async (q: string, cat: string) => {
     setLoading(true)
@@ -38,7 +39,9 @@ export default function SearchPage() {
     if (q.trim()) req = req.ilike('name', `%${q.trim()}%`)
     if (cat !== 'Toate') req = req.eq('category', cat)
 
-    const { data } = await req
+    const { data, error: searchError } = await req
+    // fără asta, o căutare picată arată identic cu „niciun rezultat"
+    setError(searchError ? 'Nu am putut încărca locurile. Verifică conexiunea și încearcă din nou.' : null)
     setResults(data || [])
     setLoading(false)
   }, [])
@@ -65,9 +68,6 @@ export default function SearchPage() {
               />
               {loading && <Loader2 size={14} className="animate-spin text-[#9B9B9B] flex-shrink-0" />}
             </div>
-            <button className="w-9 h-9 rounded-full bg-[#EEEDFB] flex items-center justify-center flex-shrink-0">
-              <SlidersHorizontal size={17} className="text-[#5B4FCF]" />
-            </button>
           </div>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
             {CHIPS.map(chip => (
@@ -79,13 +79,19 @@ export default function SearchPage() {
         </div>
 
         <div className="px-5 pt-4">
-          {!loading && (
+          {error && (
+            <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3 mb-3">
+              <p className="text-[13px] text-[#DC2626]">{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && (
             <div className="flex items-center justify-between mb-3">
               <span className="text-[13px] text-[#9B9B9B]">{results.length} locuri găsite</span>
             </div>
           )}
 
-          {results.length === 0 && !loading && (
+          {results.length === 0 && !loading && !error && (
             <div className="text-center py-12 bg-white rounded-2xl border border-[rgba(0,0,0,0.08)]">
               <div className="text-4xl mb-3">🔍</div>
               <p className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-1">Niciun rezultat</p>

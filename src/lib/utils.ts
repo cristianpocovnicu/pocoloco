@@ -24,6 +24,27 @@ export function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
+/**
+ * Share nativ unde există, altfel copiere în clipboard.
+ * Întoarce ce s-a întâmplat, ca apelantul să poată da feedback.
+ */
+export async function shareLink(url: string, title?: string): Promise<'shared' | 'copied' | 'failed'> {
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    try {
+      await navigator.share({ title, url })
+      return 'shared'
+    } catch {
+      return 'failed' // userul a anulat
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url)
+    return 'copied'
+  } catch {
+    return 'failed'
+  }
+}
+
 export const CATEGORIES = [
   'Castele', 'Natură', 'Muzee', 'Restaurante', 
   'Trasee', 'Orașe', 'Plaje', 'Sate', 'Biserici', 'Altele'
