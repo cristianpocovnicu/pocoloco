@@ -41,11 +41,12 @@ export async function fetchItinerary(
   supabase: SupabaseClient,
   tripId: string
 ): Promise<ItineraryItem[]> {
+  // coloana din bază e day_number; o aliasăm ca `day` pentru restul codului
   const { data, error } = await supabase
     .from('trip_locations')
-    .select('id, location_id, day, note, position')
+    .select('id, location_id, day:day_number, note, position')
     .eq('trip_id', tripId)
-    .order('day', { ascending: true })
+    .order('day_number', { ascending: true })
     .order('position', { ascending: true })
 
   if (error || !data || data.length === 0) return []

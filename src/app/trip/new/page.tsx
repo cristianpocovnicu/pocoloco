@@ -158,7 +158,8 @@ export default function NewTripPage() {
         return {
           trip_id: trip.id,
           location_id: item.location.id,
-          day: item.day,
+          // coloana din bază e day_number, nu day
+          day_number: item.day,
           note: item.note.trim() || null,
           position,
         }
@@ -318,7 +319,13 @@ export default function NewTripPage() {
           {step === 1 && (
             <div>
               <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Construiește itinerarul</h2>
-              <p className="text-[14px] text-[#6B6B6B] mb-5">Caută locuri din Pocoloco și pune-le pe zile.</p>
+              <p className="text-[14px] text-[#6B6B6B] mb-2">
+                Adaugă obiectivele călătoriei — locurile pe care le-ai vizitat. Le poți
+                organiza pe zile sau le lași simplu în ordine.
+              </p>
+              <p className="text-[12px] text-[#9B9B9B] mb-5">
+                Ziua și nota sunt opționale: poți publica și doar cu lista de locuri.
+              </p>
 
               <div className="relative mb-4">
                 <div className="flex items-center gap-2 bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3">
@@ -359,9 +366,11 @@ export default function NewTripPage() {
               </div>
 
               {items.length === 0 ? (
-                <div className="bg-white border border-dashed border-[rgba(0,0,0,0.15)] rounded-2xl py-10 text-center">
+                <div className="bg-white border border-dashed border-[rgba(0,0,0,0.15)] rounded-2xl py-10 text-center px-5">
                   <div className="text-3xl mb-2">🗺️</div>
-                  <p className="text-[13px] text-[#9B9B9B]">Adaugă cel puțin o locație ca să continui.</p>
+                  <p className="text-[13px] text-[#9B9B9B]">
+                    Caută mai sus primul obiectiv. Ai nevoie de cel puțin unul ca să continui.
+                  </p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2.5">
@@ -384,9 +393,10 @@ export default function NewTripPage() {
                         <select
                           value={item.day}
                           onChange={e => updateItem(item.key, { day: Number(e.target.value) })}
+                          aria-label="Ziua (opțional)"
                           className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-lg px-2.5 py-2 text-[12px] outline-none flex-shrink-0"
                         >
-                          {days.map(d => <option key={d} value={d}>Ziua {d}</option>)}
+                          {days.map(d => <option key={d} value={d}>Ziua {d} (opțional)</option>)}
                         </select>
                         <input
                           value={item.note}

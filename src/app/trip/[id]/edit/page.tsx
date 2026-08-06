@@ -212,7 +212,7 @@ export default function EditTripPage() {
       for (const row of withPositions.filter(r => r.rowId)) {
         const { error: updateError } = await supabase
           .from('trip_locations')
-          .update({ day: row.day, note: row.note.trim() || null, position: row.position })
+          .update({ day_number: row.day, note: row.note.trim() || null, position: row.position })
           .eq('id', row.rowId as string)
         if (updateError) throw new Error(`Nu am putut actualiza itinerarul: ${updateError.message}`)
       }
@@ -223,7 +223,7 @@ export default function EditTripPage() {
           added.map(row => ({
             trip_id: id,
             location_id: row.locationId,
-            day: row.day,
+            day_number: row.day,
             note: row.note.trim() || null,
             position: row.position,
           }))
@@ -394,7 +394,9 @@ export default function EditTripPage() {
         {/* Itinerar */}
         <section className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-5">
           <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-1">Itinerar</h2>
-          <p className="text-[12px] text-[#9B9B9B] mb-4">Ordinea din listă dă ordinea opririlor din fiecare zi.</p>
+          <p className="text-[12px] text-[#9B9B9B] mb-4">
+            Ordinea din listă dă ordinea opririlor. Ziua și nota sunt opționale.
+          </p>
 
           <div className="relative mb-4">
             <div className="flex items-center gap-2 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3">
@@ -467,7 +469,7 @@ export default function EditTripPage() {
                     onChange={e => updateRow(row.key, { day: Number(e.target.value) })}
                     className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-lg px-2.5 py-2 text-[12px] outline-none flex-shrink-0"
                   >
-                    {days.map(d => <option key={d} value={d}>Ziua {d}</option>)}
+                    {days.map(d => <option key={d} value={d}>Ziua {d} (opțional)</option>)}
                   </select>
                   <input
                     value={row.note}
