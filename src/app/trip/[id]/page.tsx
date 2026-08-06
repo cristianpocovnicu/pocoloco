@@ -81,7 +81,7 @@ export default function TripPage() {
     setSaveCount(c => Math.max(0, c + (next ? 1 : -1)))
 
     const error = await setTripSaved(supabase, user.id, trip.id, next)
-    if (!error) toast(next ? 'Călătorie salvată' : 'Scoasă din salvate')
+    if (!error) toast(next ? 'Salvat în profilul tău · Salvate' : 'Scoasă din salvate')
     if (error) {
       setSaved(!next)
       setSaveCount(c => Math.max(0, c + (next ? -1 : 1)))

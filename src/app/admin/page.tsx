@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server'
 import { countRows, fetchProfilesMap, CONTENT_TYPE_LABELS } from '@/lib/admin'
 import { timeAgo } from '@/lib/utils'
 import AdminHeader from '@/components/admin/AdminHeader'
+import FlaggedByVotes from '@/components/admin/FlaggedByVotes'
 
 export const dynamic = 'force-dynamic'
 
@@ -229,6 +230,15 @@ export default async function AdminOverviewPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Semnalate de comunitate — votat negativ, dar încă neraportat */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F]">Semnalate de comunitate</h2>
+            <span className="text-[12px] text-[#9B9B9B]">scor net ≤ -3</span>
+          </div>
+          <FlaggedByVotes />
         </div>
 
         {/* Raportări recente */}

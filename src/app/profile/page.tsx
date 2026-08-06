@@ -8,7 +8,8 @@ import { getFollowCounts } from '@/lib/follows'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import BadgeGrid from '@/components/profile/BadgeGrid'
 import SavedLocationList from '@/components/profile/SavedLocationList'
-import { fetchSavedLocations, setLocationSaveStatus, type SavedLocation } from '@/lib/saves'
+import SavedTripList from '@/components/profile/SavedTripList'
+import { fetchSavedLocations, fetchSavedTrips, setLocationSaveStatus, type SavedLocation, type SavedTrip } from '@/lib/saves'
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
 import { formatCount, timeAgo, shareLink } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
@@ -37,7 +38,7 @@ type Experience = {
   location: { id: string; name: string; city: string }
 }
 
-const TABS = ['Experiențe', 'Vreau să merg', 'Am fost', 'Insigne']
+const TABS = ['Experiențe', 'Salvate', 'Am fost', 'Insigne']
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -54,6 +55,7 @@ export default function ProfilePage() {
   const [visited, setVisited] = useState<SavedLocation[]>([])
   const [savedLoading, setSavedLoading] = useState(true)
   const [movingId, setMovingId] = useState<string | null>(null)
+  const [savedTrips, setSavedTrips] = useState<SavedTrip[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,16 +77,18 @@ export default function ProfilePage() {
 
       if (prof) setProfile(prof as Profile)
       if (exps) setExperiences(exps as unknown as Experience[])
-      const [followCounts, userBadges, want, been] = await Promise.all([
+      const [followCounts, userBadges, want, been, trips] = await Promise.all([
         getFollowCounts(supabase, user.id),
         fetchBadges(supabase, user.id),
         fetchSavedLocations(supabase, user.id, 'want_to_go'),
         fetchSavedLocations(supabase, user.id, 'visited'),
+        fetchSavedTrips(supabase, user.id),
       ])
       setCounts(followCounts)
       setBadges(userBadges)
       setWantToGo(want)
       setVisited(been)
+      setSavedTrips(trips)
       setSavedLoading(false)
       setLoading(false)
     }
@@ -301,14 +305,28 @@ export default function ProfilePage() {
           )}
 
           {tab === 1 && (
-            <SavedLocationList
-              items={wantToGo}
-              loading={savedLoading}
-              emptyTitle="Nimic pe listă încă"
-              emptyDescription={'Salvează locurile care te tentează cu „Vreau să merg" și le găsești aici.'}
-              onMarkVisited={markVisited}
-              busyId={movingId}
-            />
+            <div className="flex flex-col gap-6">
+              <div>
+                <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">
+                  Locuri {wantToGo.length > 0 && <span className="text-[#9B9B9B] font-normal">({wantToGo.length})</span>}
+                </h3>
+                <SavedLocationList
+                  items={wantToGo}
+                  loading={savedLoading}
+                  emptyTitle="Niciun loc salvat"
+                  emptyDescription={'Salvează locurile care te tentează cu „Vreau să merg" și le găsești aici.'}
+                  onMarkVisited={markVisited}
+                  busyId={movingId}
+                />
+              </div>
+
+              <div>
+                <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">
+                  Călătorii {savedTrips.length > 0 && <span className="text-[#9B9B9B] font-normal">({savedTrips.length})</span>}
+                </h3>
+                <SavedTripList items={savedTrips} />
+              </div>
+            </div>
           )}
 
           {tab === 2 && (

@@ -76,6 +76,48 @@ export async function setLocationSaveStatus(
   return insertError?.message ?? null
 }
 
+export type SavedTrip = {
+  saved_at: string
+  trip: {
+    id: string
+    title: string
+    cover_image: string | null
+    duration_days: number | null
+    countries: string[] | null
+    save_count: number | null
+  }
+}
+
+/** Călătoriile salvate de user, pentru tabul „Salvate" din profil. */
+export async function fetchSavedTrips(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<SavedTrip[]> {
+  const { data, error } = await supabase
+    .from('saves')
+    .select('created_at, trip_id')
+    .eq('user_id', userId)
+    .not('trip_id', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  if (error || !data || data.length === 0) return []
+
+  const rows = data as { created_at: string; trip_id: string }[]
+  const { data: trips } = await supabase
+    .from('trips')
+    .select('id, title, cover_image, duration_days, countries, save_count')
+    .in('id', rows.map(r => r.trip_id))
+    .eq('status', 'active')
+
+  const byId: Record<string, SavedTrip['trip']> = {}
+  for (const trip of (trips || []) as SavedTrip['trip'][]) byId[trip.id] = trip
+
+  return rows
+    .filter(r => byId[r.trip_id])
+    .map(r => ({ saved_at: r.created_at, trip: byId[r.trip_id] }))
+}
+
 /** Locațiile dintr-o listă, cu datele necesare pentru carduri. */
 export async function fetchSavedLocations(
   supabase: SupabaseClient,

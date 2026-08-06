@@ -225,7 +225,7 @@ export default function LocationPage() {
       // momentul cu amintirea proaspătă — aici se scriu experiențele
       setShowVisitPrompt(true)
     } else if (target === 'want_to_go') {
-      toast('Salvat în „Vreau să merg"')
+      toast('Salvat în profilul tău · Salvate')
     } else {
       toast('Scos din listă')
     }
