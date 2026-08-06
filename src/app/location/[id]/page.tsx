@@ -14,6 +14,7 @@ import CommentThread, { type CommentViewer } from '@/components/experience/Comme
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import PhotoGallery from '@/components/location/PhotoGallery'
 import VisitPrompt from '@/components/location/VisitPrompt'
+import DynamicMap from '@/components/map/DynamicMap'
 import { getLocationSaveStatus, setLocationSaveStatus, type SaveStatus } from '@/lib/saves'
 import { useToast } from '@/components/ui/Toast'
 import Image from 'next/image'
@@ -26,6 +27,8 @@ type Location = {
   country: string
   description: string | null
   cover_image: string | null
+  latitude: number | null
+  longitude: number | null
   score: number
   experience_count: number
   trip_count: number
@@ -357,6 +360,25 @@ export default function LocationPage() {
         {location.description && (
           <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
             <p className="text-[14px] text-[#6B6B6B] leading-relaxed">{location.description}</p>
+          </div>
+        )}
+
+        {/* Harta — doar dacă știm unde e locul */}
+        {location.latitude != null && location.longitude != null && (
+          <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
+            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">Pe hartă</h2>
+            <DynamicMap
+              markers={[{
+                id: location.id,
+                lat: location.latitude,
+                lng: location.longitude,
+                name: location.name,
+                subtitle: location.city,
+                score: location.score,
+              }]}
+              height={200}
+              showDirections
+            />
           </div>
         )}
 

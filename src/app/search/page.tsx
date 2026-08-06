@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, Loader2, MapPin, Users, Clock, X, Star } from 'lucide-react'
+import { Search, Loader2, MapPin, Users, Clock, X, Star, LayoutList, Map as MapIcon } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
@@ -9,6 +9,7 @@ import { cn, CATEGORIES, CATEGORY_ICONS } from '@/lib/utils'
 import { fetchFollowingIds, type SuggestedUser } from '@/lib/follows'
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches'
 import { LocationRowSkeleton } from '@/components/ui/Skeleton'
+import DynamicMap from '@/components/map/DynamicMap'
 import CoverImage from '@/components/ui/CoverImage'
 
 // aceeași listă de categorii ca în restul aplicației, nu una paralelă
@@ -32,10 +33,15 @@ type Location = {
   score: number
   experience_count: number
   cover_image: string | null
+  latitude: number | null
+  longitude: number | null
 }
+
+type View = 'list' | 'map'
 
 export default function SearchPage() {
   const [tab, setTab] = useState<Tab>('locations')
+  const [view, setView] = useState<View>('list')
   const [query, setQuery] = useState('')
   const [activeChip, setActiveChip] = useState('Toate')
   const [minScore, setMinScore] = useState(0)
@@ -69,7 +75,7 @@ export default function SearchPage() {
     const supabase = createClient()
     let req = supabase
       .from('locations')
-      .select('id, name, city, country, category, score, experience_count, cover_image')
+      .select('id, name, city, country, category, score, experience_count, cover_image, latitude, longitude')
       .eq('status', 'approved')
       .order('experience_count', { ascending: false })
       .limit(30)
@@ -154,7 +160,7 @@ export default function SearchPage() {
       const supabase = createClient()
       const { data } = await supabase
         .from('locations')
-        .select('id, name, city, country, category, score, experience_count, cover_image')
+        .select('id, name, city, country, category, score, experience_count, cover_image, latitude, longitude')
         .eq('status', 'approved')
         .ilike('name', `%${query.trim()}%`)
         .order('experience_count', { ascending: false })
@@ -320,12 +326,62 @@ export default function SearchPage() {
           )}
 
           {!loading && !error && (
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between gap-2 mb-3">
               <span className="text-[13px] text-[#9B9B9B]">
                 {tab === 'locations'
                   ? `${results.length} locuri găsite`
                   : `${users.length} ${users.length === 1 ? 'user găsit' : 'useri găsiți'}`}
               </span>
+
+              {tab === 'locations' && results.length > 0 && (
+                <div className="flex bg-white border border-[rgba(0,0,0,0.08)] rounded-full p-0.5 flex-shrink-0">
+                  {([
+                    { id: 'list' as const, label: 'Listă', Icon: LayoutList },
+                    { id: 'map' as const, label: 'Hartă', Icon: MapIcon },
+                  ]).map(({ id, label, Icon }) => (
+                    <button
+                      key={id}
+                      onClick={() => setView(id)}
+                      className={cn(
+                        'flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-outfit font-medium transition-colors',
+                        view === id ? 'bg-[#0F0F0F] text-white' : 'text-[#6B6B6B]'
+                      )}
+                    >
+                      <Icon size={12} /> {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Harta rezultatelor curente */}
+          {tab === 'locations' && view === 'map' && results.length > 0 && (
+            <div>
+              <DynamicMap
+                height={420}
+                markers={results
+                  .filter(loc => loc.latitude != null && loc.longitude != null)
+                  .map(loc => ({
+                    id: loc.id,
+                    lat: loc.latitude as number,
+                    lng: loc.longitude as number,
+                    name: loc.name,
+                    subtitle: [loc.city, loc.category].filter(Boolean).join(' · '),
+                    score: loc.score,
+                    href: `/location/${loc.id}`,
+                  }))}
+              />
+              {(() => {
+                const withoutCoords = results.filter(loc => loc.latitude == null || loc.longitude == null).length
+                if (withoutCoords === 0) return null
+                return (
+                  <p className="text-[11px] text-[#9B9B9B] mt-2.5">
+                    {withoutCoords} {withoutCoords === 1 ? 'loc nu are coordonate' : 'locuri nu au coordonate'} și
+                    {withoutCoords === 1 ? ' apare' : ' apar'} doar în listă.
+                  </p>
+                )
+              })()}
             </div>
           )}
 
@@ -382,7 +438,7 @@ export default function SearchPage() {
             <UserSuggestionList users={users} followingIds={followingIds} />
           )}
 
-          <div className={cn('flex-col gap-3', tab === 'locations' ? 'flex' : 'hidden')}>
+          <div className={cn('flex-col gap-3', tab === 'locations' && view === 'list' ? 'flex' : 'hidden')}>
             {results.map(loc => (
               <Link key={loc.id} href={`/location/${loc.id}`} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex hover:border-[rgba(0,0,0,0.15)] transition-colors">
                 <div className="relative w-24 flex-shrink-0 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center text-4xl">
