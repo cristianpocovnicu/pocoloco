@@ -1,0 +1,78 @@
+'use client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Home, Search, Users, Plus, Bell, Settings } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import UserMenu from './UserMenu'
+
+const NAV_LINKS = [
+  { href: '/', label: 'Acasă', Icon: Home },
+  { href: '/search', label: 'Caută', Icon: Search },
+  { href: '/following', label: 'Urmaresc', Icon: Users },
+  { href: '/add-experience', label: 'Creează', Icon: Plus },
+]
+
+const NAV_BOTTOM = [
+  { href: '/notifications', label: 'Notificări', Icon: Bell },
+  { href: '/settings', label: 'Setări', Icon: Settings },
+]
+
+export default function Sidebar() {
+  const pathname = usePathname()
+
+  return (
+    <aside className="hidden md:flex w-[220px] flex-shrink-0 flex-col bg-white border-r border-[rgba(0,0,0,0.08)] sticky top-0 h-screen">
+      <Link href="/" className="font-outfit text-[22px] font-bold text-[#E8440A] px-6 pt-6 pb-7 block">
+        🧭 pocoloco
+      </Link>
+
+      <nav className="flex-1">
+        {NAV_LINKS.map(({ href, label, Icon }) => {
+          const active = pathname === href
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                'flex items-center gap-3 px-6 py-3 font-outfit text-[15px] font-medium transition-all relative',
+                active
+                  ? 'text-[#0F0F0F] font-semibold'
+                  : 'text-[#6B6B6B] hover:bg-[#F8F7F5] hover:text-[#0F0F0F]'
+              )}
+            >
+              {active && <div className="absolute left-0 top-[20%] bottom-[20%] w-[3px] bg-[#E8440A] rounded-r" />}
+              <Icon size={21} strokeWidth={active ? 2.5 : 1.8} />
+              {label}
+            </Link>
+          )
+        })}
+
+        <div className="h-px bg-[rgba(0,0,0,0.08)] mx-6 my-3" />
+
+        {NAV_BOTTOM.map(({ href, label, Icon }) => {
+          const active = pathname === href
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                'flex items-center gap-3 px-6 py-3 font-outfit text-[15px] font-medium transition-all relative',
+                active
+                  ? 'text-[#0F0F0F] font-semibold'
+                  : 'text-[#6B6B6B] hover:bg-[#F8F7F5] hover:text-[#0F0F0F]'
+              )}
+            >
+              {active && <div className="absolute left-0 top-[20%] bottom-[20%] w-[3px] bg-[#E8440A] rounded-r" />}
+              <Icon size={21} strokeWidth={active ? 2.5 : 1.8} />
+              {label}
+            </Link>
+          )
+        })}
+      </nav>
+
+      <div className="px-6 py-5 border-t border-[rgba(0,0,0,0.08)]">
+        <UserMenu sidebar />
+      </div>
+    </aside>
+  )
+}

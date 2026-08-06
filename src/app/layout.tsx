@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import '@/styles/globals.css'
-import TopNav from '@/components/layout/TopNav'
+import Sidebar from '@/components/layout/Sidebar'
 
 export const metadata: Metadata = {
   title: 'Pocoloco — Experiențe reale de la călători reali',
@@ -33,8 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ro">
       <body>
-        <TopNav />
-        {children}
+        <div className="flex min-h-screen">
+          <Sidebar />
+          <div className="flex-1 min-w-0">
+            {children}
+          </div>
+        </div>
       </body>
     </html>
   )

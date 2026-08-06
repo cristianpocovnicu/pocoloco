@@ -6,7 +6,7 @@ import SearchBar from '@/components/home/SearchBar'
 
 export default function HomePage() {
   return (
-    <main className="pb-nav">
+    <main className="pb-nav bg-[#F0EDE8] min-h-screen">
       <div className="content-wrap">
         <div className="mb-5">
           <SearchBar />
