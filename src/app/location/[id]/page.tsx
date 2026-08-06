@@ -6,9 +6,11 @@ import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, MessageC
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo } from '@/lib/utils'
 import { fetchMyVotes, type VoteType } from '@/lib/votes'
+import { fetchCommentsFor, type CommentWithAuthor } from '@/lib/comments'
 import BottomNav from '@/components/layout/BottomNav'
 import VoteButtons from '@/components/experience/VoteButtons'
 import FollowButton from '@/components/profile/FollowButton'
+import CommentThread, { type CommentViewer } from '@/components/experience/CommentThread'
 
 type Location = {
   id: string
@@ -48,6 +50,8 @@ export default function LocationPage() {
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [myVotes, setMyVotes] = useState<Record<string, VoteType>>({})
+  const [comments, setComments] = useState<Record<string, CommentWithAuthor[]>>({})
+  const [viewer, setViewer] = useState<CommentViewer>(null)
   // locațiile neaprobate sunt vizibile doar celui care le-a adăugat și adminilor
   const [canModerate, setCanModerate] = useState(false)
   const [blocked, setBlocked] = useState(false)
@@ -69,21 +73,21 @@ export default function LocationPage() {
         .eq('status', 'active')
         .order('created_at', { ascending: false })
 
+      // userul curent + rolul lui, o singură dată pentru toate firele de comentarii
+      const { data: { user } } = await supabase.auth.getUser()
+      let isAdmin = false
+      if (user) {
+        const { data: prof } = await supabase
+          .from('profiles').select('role').eq('id', user.id).maybeSingle()
+        isAdmin = prof?.role === 'admin'
+        setViewer({ id: user.id, isAdmin })
+      }
+
       if (loc) {
         const location = loc as unknown as Location
 
         if (location.status !== 'approved') {
-          const { data: { user } } = await supabase.auth.getUser()
-          let allowed = false
-          if (user) {
-            if (location.added_by === user.id) {
-              allowed = true
-            } else {
-              const { data: prof } = await supabase
-                .from('profiles').select('role').eq('id', user.id).maybeSingle()
-              allowed = prof?.role === 'admin'
-            }
-          }
+          const allowed = !!user && (location.added_by === user.id || isAdmin)
           setCanModerate(allowed)
           if (allowed) setLocation(location)
           else setBlocked(true)
@@ -95,7 +99,14 @@ export default function LocationPage() {
       if (exps) {
         const list = exps as unknown as Experience[]
         setExperiences(list)
-        setMyVotes(await fetchMyVotes(supabase, list.map(e => e.id)))
+        const ids = list.map(e => e.id)
+        // un singur query pentru comentariile tuturor experiențelor de pe pagină
+        const [votes, threads] = await Promise.all([
+          fetchMyVotes(supabase, ids),
+          fetchCommentsFor(supabase, ids),
+        ])
+        setMyVotes(votes)
+        setComments(threads)
       }
       setLoading(false)
     }
@@ -355,6 +366,15 @@ export default function LocationPage() {
                     </div>
                   </div>
                 </div>
+
+                <CommentThread
+                  experienceId={exp.id}
+                  initialComments={comments[exp.id] || []}
+                  viewer={viewer}
+                  onCountChange={delta => setExperiences(prev => prev.map(e =>
+                    e.id === exp.id ? { ...e, comment_count: Math.max(0, e.comment_count + delta) } : e
+                  ))}
+                />
               </div>
             ))
           )}
