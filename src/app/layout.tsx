@@ -4,7 +4,12 @@ import Sidebar from '@/components/layout/Sidebar'
 import Footer from '@/components/layout/Footer'
 
 export const metadata: Metadata = {
-  title: 'Pocoloco — Experiențe reale de la călători reali',
+  // fără metadataBase, imaginile OG relative nu se rezolvă în absolut
+  metadataBase: new URL('https://pocoloco.travel'),
+  title: {
+    default: 'Pocoloco — Experiențe reale de la călători reali',
+    template: '%s',
+  },
   description: 'Descoperă locuri autentice, citește experiențe reale și împărtășește aventurile tale cu comunitatea Pocoloco.',
   keywords: 'travel, calatorii, experiente, romania, locuri, ghid',
   openGraph: {
@@ -14,6 +19,11 @@ export const metadata: Metadata = {
     siteName: 'Pocoloco',
     locale: 'ro_RO',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Pocoloco',
+    description: 'Experiențe reale de la călători reali',
   },
   manifest: '/manifest.json',
   appleWebApp: {
