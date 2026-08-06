@@ -35,8 +35,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="flex min-h-screen">
           <Sidebar />
-          <div className="flex-1 min-w-0">
-            {children}
+          {/* Zona de continut — se intinde pe tot spatiul ramas si centreaza continutul */}
+          <div className="flex-1 min-w-0 flex flex-col items-center">
+            <div className="w-full">
+              {children}
+            </div>
           </div>
         </div>
       </body>

@@ -32,8 +32,9 @@ html, body {
 
 .font-outfit { font-family: 'Outfit', sans-serif; }
 
-/* Conținut centrat cu lățime mai mare pe desktop */
+/* Conținut centrat în spațiul disponibil */
 .content-wrap {
+  width: 100%;
   max-width: 100%;
   padding: 20px 16px 100px;
 }
@@ -41,7 +42,8 @@ html, body {
 @media (min-width: 768px) {
   .content-wrap {
     max-width: 680px;
-    padding: 28px 40px 60px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
   }
 }
 
