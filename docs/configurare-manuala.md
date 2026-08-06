@@ -53,6 +53,7 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 15 | `supabase/migrations/20260806_nearby.sql` | funcția `nearby_locations()` pentru secțiunea „În apropiere" |
 | 16 | `supabase/migrations/20260806_trip_locations_fix.sql` | reconciliază `day` / `day_number`, altfel publicarea itinerariului crapă |
 | 17 | `supabase/migrations/20260807_vote_effects.sql` | `net_score`, voturi pe comentarii, trigger unificat de contoare |
+| 18 | `supabase/migrations/20260807_text_limits.sql` | coloanele lungi devin `text`, limita comentariilor urcă la 10.000 |
 
 Ordinea contează: migrările 2–7 folosesc `is_admin()` din prima, iar 6 atașează
 triggere pe tabelele create de 3, 4 și 5.
