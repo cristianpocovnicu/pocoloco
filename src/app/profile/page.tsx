@@ -1,165 +1,233 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import TopBar from '@/components/layout/TopBar'
 import BottomNav from '@/components/layout/BottomNav'
-import { Bell, Settings, Share2, Star, MapPin, ArrowUp, MessageCircle } from 'lucide-react'
-import { formatCount } from '@/lib/utils'
+import { Settings, Share2, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut } from 'lucide-react'
+import { createClient } from '@/lib/supabase-client'
+import { formatCount, timeAgo } from '@/lib/utils'
+import Link from 'next/link'
 
-const TABS = ['Călătorii', 'Experiențe', 'Insigne']
+type Profile = {
+  id: string
+  full_name: string
+  username: string
+  bio: string | null
+  is_guide: boolean
+  guide_level: number
+  xp: number
+}
 
-const TRIPS = [
-  { title: 'Transilvania în 7 zile', emoji: '🏔️', gradient: 'from-blue-900 to-emerald-700', type: 'Calatorie' },
-  { title: 'Grecia cu barca 12 zile', emoji: '⛵', gradient: 'from-sky-400 to-blue-700', type: 'Calatorie' },
-  { title: 'New York iarna', emoji: '🗽', gradient: 'from-amber-500 to-orange-800', type: 'Calatorie' },
-  { title: 'Scandinavia fără plan', emoji: '🌲', gradient: 'from-emerald-400 to-emerald-900', type: 'Calatorie' },
-]
+type Experience = {
+  id: string
+  content: string
+  images: string[]
+  rating_experience: number
+  upvotes: number
+  comment_count: number
+  created_at: string
+  location: { id: string; name: string; city: string }
+}
 
-const BADGES_EARNED = [
-  { emoji: '🏰', name: 'Explorator Castele', bg: '#FFF0EB' },
-  { emoji: '⛵', name: 'Navigat 10+ zile', bg: '#ECFDF5' },
-  { emoji: '✍️', name: '100 Experiențe', bg: '#EEEDFB' },
-  { emoji: '⭐', name: 'Ghid Experimentat', bg: '#FFFBEB' },
-]
-const BADGES_LOCKED = [
-  { emoji: '🌍', name: '5 Continente' },
-  { emoji: '📸', name: '500 Fotografii' },
-  { emoji: '🏆', name: 'Expert Local' },
-  { emoji: '👥', name: '5k Urmăritori' },
-]
+const TABS = ['Experiențe', 'Insigne']
 
 export default function ProfilePage() {
+  const router = useRouter()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [experiences, setExperiences] = useState<Experience[]>([])
+  const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState(0)
 
+  useEffect(() => {
+    const fetchData = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
+
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      const { data: exps } = await supabase
+        .from('experiences')
+        .select('*, location:locations!location_id(id, name, city)')
+        .eq('author_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (prof) setProfile(prof as Profile)
+      if (exps) setExperiences(exps as unknown as Experience[])
+      setLoading(false)
+    }
+    fetchData()
+  }, [router])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
+
+  const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 size={28} className="animate-spin text-[#E8440A]" />
+    </div>
+  )
+
+  if (!profile) return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <p className="text-[#6B6B6B]">Trebuie să fii logat.</p>
+      <Link href="/login" className="text-[#E8440A] font-medium">Intră în cont</Link>
+    </div>
+  )
+
+  const BADGES_EARNED = [
+    ...(experiences.length >= 1 ? [{ emoji: '✍️', name: 'Prima experiență', bg: '#EEEDFB' }] : []),
+    ...(experiences.length >= 10 ? [{ emoji: '🏆', name: '10 Experiențe', bg: '#FFF0EB' }] : []),
+    ...(profile.is_guide ? [{ emoji: '⭐', name: 'Ghid Experimentat', bg: '#FFFBEB' }] : []),
+  ]
+
   return (
-    <main className="pb-nav">
-      <TopBar showLogo rightElement={
+    <main className="pb-nav bg-[#F0EDE8] min-h-screen">
+      <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 flex items-center justify-between sticky top-0 z-30">
+        <span className="font-outfit text-[17px] font-semibold text-[#0F0F0F]">Profilul meu</span>
         <div className="flex gap-2">
-          <div className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center cursor-pointer"><Bell size={16} className="text-[#6B6B6B]" /></div>
-          <div className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center cursor-pointer"><Settings size={16} className="text-[#6B6B6B]" /></div>
-        </div>
-      } />
-
-      {/* Hero */}
-      <div className="bg-white px-5 pt-6 pb-5 border-b border-[rgba(0,0,0,0.08)]">
-        <div className="flex items-start justify-between mb-4">
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E8440A] to-orange-400 flex items-center justify-center font-outfit text-3xl font-bold text-white" style={{ boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}>MA</div>
-            <div className="absolute bottom-0 right-0 w-6 h-6 bg-[#5B4FCF] rounded-full border-2 border-white flex items-center justify-center">
-              <Star size={11} className="text-white fill-white" />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button className="bg-white border border-[rgba(0,0,0,0.08)] font-outfit text-[12px] font-semibold px-4 py-2 rounded-full">Editează</button>
-            <button className="bg-[#EEEDFB] text-[#5B4FCF] font-outfit text-[12px] font-semibold px-3 py-2 rounded-full flex items-center gap-1"><Share2 size={13} />Share</button>
-          </div>
-        </div>
-        <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F]">Mihai Alexe</h1>
-        <p className="text-[13px] text-[#9B9B9B] mb-2">@mihai.alexe · Ghid Experimentat</p>
-        <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3">Călătoresc de 12 ani. Cred că locurile ascunse spun cele mai bune povești. Bazat în Cluj, activ în toată Europa.</p>
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {['🇷🇴 România', '⛵ Navigat', '🏔️ Munte', '🏰 Castele', '🚗 Road trip'].map(t => (
-            <span key={t} className="text-[11px] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] px-2.5 py-1 rounded-full">{t}</span>
-          ))}
-        </div>
-        <div className="flex pt-4 border-t border-[rgba(0,0,0,0.08)]">
-          {[['47', 'călătorii'], ['183', 'experiențe'], ['2.1k', 'urmăritori'], ['8.4k', 'aprecieri']].map(([num, lbl], i) => (
-            <div key={lbl} className={`flex-1 text-center ${i < 3 ? 'border-r border-[rgba(0,0,0,0.08)]' : ''}`}>
-              <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{num}</div>
-              <div className="text-[11px] text-[#9B9B9B]">{lbl}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Guide level */}
-      <div className="bg-gradient-to-r from-[#EEEDFB] to-[#F0EEFF] px-5 py-3.5 flex items-center gap-3 border-b border-[rgba(0,0,0,0.08)]">
-        <div className="w-11 h-11 bg-[#5B4FCF] rounded-xl flex items-center justify-center text-xl flex-shrink-0">🧭</div>
-        <div className="flex-1">
-          <div className="font-outfit text-[14px] font-semibold text-[#5B4FCF]">Ghid Experimentat · Nivel 4</div>
-          <div className="text-[12px] text-[#6B6B6B] mb-1.5">680 XP până la Nivel 5 — Expert Local</div>
-          <div className="h-1.5 bg-[rgba(91,79,207,0.15)] rounded-full overflow-hidden">
-            <div className="h-full bg-[#5B4FCF] rounded-full" style={{ width: '68%' }} />
-          </div>
-          <div className="text-[10px] text-[#5B4FCF] font-medium mt-0.5">4,320 / 5,000 XP</div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex bg-white border-b border-[rgba(0,0,0,0.08)] sticky top-[57px] z-20">
-        {TABS.map((t, i) => (
-          <button key={t} onClick={() => setTab(i)} className={`flex-1 py-3 text-[13px] font-outfit font-medium border-b-2 transition-colors ${tab === i ? 'text-[#E8440A] border-[#E8440A]' : 'text-[#9B9B9B] border-transparent'}`}>
-            {t}
+          <button onClick={handleLogout} className="w-8 h-8 rounded-full bg-[#FEF2F2] border border-[rgba(220,38,38,0.1)] flex items-center justify-center">
+            <LogOut size={16} className="text-[#DC2626]" />
           </button>
-        ))}
+          <button className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center">
+            <Settings size={16} className="text-[#6B6B6B]" />
+          </button>
+        </div>
       </div>
 
-      {/* Tab content */}
-      <div className="px-5 pt-4">
-        {tab === 0 && (
-          <div className="grid grid-cols-2 gap-2.5">
-            {TRIPS.map(trip => (
-              <div key={trip.title} className={`rounded-2xl overflow-hidden h-28 bg-gradient-to-br ${trip.gradient} relative cursor-pointer`}>
-                <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-30">{trip.emoji}</div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-2.5">
-                  <span className="block text-[9px] font-outfit font-bold uppercase text-white bg-[#E8440A] px-1.5 py-0.5 rounded-full w-fit mb-1">{trip.type}</span>
-                  <span className="font-outfit text-[12px] font-semibold text-white leading-tight">{trip.title}</span>
-                </div>
+      <div className="max-w-[680px] mx-auto">
+        {/* Hero */}
+        <div className="bg-white px-5 pt-6 pb-5 border-b border-[rgba(0,0,0,0.08)]">
+          <div className="flex items-start justify-between mb-4">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E8440A] to-orange-400 flex items-center justify-center font-outfit text-3xl font-bold text-white" style={{ boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}>
+                {getInitials(profile.full_name)}
               </div>
-            ))}
-            <div className="col-span-2 text-center py-2"><button className="text-[13px] text-[#E8440A] font-medium">Vezi toate 47 de călătorii</button></div>
-          </div>
-        )}
-        {tab === 1 && (
-          <div className="flex flex-col gap-3">
-            {[
-              { loc: 'Castelul Bran', addr: 'Bran, Brașov', stars: 5, text: 'Mergeți dimineața devreme la 9:00 să evitați coada. Castelul în sine merită — atmosfera medievală e autentică.', date: '14 mai 2025', ups: 341, comments: 87 },
-              { loc: 'Centrul Vechi Brașov', addr: 'Brașov', stars: 4, text: 'Piața Sfatului la apus e magică. Evitați restaurantele turistice din centru — mergeți în Șchei pentru mâncare bună.', date: '13 mai 2025', ups: 219, comments: 43 },
-            ].map(exp => (
-              <div key={exp.loc} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5">
-                <div className="flex items-start justify-between mb-1">
-                  <div>
-                    <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F]">{exp.loc}</h3>
-                    <p className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><MapPin size={10} />{exp.addr}</p>
-                  </div>
-                  <div className="flex gap-0.5">{[1,2,3,4,5].map(i => <Star key={i} size={12} className={i <= exp.stars ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />)}</div>
+              {profile.is_guide && (
+                <div className="absolute bottom-0 right-0 w-6 h-6 bg-[#5B4FCF] rounded-full border-2 border-white flex items-center justify-center">
+                  <Star size={11} className="text-white fill-white" />
                 </div>
-                <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2">{exp.text}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-[#9B9B9B]">{exp.date}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><ArrowUp size={11} />{exp.ups}</span>
-                    <span className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><MessageCircle size={11} />{exp.comments}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {tab === 2 && (
-          <div>
-            <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">Insigne câștigate</h3>
-            <div className="grid grid-cols-4 gap-3 mb-5">
-              {BADGES_EARNED.map(b => (
-                <div key={b.name} className="flex flex-col items-center gap-1.5">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: b.bg, boxShadow: '0 0 0 2px #E8440A' }}>{b.emoji}</div>
-                  <span className="text-[10px] text-[#6B6B6B] text-center leading-tight font-medium">{b.name}</span>
-                </div>
-              ))}
+              )}
             </div>
-            <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">Insigne blocate</h3>
-            <div className="grid grid-cols-4 gap-3">
-              {BADGES_LOCKED.map(b => (
-                <div key={b.name} className="flex flex-col items-center gap-1.5 opacity-35">
-                  <div className="w-14 h-14 rounded-2xl bg-[#F8F7F5] flex items-center justify-center text-2xl grayscale">{b.emoji}</div>
-                  <span className="text-[10px] text-[#6B6B6B] text-center leading-tight">{b.name}</span>
-                </div>
-              ))}
-            </div>
+            <button className="bg-[#EEEDFB] text-[#5B4FCF] font-outfit text-[12px] font-semibold px-3 py-2 rounded-full flex items-center gap-1">
+              <Share2 size={13} /> Share
+            </button>
           </div>
-        )}
-      </div>
+          <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F]">{profile.full_name}</h1>
+          <p className="text-[13px] text-[#9B9B9B] mb-2">@{profile.username}{profile.is_guide ? ' · Ghid Experimentat' : ''}</p>
+          {profile.bio && <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3">{profile.bio}</p>}
 
+          <div className="flex pt-4 border-t border-[rgba(0,0,0,0.08)]">
+            <div className="flex-1 text-center border-r border-[rgba(0,0,0,0.08)]">
+              <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{experiences.length}</div>
+              <div className="text-[11px] text-[#9B9B9B]">experiențe</div>
+            </div>
+            <div className="flex-1 text-center border-r border-[rgba(0,0,0,0.08)]">
+              <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{profile.xp}</div>
+              <div className="text-[11px] text-[#9B9B9B]">XP</div>
+            </div>
+            <div className="flex-1 text-center">
+              <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">Niv. {profile.guide_level}</div>
+              <div className="text-[11px] text-[#9B9B9B]">nivel</div>
+            </div>
+          </div>
+        </div>
+
+        {/* XP bar */}
+        <div className="bg-gradient-to-r from-[#EEEDFB] to-[#F0EEFF] px-5 py-3.5 flex items-center gap-3 border-b border-[rgba(0,0,0,0.08)]">
+          <div className="w-11 h-11 bg-[#5B4FCF] rounded-xl flex items-center justify-center text-xl flex-shrink-0">🧭</div>
+          <div className="flex-1">
+            <div className="font-outfit text-[14px] font-semibold text-[#5B4FCF]">
+              {profile.is_guide ? 'Ghid Experimentat' : 'Explorator'} · Nivel {profile.guide_level}
+            </div>
+            <div className="h-1.5 bg-[rgba(91,79,207,0.15)] rounded-full overflow-hidden mt-1.5">
+              <div className="h-full bg-[#5B4FCF] rounded-full" style={{ width: `${Math.min((profile.xp % 1000) / 10, 100)}%` }} />
+            </div>
+            <div className="text-[10px] text-[#5B4FCF] font-medium mt-0.5">{profile.xp} XP</div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex bg-white border-b border-[rgba(0,0,0,0.08)] sticky top-[57px] z-20">
+          {TABS.map((t, i) => (
+            <button key={t} onClick={() => setTab(i)} className={`flex-1 py-3 text-[13px] font-outfit font-medium border-b-2 transition-colors ${tab === i ? 'text-[#E8440A] border-[#E8440A]' : 'text-[#9B9B9B] border-transparent'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+
+        <div className="px-5 pt-4">
+          {tab === 0 && (
+            <div className="flex flex-col gap-3">
+              {experiences.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-2xl border border-[rgba(0,0,0,0.08)]">
+                  <p className="text-[14px] text-[#9B9B9B] mb-3">Nicio experiență adăugată încă.</p>
+                  <Link href="/add-experience" className="inline-flex bg-[#E8440A] text-white font-outfit text-sm font-semibold px-5 py-2.5 rounded-full">
+                    + Adaugă prima experiență
+                  </Link>
+                </div>
+              ) : experiences.map(exp => (
+                <Link key={exp.id} href={`/location/${exp.location?.id}`} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5 block hover:border-[rgba(0,0,0,0.15)] transition-colors">
+                  <div className="flex items-start justify-between mb-1">
+                    <div>
+                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F]">{exp.location?.name}</h3>
+                      <p className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><MapPin size={10} /> {exp.location?.city}</p>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {[1,2,3,4,5].map(i => <Star key={i} size={12} className={i <= exp.rating_experience ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />)}
+                    </div>
+                  </div>
+                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2 line-clamp-2">{exp.content}</p>
+                  {exp.images && exp.images.length > 0 && (
+                    <div className="flex gap-1.5 mb-2">
+                      {exp.images.slice(0, 3).map((img, i) => (
+                        <img key={i} src={img} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-[#9B9B9B]">{timeAgo(exp.created_at)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><ArrowUp size={11} /> {formatCount(exp.upvotes)}</span>
+                      <span className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><MessageCircle size={11} /> {formatCount(exp.comment_count)}</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {tab === 1 && (
+            <div>
+              <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">Insigne câștigate</h3>
+              {BADGES_EARNED.length === 0 ? (
+                <div className="text-center py-8 bg-white rounded-2xl border border-[rgba(0,0,0,0.08)]">
+                  <p className="text-[13px] text-[#9B9B9B]">Adaugă prima experiență pentru a câștiga prima insignă!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-3">
+                  {BADGES_EARNED.map(b => (
+                    <div key={b.name} className="flex flex-col items-center gap-1.5">
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: b.bg, boxShadow: '0 0 0 2px #E8440A' }}>{b.emoji}</div>
+                      <span className="text-[10px] text-[#6B6B6B] text-center leading-tight font-medium">{b.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
       <BottomNav />
     </main>
   )

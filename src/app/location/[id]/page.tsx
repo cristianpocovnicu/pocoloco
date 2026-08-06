@@ -1,154 +1,316 @@
-import BottomNav from '@/components/layout/BottomNav'
-import TopBar from '@/components/layout/TopBar'
-import { Bookmark, CheckCircle, Share2, Globe, MapPin, Route, Star, ArrowUp, ArrowDown, MessageCircle, Pencil } from 'lucide-react'
+'use client'
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, ArrowUp, ArrowDown, MessageCircle, Pencil, Loader2, Globe } from 'lucide-react'
+import { createClient } from '@/lib/supabase-client'
+import { formatCount, timeAgo } from '@/lib/utils'
+import BottomNav from '@/components/layout/BottomNav'
 
-export default function LocationPage({ params }: { params: { id: string } }) {
+type Location = {
+  id: string
+  name: string
+  city: string
+  country: string
+  description: string | null
+  cover_image: string | null
+  score: number
+  experience_count: number
+  trip_count: number
+  added_by: string
+  adder?: { full_name: string; is_guide: boolean }
+}
+
+type Experience = {
+  id: string
+  content: string
+  images: string[]
+  tips: string[]
+  rating_experience: number
+  rating_access: number | null
+  rating_crowd: number | null
+  upvotes: number
+  downvotes: number
+  comment_count: number
+  created_at: string
+  author: { full_name: string; is_guide: boolean }
+}
+
+export default function LocationPage() {
+  const { id } = useParams()
+  const router = useRouter()
+  const [location, setLocation] = useState<Location | null>(null)
+  const [experiences, setExperiences] = useState<Experience[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saved, setSaved] = useState(false)
+  const [voted, setVoted] = useState<Record<string, 'up' | 'down' | null>>({})
+
+  useEffect(() => {
+    const fetch = async () => {
+      const supabase = createClient()
+
+      const { data: loc } = await supabase
+        .from('locations')
+        .select('*, adder:profiles!added_by(full_name, is_guide)')
+        .eq('id', id)
+        .single()
+
+      const { data: exps } = await supabase
+        .from('experiences')
+        .select('*, author:profiles!author_id(full_name, is_guide)')
+        .eq('location_id', id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+
+      if (loc) setLocation(loc as unknown as Location)
+      if (exps) setExperiences(exps as unknown as Experience[])
+      setLoading(false)
+    }
+    fetch()
+  }, [id])
+
+  const handleUpvote = async (expId: string) => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/login'); return }
+
+    const current = voted[expId]
+    if (current === 'up') {
+      await supabase.from('experiences').update({ upvotes: (experiences.find(e => e.id === expId)?.upvotes || 1) - 1 }).eq('id', expId)
+      setVoted(v => ({ ...v, [expId]: null }))
+      setExperiences(prev => prev.map(e => e.id === expId ? { ...e, upvotes: e.upvotes - 1 } : e))
+    } else {
+      await supabase.from('experiences').update({ upvotes: (experiences.find(e => e.id === expId)?.upvotes || 0) + 1 }).eq('id', expId)
+      setVoted(v => ({ ...v, [expId]: 'up' }))
+      setExperiences(prev => prev.map(e => e.id === expId ? { ...e, upvotes: e.upvotes + 1 } : e))
+    }
+  }
+
+  const handleSave = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/login'); return }
+    if (!saved) {
+      await supabase.from('saves').insert({ user_id: user.id, location_id: id })
+      setSaved(true)
+    } else {
+      await supabase.from('saves').delete().eq('user_id', user.id).eq('location_id', id)
+      setSaved(false)
+    }
+  }
+
+  const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
+
+  const avgRating = (key: 'rating_experience' | 'rating_access' | 'rating_crowd') => {
+    const valid = experiences.filter(e => e[key] != null)
+    if (!valid.length) return null
+    return (valid.reduce((s, e) => s + (e[key] || 0), 0) / valid.length).toFixed(1)
+  }
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 size={28} className="animate-spin text-[#E8440A]" />
+    </div>
+  )
+
+  if (!location) return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <p className="text-[#6B6B6B]">Locația nu a fost găsită.</p>
+      <Link href="/" className="text-[#E8440A] font-medium">← Înapoi acasă</Link>
+    </div>
+  )
+
   return (
-    <main className="pb-nav">
-      <TopBar showLogo rightElement={
-        <div className="w-8 h-8 rounded-full bg-[#EEEDFB] flex items-center justify-center cursor-pointer">
-          <Globe size={17} className="text-[#5B4FCF]" />
-        </div>
-      } />
-
-      {/* Gallery */}
-      <div className="grid grid-cols-2 gap-0.5 h-52">
-        <div className="bg-gradient-to-br from-amber-200 to-amber-600 flex items-center justify-center text-7xl relative">
-          🏰
-          <span className="absolute top-2.5 right-2.5 bg-[#E8440A] text-white font-outfit text-xs font-bold px-2 py-0.5 rounded-full">8.3 / 10</span>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <div className="flex-1 bg-gradient-to-br from-violet-500 to-violet-800 flex items-center justify-center text-4xl">🗡️</div>
-          <div className="flex-1 bg-gradient-to-br from-emerald-600 to-emerald-900 flex items-center justify-center text-4xl">🌿</div>
-        </div>
+    <main className="pb-nav bg-[#F0EDE8] min-h-screen">
+      {/* Topbar */}
+      <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 flex items-center justify-between sticky top-0 z-30">
+        <button onClick={() => router.back()} className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center">
+          <ArrowLeft size={16} className="text-[#6B6B6B]" />
+        </button>
+        <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F] truncate mx-3 flex-1 text-center">{location.name}</span>
+        <button className="w-8 h-8 rounded-full bg-[#EEEDFB] flex items-center justify-center">
+          <Globe size={16} className="text-[#5B4FCF]" />
+        </button>
       </div>
 
-      {/* Title & Actions */}
-      <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-        <div className="flex items-start justify-between mb-1">
-          <div>
-            <h1 className="font-outfit text-2xl font-bold text-[#0F0F0F]">Castelul Bran</h1>
-            <p className="text-[13px] text-[#6B6B6B] flex items-center gap-1 mt-0.5"><MapPin size={12} /> Brașov, România</p>
-          </div>
-          <button className="w-9 h-9 rounded-full bg-[#EEEDFB] flex items-center justify-center flex-shrink-0">
-            <Globe size={17} className="text-[#5B4FCF]" />
-          </button>
+      <div className="max-w-[680px] mx-auto">
+        {/* Cover image / gradient */}
+        <div className="h-52 bg-gradient-to-br from-amber-200 to-amber-600 relative overflow-hidden">
+          {location.cover_image
+            ? <img src={location.cover_image} alt={location.name} className="w-full h-full object-cover" />
+            : <div className="w-full h-full flex items-center justify-center text-7xl opacity-40">🏔️</div>
+          }
+          {location.score > 0 && (
+            <span className="absolute top-3 right-3 bg-[#E8440A] text-white font-outfit text-sm font-bold px-3 py-1 rounded-full">
+              {location.score.toFixed(1)} / 10
+            </span>
+          )}
         </div>
-        <div className="flex gap-2 mt-3">
-          <button className="flex-1 bg-[#E8440A] text-white font-outfit text-sm font-semibold rounded-full py-2.5 flex items-center justify-center gap-2">
-            <Bookmark size={15} /> Vreau să merg
-          </button>
-          <button className="bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-sm font-medium rounded-full px-4 py-2.5 flex items-center gap-2">
-            <CheckCircle size={15} /> Am fost
-          </button>
-          <button className="w-10 h-10 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0">
-            <Share2 size={16} className="text-[#6B6B6B]" />
-          </button>
-        </div>
-      </div>
 
-      {/* Added by */}
-      <div className="bg-white px-5 py-3 flex items-center gap-2 border-b border-[rgba(0,0,0,0.08)]">
-        <span className="text-[12px] text-[#9B9B9B]">Adăugat de</span>
-        <div className="w-6 h-6 rounded-full bg-[#5B4FCF] flex items-center justify-center text-[10px] font-bold text-white">MA</div>
-        <span className="text-[13px] font-medium text-[#0F0F0F]">Mihai Alexe</span>
-        <span className="text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-2 py-0.5 rounded-full font-medium">Ghid Experimentat</span>
-      </div>
-
-      {/* Description */}
-      <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-        <p className="text-[14px] text-[#6B6B6B] leading-relaxed">
-          Castelul Bran este o fortăreață medievală istorică din Transilvania, România, faimoasă pentru locația sa dramatică pe deal și asocierea cu legenda Draculei. Construit în secolul XIV, a servit drept reședință regală și bastion defensiv.
-        </p>
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(0,0,0,0.08)]">
-          <div className="text-[13px] text-[#6B6B6B] flex items-center gap-1.5">
-            <Route size={15} /> Locație în <strong>372 de călătorii</strong>
-          </div>
-          <button className="text-[13px] text-[#E8440A] font-medium">Vezi călătoriile</button>
-        </div>
-      </div>
-
-      {/* Ratings */}
-      <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-        <h2 className="font-outfit text-base font-semibold text-[#0F0F0F] mb-3">Evaluare medie</h2>
-        {[
-          { label: 'Experiență generală', value: 4.2, pct: 83 },
-          { label: 'Acces și organizare', value: 3.0, pct: 60 },
-          { label: 'Aglomerație și așteptare', value: 2.4, pct: 48 },
-        ].map(r => (
-          <div key={r.label} className="flex items-center gap-3 mb-2.5">
-            <span className="text-[13px] text-[#6B6B6B] w-40 flex-shrink-0">{r.label}</span>
-            <div className="flex-1 h-1.5 bg-[#F0EEE8] rounded-full overflow-hidden">
-              <div className="h-full bg-[#E8440A] rounded-full" style={{ width: `${r.pct}%` }} />
-            </div>
-            <span className="text-[13px] font-semibold text-[#0F0F0F] w-7 text-right">{r.value}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* CTA */}
-      <Link href="/add-experience" className="mx-5 my-3 bg-[#5B4FCF] rounded-2xl px-4 py-3.5 flex items-center gap-3 cursor-pointer block">
-        <Pencil size={20} className="text-white/80" />
-        <span className="font-outfit text-sm font-semibold text-white flex-1">Povestește-ne experiența ta</span>
-        <span className="text-white/60">→</span>
-      </Link>
-
-      {/* Experiences */}
-      <div className="px-5">
-        <h2 className="font-outfit text-base font-semibold text-[#0F0F0F] py-3">Experiențe (439)</h2>
-
-        {/* Experience card */}
-        <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden mb-3">
-          <div className="p-3.5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[12px] font-bold text-white">MP</div>
-              <span className="text-[13px] font-semibold text-[#0F0F0F]">Maria Popescu</span>
-            </div>
-            {[['Experiență', 5], ['Aglomerație', 2], ['Acces', 3]].map(([label, stars]) => (
-              <div key={String(label)} className="flex items-center justify-between mb-1.5">
-                <span className="text-[12px] text-[#6B6B6B]">{label}</span>
-                <div className="flex gap-0.5">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} size={11} className={i <= Number(stars) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="px-3.5 pb-3 text-[13px] text-[#6B6B6B] leading-relaxed">
-            Vizita la Castelul Bran a fost una dintre cele mai memorabile experiențe din România. Perched pe un deal înconjurat de munți, castelul arată exact ca din povești — sau dintr-un film cu vampiri.
+        {/* Title & Actions */}
+        <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
+          <h1 className="font-outfit text-2xl font-bold text-[#0F0F0F] mb-1">{location.name}</h1>
+          <p className="text-[13px] text-[#6B6B6B] flex items-center gap-1 mb-3">
+            <MapPin size={12} /> {location.city}{location.country ? `, ${location.country}` : ''}
           </p>
-          {/* Thread */}
-          <div className="mx-3.5 mb-3 bg-[#F8F7F5] rounded-xl p-3">
-            <div className="flex gap-2 mb-2">
-              <div className="w-7 h-7 rounded-full bg-[#5B4FCF] flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">DG</div>
-              <div>
-                <p className="text-[12px] font-semibold text-[#0F0F0F] mb-0.5">Dumitru Gabriel</p>
-                <p className="text-[12px] text-[#6B6B6B]">Știi dacă se poate evita coada? Vreau să merg câteva ore și mi-e teamă de așteptare.</p>
-              </div>
-            </div>
-            <div className="ml-9 border-l-2 border-[rgba(0,0,0,0.08)] pl-2.5">
-              <div className="flex gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#E8440A] flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">MP</div>
-                <div>
-                  <p className="text-[12px] font-semibold text-[#0F0F0F] mb-0.5">Maria Popescu</p>
-                  <p className="text-[12px] text-[#6B6B6B]">Poți cumpăra bilete online și evita coada, dar când am mers noi site-ul era picat.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="px-3.5 py-2.5 flex items-center justify-between border-t border-[rgba(0,0,0,0.06)]">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 bg-[#F8F7F5] rounded-full px-2.5 py-1 text-[12px] text-[#6B6B6B]"><MessageCircle size={12} /> 759</div>
-              <div className="flex items-center gap-1 bg-[#EEEDFB] text-[#5B4FCF] rounded-full px-2.5 py-1 text-[12px]"><ArrowUp size={12} /> 759</div>
-              <div className="flex items-center gap-1 bg-[#F8F7F5] rounded-full px-2.5 py-1 text-[12px] text-[#6B6B6B]"><ArrowDown size={12} /></div>
-            </div>
-            <button className="text-[12px] text-[#6B6B6B] flex items-center gap-1">Discuție (439)</button>
+          <div className="flex gap-2">
+            <button onClick={handleSave} className={`flex-1 font-outfit text-sm font-semibold rounded-full py-2.5 flex items-center justify-center gap-2 transition-colors ${saved ? 'bg-[#FFF0EB] text-[#E8440A] border border-[rgba(232,68,10,0.2)]' : 'bg-[#E8440A] text-white'}`}>
+              <Bookmark size={15} fill={saved ? '#E8440A' : 'none'} /> {saved ? 'Salvat' : 'Vreau să merg'}
+            </button>
+            <button className="bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-sm font-medium rounded-full px-4 py-2.5 flex items-center gap-2">
+              <CheckCircle size={15} /> Am fost
+            </button>
+            <button className="w-10 h-10 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0">
+              <Share2 size={16} className="text-[#6B6B6B]" />
+            </button>
           </div>
         </div>
-      </div>
 
+        {/* Added by */}
+        {location.adder && (
+          <div className="bg-white px-5 py-3 flex items-center gap-2 border-b border-[rgba(0,0,0,0.08)]">
+            <span className="text-[12px] text-[#9B9B9B]">Adăugat de</span>
+            <div className="w-6 h-6 rounded-full bg-[#5B4FCF] flex items-center justify-center text-[10px] font-bold text-white">
+              {getInitials(location.adder.full_name)}
+            </div>
+            <span className="text-[13px] font-medium text-[#0F0F0F]">{location.adder.full_name}</span>
+            {location.adder.is_guide && (
+              <span className="text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-2 py-0.5 rounded-full font-medium">Ghid Experimentat</span>
+            )}
+          </div>
+        )}
+
+        {/* Description */}
+        {location.description && (
+          <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
+            <p className="text-[14px] text-[#6B6B6B] leading-relaxed">{location.description}</p>
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="bg-white px-5 py-3 border-b border-[rgba(0,0,0,0.08)] flex items-center gap-4">
+          <div className="flex items-center gap-1.5 text-[13px] text-[#6B6B6B]">
+            <MessageCircle size={14} /> <strong>{experiences.length}</strong> experiențe
+          </div>
+          {location.trip_count > 0 && (
+            <div className="flex items-center gap-1.5 text-[13px] text-[#6B6B6B]">
+              <Route size={14} /> în <strong>{location.trip_count}</strong> călătorii
+            </div>
+          )}
+        </div>
+
+        {/* Ratings summary */}
+        {experiences.length > 0 && (
+          <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
+            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">Evaluare medie</h2>
+            {[
+              { label: 'Experiență generală', key: 'rating_experience' as const },
+              { label: 'Acces și organizare', key: 'rating_access' as const },
+              { label: 'Aglomerație', key: 'rating_crowd' as const },
+            ].map(({ label, key }) => {
+              const avg = avgRating(key)
+              if (!avg) return null
+              return (
+                <div key={key} className="flex items-center gap-3 mb-2.5">
+                  <span className="text-[13px] text-[#6B6B6B] w-40 flex-shrink-0">{label}</span>
+                  <div className="flex-1 h-1.5 bg-[#F0EEE8] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#E8440A] rounded-full" style={{ width: `${(parseFloat(avg) / 5) * 100}%` }} />
+                  </div>
+                  <span className="text-[13px] font-semibold text-[#0F0F0F] w-7 text-right">{avg}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* CTA */}
+        <Link href={`/add-experience?location=${id}&name=${encodeURIComponent(location.name)}`} className="mx-5 my-3 bg-[#5B4FCF] rounded-2xl px-4 py-3.5 flex items-center gap-3 cursor-pointer block">
+          <Pencil size={20} className="text-white/80" />
+          <span className="font-outfit text-sm font-semibold text-white flex-1">Povestește-ne experiența ta</span>
+          <span className="text-white/60">→</span>
+        </Link>
+
+        {/* Experiences */}
+        <div className="px-5 pb-6">
+          <h2 className="font-outfit text-[16px] font-semibold text-[#0F0F0F] py-3">
+            Experiențe ({experiences.length})
+          </h2>
+
+          {experiences.length === 0 ? (
+            <div className="text-center py-8 bg-white rounded-2xl border border-[rgba(0,0,0,0.08)]">
+              <p className="text-[14px] text-[#9B9B9B]">Nicio experiență încă. Fii primul!</p>
+            </div>
+          ) : (
+            experiences.map(exp => (
+              <div key={exp.id} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden mb-3">
+                <div className="p-3.5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0">
+                      {getInitials(exp.author?.full_name)}
+                    </div>
+                    <div>
+                      <span className="text-[13px] font-semibold text-[#0F0F0F]">{exp.author?.full_name}</span>
+                      {exp.author?.is_guide && <span className="ml-1.5 text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-medium">Ghid</span>}
+                      <div className="text-[11px] text-[#9B9B9B]">{timeAgo(exp.created_at)}</div>
+                    </div>
+                  </div>
+
+                  {/* Stars */}
+                  {[
+                    { label: 'Experiență', val: exp.rating_experience },
+                    { label: 'Aglomerație', val: exp.rating_crowd },
+                    { label: 'Acces', val: exp.rating_access },
+                  ].filter(r => r.val).map(r => (
+                    <div key={r.label} className="flex items-center justify-between mb-1.5">
+                      <span className="text-[12px] text-[#6B6B6B]">{r.label}</span>
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map(i => (
+                          <Star key={i} size={11} className={i <= (r.val || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mt-2">{exp.content}</p>
+
+                  {/* Tips */}
+                  {exp.tips && exp.tips.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {exp.tips.map(tip => (
+                        <span key={tip} className="text-[11px] bg-[#FFF0EB] text-[#E8440A] px-2 py-0.5 rounded-full">✓ {tip}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Images */}
+                {exp.images && exp.images.length > 0 && (
+                  <div className="flex gap-1.5 px-3.5 pb-3 overflow-x-auto scrollbar-hide">
+                    {exp.images.map((img, i) => (
+                      <img key={i} src={img} alt="" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className="px-3.5 py-2.5 flex items-center justify-between border-t border-[rgba(0,0,0,0.06)]">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handleUpvote(exp.id)} className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] transition-colors ${voted[exp.id] === 'up' ? 'bg-[#EEEDFB] text-[#5B4FCF]' : 'bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B]'}`}>
+                      <ArrowUp size={12} /> {formatCount(exp.upvotes)}
+                    </button>
+                    <button className="flex items-center gap-1 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2.5 py-1 text-[12px] text-[#6B6B6B]">
+                      <ArrowDown size={12} />
+                    </button>
+                    <div className="flex items-center gap-1 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2.5 py-1 text-[12px] text-[#6B6B6B]">
+                      <MessageCircle size={12} /> {formatCount(exp.comment_count)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
       <BottomNav />
     </main>
   )
