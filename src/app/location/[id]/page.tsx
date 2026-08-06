@@ -12,6 +12,7 @@ import VoteButtons from '@/components/experience/VoteButtons'
 import FollowButton from '@/components/profile/FollowButton'
 import CommentThread, { type CommentViewer } from '@/components/experience/CommentThread'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
+import PhotoGallery from '@/components/location/PhotoGallery'
 
 type Location = {
   id: string
@@ -43,6 +44,14 @@ type Experience = {
   author: { id: string; username: string | null; full_name: string; is_guide: boolean } | null
 }
 
+type RelatedTrip = {
+  id: string
+  title: string
+  cover_image: string | null
+  duration_days: number | null
+  save_count: number | null
+}
+
 export default function LocationPage() {
   const { id } = useParams()
   const router = useRouter()
@@ -59,6 +68,7 @@ export default function LocationPage() {
   const [loadError, setLoadError] = useState(false)
   const [shareNote, setShareNote] = useState('')
   const [editing, setEditing] = useState<EditableExperience | null>(null)
+  const [relatedTrips, setRelatedTrips] = useState<RelatedTrip[]>([])
 
   useEffect(() => {
     const fetch = async () => {
@@ -123,6 +133,26 @@ export default function LocationPage() {
         setMyVotes(votes)
         setComments(threads)
       }
+
+      // călătoriile care trec prin locația asta
+      const { data: stops } = await supabase
+        .from('trip_locations')
+        .select('trip_id')
+        .eq('location_id', id)
+        .limit(50)
+
+      const tripIds = Array.from(new Set((stops || []).map((s: { trip_id: string }) => s.trip_id)))
+      if (tripIds.length > 0) {
+        const { data: trips } = await supabase
+          .from('trips')
+          .select('id, title, cover_image, duration_days, save_count')
+          .in('id', tripIds)
+          .eq('status', 'active')
+          .order('save_count', { ascending: false })
+          .limit(6)
+        setRelatedTrips((trips || []) as RelatedTrip[])
+      }
+
       setLoading(false)
     }
     fetch()
@@ -162,6 +192,9 @@ export default function LocationPage() {
   }
 
   const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
+
+  // toate pozele din experiențele locației, în ordinea în care au fost postate
+  const galleryImages = experiences.flatMap(exp => exp.images || [])
 
   const avgRating = (key: 'rating_experience' | 'rating_access' | 'rating_crowd') => {
     const valid = experiences.filter(e => e[key] != null)
@@ -295,17 +328,26 @@ export default function LocationPage() {
         {/* Ratings summary */}
         {experiences.length > 0 && (
           <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">Evaluare medie</h2>
+            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">
+              Evaluare medie{' '}
+              <span className="text-[12px] font-normal text-[#9B9B9B]">
+                din {experiences.length} {experiences.length === 1 ? 'experiență' : 'experiențe'}
+              </span>
+            </h2>
             {[
               { label: 'Experiență generală', key: 'rating_experience' as const },
               { label: 'Acces și organizare', key: 'rating_access' as const },
               { label: 'Aglomerație', key: 'rating_crowd' as const },
             ].map(({ label, key }) => {
               const avg = avgRating(key)
+              const rated = experiences.filter(e => e[key] != null).length
               if (!avg) return null
               return (
                 <div key={key} className="flex items-center gap-3 mb-2.5">
-                  <span className="text-[13px] text-[#6B6B6B] w-40 flex-shrink-0">{label}</span>
+                  <span className="text-[13px] text-[#6B6B6B] w-36 md:w-40 flex-shrink-0">
+                    {label}
+                    <span className="text-[11px] text-[#9B9B9B]"> ({rated})</span>
+                  </span>
                   <div className="flex-1 h-1.5 bg-[#F0EEE8] rounded-full overflow-hidden">
                     <div className="h-full bg-[#E8440A] rounded-full" style={{ width: `${(parseFloat(avg) / 5) * 100}%` }} />
                   </div>
@@ -313,6 +355,50 @@ export default function LocationPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Galeria — toate pozele din experiențele locației */}
+        {galleryImages.length > 0 && (
+          <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
+            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">
+              Galerie{' '}
+              <span className="text-[12px] font-normal text-[#9B9B9B]">{galleryImages.length} fotografii</span>
+            </h2>
+            <PhotoGallery images={galleryImages} />
+          </div>
+        )}
+
+        {/* Călătorii care trec pe aici */}
+        {relatedTrips.length > 0 && (
+          <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
+            <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">
+              Călătorii care includ această locație
+            </h2>
+            <div className="flex gap-2.5 overflow-x-auto scrollbar-hide">
+              {relatedTrips.map(trip => (
+                <Link
+                  key={trip.id}
+                  href={`/trip/${trip.id}`}
+                  className="min-w-[180px] max-w-[180px] border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex-shrink-0 hover:border-[rgba(0,0,0,0.15)] transition-colors"
+                >
+                  <div className="h-20 bg-gradient-to-br from-[#5B4FCF] to-[#8B7FE8] flex items-center justify-center">
+                    {trip.cover_image
+                      ? <img src={trip.cover_image} alt="" className="w-full h-full object-cover" />
+                      : <span className="text-2xl opacity-50">🧭</span>}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="font-outfit text-[13px] font-semibold text-[#0F0F0F] leading-tight line-clamp-2 mb-1">
+                      {trip.title}
+                    </p>
+                    <p className="text-[11px] text-[#9B9B9B]">
+                      {trip.duration_days ? `${trip.duration_days} zile` : 'Itinerar'}
+                      {trip.save_count ? ` · ${trip.save_count} salvări` : ''}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 
