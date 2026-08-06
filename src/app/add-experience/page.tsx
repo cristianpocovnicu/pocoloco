@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Camera, X, Star, Loader2, MapPin, Check } from 'lucide-react'
 import Link from 'next/link'
@@ -13,7 +13,7 @@ const TIPS_OPTIONS = [
 
 const STEPS = ['Locație', 'Poze', 'Rating', 'Povestea ta', 'Publică']
 
-export default function AddExperiencePage() {
+function AddExperienceContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -304,6 +304,13 @@ export default function AddExperiencePage() {
               </button>
             </div>
           )}
+export default function AddExperiencePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E8440A]"></div></div>}>
+      <AddExperienceContent />
+    </Suspense>
+  )
+}
         </div>
       </div>
     </div>
