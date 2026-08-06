@@ -9,16 +9,18 @@ const FEATURED = [
 export default function FeaturedSection() {
   return (
     <section className="mb-7">
-      <div className="flex items-center justify-between px-5 mb-3">
+      <div className="flex items-center justify-between mb-3">
         <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F]">Recomandate</h2>
         <Link href="/search" className="text-sm text-[#E8440A] font-medium">Vezi tot</Link>
       </div>
-      <div className="flex gap-3 px-5 overflow-x-auto scrollbar-hide">
+
+      {/* Mobile: scroll orizontal / Desktop: grid 3 coloane */}
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible">
         {FEATURED.map((item) => (
           <Link
             key={item.id}
             href={`/trip/${item.id}`}
-            className="min-w-[240px] h-[150px] rounded-2xl overflow-hidden relative flex-shrink-0 block"
+            className="min-w-[240px] md:min-w-0 h-[150px] md:h-[160px] rounded-2xl overflow-hidden relative flex-shrink-0 md:flex-shrink block"
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} flex items-center justify-center text-5xl opacity-40`}>
               {item.emoji}
