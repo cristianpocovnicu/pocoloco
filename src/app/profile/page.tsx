@@ -14,6 +14,7 @@ type Profile = {
   full_name: string
   username: string
   bio: string | null
+  avatar_url: string | null
   is_guide: boolean
   guide_level: number
   xp: number
@@ -113,9 +114,18 @@ export default function ProfilePage() {
         <div className="bg-white px-5 pt-6 pb-5 border-b border-[rgba(0,0,0,0.08)]">
           <div className="flex items-start justify-between mb-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E8440A] to-orange-400 flex items-center justify-center font-outfit text-3xl font-bold text-white" style={{ boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}>
-                {getInitials(profile.full_name)}
-              </div>
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt=""
+                  className="w-20 h-20 rounded-full object-cover"
+                  style={{ boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E8440A] to-orange-400 flex items-center justify-center font-outfit text-3xl font-bold text-white" style={{ boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}>
+                  {getInitials(profile.full_name)}
+                </div>
+              )}
               {profile.is_guide && (
                 <div className="absolute bottom-0 right-0 w-6 h-6 bg-[#5B4FCF] rounded-full border-2 border-white flex items-center justify-center">
                   <Star size={11} className="text-white fill-white" />

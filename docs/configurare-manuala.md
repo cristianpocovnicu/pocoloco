@@ -1,0 +1,118 @@
+# Ce necesită configurare manuală
+
+Tot ce nu se poate face din cod, într-un singur loc. Ordinea de mai jos e
+ordinea în care trebuie făcute lucrurile.
+
+---
+
+## 1. Variabile de mediu
+
+În Vercel (Project → Settings → Environment Variables) și în `.env.local`
+pentru dezvoltare locală:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+```
+
+Ambele se găsesc în Supabase → Settings → API. `.env.local` e în `.gitignore`,
+deci nu ajunge în repo.
+
+---
+
+## 2. Migrări SQL
+
+Rulează-le în **Supabase → SQL Editor**, în această ordine. Fiecare e
+idempotentă — se poate rula din nou fără efecte secundare.
+
+| # | Fișier | Ce face |
+|---|--------|---------|
+| 0 | `supabase/checks/inspect_comments.sql` | doar citește: îți arată schema `comments` înainte de migrarea 5 |
+| 1 | `supabase/migrations/20260806_admin_dashboard.sql` | `profiles.role` / `status`, funcția `is_admin()`, politici de moderare |
+| 2 | `supabase/migrations/20260806_location_approval.sql` | status `pending` implicit pe locații, triggere, RLS |
+| 3 | `supabase/migrations/20260806_votes.sql` | tabelul `votes`, trigger pentru contoare, RLS |
+| 4 | `supabase/migrations/20260806_follows.sql` | tabelul `follows`, RLS |
+| 5 | `supabase/migrations/20260806_comments.sql` | `parent_id`, trigger pentru `comment_count`, RLS |
+| 6 | `supabase/migrations/20260806_notifications.sql` | tabelul `notifications` + triggerele care le generează |
+| 7 | `supabase/migrations/20260806_profile_on_signup.sql` | profil automat la înregistrare (necesar pentru Google) |
+
+Ordinea contează: migrările 2–7 folosesc `is_admin()` din prima, iar 6 atașează
+triggere pe tabelele create de 3, 4 și 5.
+
+### După prima migrare — fă-ți contul admin
+
+```sql
+update public.profiles set role = 'admin' where username = 'username_tau';
+```
+
+Fără asta, `/admin` îți răspunde „Acces restricționat".
+
+### Atenție la migrarea 2 (RLS pe `locations`)
+
+Dacă ai un trigger care actualizează `locations.experience_count` când se
+adaugă o experiență, funcția lui trebuie să fie `SECURITY DEFINER`, altfel RLS
+o blochează. Fișierul conține query-ul care îți listează triggerele. Rollback
+dacă ceva se blochează:
+
+```sql
+alter table public.locations disable row level security;
+```
+
+### Atenție la migrarea 5 (comentarii)
+
+Rulează întâi `checks/inspect_comments.sql`. Dacă ai deja un trigger care
+actualizează `experiences.comment_count`, șterge-l — altfel numărătoarea se
+dublează.
+
+---
+
+## 3. Realtime pentru notificări
+
+Badge-ul de notificări din sidebar și din bara de jos se actualizează prin
+Supabase Realtime. Migrarea 6 încearcă să adauge tabelul în publicație; dacă
+primești un `notice` că publicația nu există:
+
+1. Supabase → **Database → Replication** → activează Realtime
+2. apoi rulează:
+   ```sql
+   alter publication supabase_realtime add table public.notifications;
+   ```
+
+Fără Realtime aplicația funcționează în continuare: contorul se recitește la
+fiecare navigare, doar că nu se mai actualizează instantaneu.
+
+---
+
+## 4. Storage
+
+Aplicația încarcă imagini (poze la experiențe, avatare) în bucket-ul `images`.
+
+Supabase → **Storage** → bucket `images`:
+- trebuie să existe și să fie **public** (linkurile sunt luate cu
+  `getPublicUrl`)
+- politici necesare: upload pentru useri autentificați, citire pentru toată
+  lumea
+
+Avatarele se salvează la `avatars/<user-id>/<timestamp>.<ext>`, pozele de la
+experiențe la `experiences/<user-id>/...`.
+
+---
+
+## 5. Autentificare cu Google
+
+Pași detaliați în [`google-auth-setup.md`](./google-auth-setup.md). Pe scurt:
+client OAuth în Google Cloud Console, Client ID + Secret în Supabase →
+Authentication → Providers → Google, plus URL-urile aplicației în
+Authentication → URL Configuration.
+
+---
+
+## 6. Ce nu e implementat
+
+- **Apple Sign In** — butonul e dezactivat în interfață; necesită cont Apple
+  Developer plătit.
+- **Călătorii** — există tabelul `trips` și o pagină minimă `/trip/[id]`, dar
+  nu există flux de creare a unei călătorii și nici itinerariul
+  (`trip_locations`).
+- **Secțiunea „Recomandate"** de pe homepage (`FeaturedSection.tsx`) e încă pe
+  date hardcodate.

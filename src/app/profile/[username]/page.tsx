@@ -15,6 +15,7 @@ type PublicProfile = {
   username: string
   full_name: string | null
   bio: string | null
+  avatar_url: string | null
   is_guide: boolean | null
   guide_level: number | null
   xp: number | null
@@ -49,7 +50,7 @@ export default function PublicProfilePage() {
 
       const { data: prof } = await supabase
         .from('profiles')
-        .select('id, username, full_name, bio, is_guide, guide_level, xp, created_at')
+        .select('id, username, full_name, bio, avatar_url, is_guide, guide_level, xp, created_at')
         .eq('username', username)
         .maybeSingle()
 
@@ -117,12 +118,21 @@ export default function PublicProfilePage() {
         <div className="bg-white px-5 pt-6 pb-5 border-b border-[rgba(0,0,0,0.08)]">
           <div className="flex items-start justify-between mb-4">
             <div className="relative">
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center font-outfit text-3xl font-bold text-white"
-                style={{ background: colorFor(profile.id), boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}
-              >
-                {initialsOf(profile.full_name || profile.username)}
-              </div>
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt=""
+                  className="w-20 h-20 rounded-full object-cover"
+                  style={{ boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}
+                />
+              ) : (
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center font-outfit text-3xl font-bold text-white"
+                  style={{ background: colorFor(profile.id), boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}
+                >
+                  {initialsOf(profile.full_name || profile.username)}
+                </div>
+              )}
               {profile.is_guide && (
                 <div className="absolute bottom-0 right-0 w-6 h-6 bg-[#5B4FCF] rounded-full border-2 border-white flex items-center justify-center">
                   <Star size={11} className="text-white fill-white" />

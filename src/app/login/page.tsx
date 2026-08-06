@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, ArrowLeft, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import SocialAuthButtons from '@/components/auth/SocialAuthButtons'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,14 +23,6 @@ export default function LoginPage() {
     else { router.push('/'); router.refresh() }
   }
 
-  const handleGoogle = async () => {
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
-    })
-  }
-
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <div className="px-5 pt-5 pb-3 flex items-center gap-3 border-b border-[rgba(0,0,0,0.08)]">
@@ -41,14 +34,7 @@ export default function LoginPage() {
       <div className="flex-1 px-6 pt-7 pb-10">
         <h1 className="font-outfit text-[26px] font-bold text-[#0F0F0F] mb-1.5">Bine ai revenit 👋</h1>
         <p className="text-[14px] text-[#6B6B6B] leading-relaxed mb-7">Intră în cont și continuă să explorezi lumea cu Pocoloco.</p>
-        <div className="flex flex-col gap-2.5 mb-5">
-          <button onClick={handleGoogle} className="w-full py-3.5 rounded-full border border-[#ddd] bg-white flex items-center justify-center gap-2.5 font-outfit text-[14px] font-medium">
-            <span className="font-bold">G</span> Continuă cu Google
-          </button>
-          <button className="w-full py-3.5 rounded-full bg-black flex items-center justify-center gap-2.5 font-outfit text-[14px] font-medium text-white">
-            🍎 Continuă cu Apple
-          </button>
-        </div>
+        <SocialAuthButtons />
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px bg-[rgba(0,0,0,0.08)]" />
           <span className="text-[12px] text-[#9B9B9B]">sau cu email</span>

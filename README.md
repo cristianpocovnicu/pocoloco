@@ -43,3 +43,10 @@ src/
 
 ## Admin Dashboard
 Accesibil la `/admin` — doar pentru utilizatorii cu rol de admin.
+
+## Configurare
+Migrările SQL, Realtime, storage și autentificarea cu Google necesită pași
+manuali în Supabase și Google Cloud Console:
+
+- [`docs/configurare-manuala.md`](docs/configurare-manuala.md) — toate migrările în ordine + restul setărilor
+- [`docs/google-auth-setup.md`](docs/google-auth-setup.md) — autentificarea cu Google, pas cu pas
