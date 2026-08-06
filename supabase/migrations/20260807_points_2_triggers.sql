@@ -56,8 +56,11 @@ begin
   if new.status is distinct from 'active' then
     return null;
   end if;
-  if tg_op = 'UPDATE' and old.status = 'active' then
-    return null;
+  if tg_op = 'UPDATE' then
+    -- era deja publicată: punctele s-au dat atunci
+    if old.status = 'active' then
+      return null;
+    end if;
   end if;
 
   -- to_jsonb ne scapă de presupuneri despre tipul coloanei (text[] sau jsonb)
@@ -112,8 +115,10 @@ begin
   if new.status is distinct from 'active' then
     return null;
   end if;
-  if tg_op = 'UPDATE' and old.status = 'active' then
-    return null;
+  if tg_op = 'UPDATE' then
+    if old.status = 'active' then
+      return null;
+    end if;
   end if;
 
   if new.cover_image is not null and new.cover_image <> '' then
@@ -286,13 +291,13 @@ begin
       end if;
     end if;
 
-  elsif tg_op = 'UPDATE'
-    and new.location_id is not null
-    and old.status is distinct from new.status
-    and new.status = 'visited'
-    and old.status = 'want_to_go' then
+  elsif tg_op = 'UPDATE' then
     -- ai plănuit și chiar ai ajuns acolo
-    perform public.award_points(new.user_id, null, 'visit_confirmed', 'location', new.location_id, 3);
+    if new.location_id is not null
+       and new.status = 'visited'
+       and old.status = 'want_to_go' then
+      perform public.award_points(new.user_id, null, 'visit_confirmed', 'location', new.location_id, 3);
+    end if;
   end if;
 
   return null;

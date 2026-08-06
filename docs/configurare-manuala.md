@@ -56,6 +56,15 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 18 | `supabase/migrations/20260807_text_limits.sql` | coloanele lungi devin `text`, limita comentariilor urcă la 10.000 |
 | 19 | `supabase/migrations/20260807_trip_guides.sql` | `trips.is_guide` + trigger care lasă doar adminii să-l seteze |
 | 20 | `supabase/migrations/20260807_location_photos.sql` | `locations.google_place_id` + `cover_source`, pentru copertele luate din Google |
+| 21 | `supabase/migrations/20260807_points_1_core.sql` | registrul de puncte, curba de nivel, `award_points()` |
+| 22 | `supabase/migrations/20260807_points_2_triggers.sql` | triggerele care acordă punctele |
+| 23 | `supabase/migrations/20260807_points_3_badges.sql` | insignele devin milestone-uri cu recompensă |
+| 24 | `supabase/migrations/20260807_points_4_shares.sql` | tabelul `shares` + `record_share()` |
+| 25 | `supabase/migrations/20260807_points_5_referrals.sql` | coduri de invitație și plata lor |
+| 26 | `supabase/migrations/20260807_points_6_backfill.sql` | reconstruiește punctele din istoricul existent (rulează ultima) |
+
+Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
+în [`economia-de-puncte.md`](./economia-de-puncte.md).
 
 Ordinea contează: migrările 2–7 folosesc `is_admin()` din prima, iar 6 atașează
 triggere pe tabelele create de 3, 4 și 5.
