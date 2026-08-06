@@ -8,6 +8,7 @@ import { formatCount, timeAgo } from '@/lib/utils'
 import { fetchMyVotes, type VoteType } from '@/lib/votes'
 import BottomNav from '@/components/layout/BottomNav'
 import VoteButtons from '@/components/experience/VoteButtons'
+import FollowButton from '@/components/profile/FollowButton'
 
 type Location = {
   id: string
@@ -36,7 +37,7 @@ type Experience = {
   downvotes: number
   comment_count: number
   created_at: string
-  author: { full_name: string; is_guide: boolean }
+  author: { id: string; username: string | null; full_name: string; is_guide: boolean } | null
 }
 
 export default function LocationPage() {
@@ -63,7 +64,7 @@ export default function LocationPage() {
 
       const { data: exps } = await supabase
         .from('experiences')
-        .select('*, author:profiles!author_id(full_name, is_guide)')
+        .select('*, author:profiles!author_id(id, username, full_name, is_guide)')
         .eq('location_id', id)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
@@ -287,14 +288,20 @@ export default function LocationPage() {
               <div key={exp.id} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden mb-3">
                 <div className="p-3.5">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0">
-                      {getInitials(exp.author?.full_name)}
-                    </div>
-                    <div>
-                      <span className="text-[13px] font-semibold text-[#0F0F0F]">{exp.author?.full_name}</span>
-                      {exp.author?.is_guide && <span className="ml-1.5 text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-medium">Ghid</span>}
-                      <div className="text-[11px] text-[#9B9B9B]">{timeAgo(exp.created_at)}</div>
-                    </div>
+                    <Link
+                      href={exp.author?.username ? `/profile/${exp.author.username}` : '#'}
+                      className="flex items-center gap-2 min-w-0 flex-1"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0">
+                        {getInitials(exp.author?.full_name || '')}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[13px] font-semibold text-[#0F0F0F]">{exp.author?.full_name}</span>
+                        {exp.author?.is_guide && <span className="ml-1.5 text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-medium">Ghid</span>}
+                        <div className="text-[11px] text-[#9B9B9B]">{timeAgo(exp.created_at)}</div>
+                      </div>
+                    </Link>
+                    {exp.author?.id && <FollowButton targetUserId={exp.author.id} size="sm" />}
                   </div>
 
                   {/* Stars */}

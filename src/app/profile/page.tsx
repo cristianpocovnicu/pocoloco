@@ -5,6 +5,7 @@ import TopBar from '@/components/layout/TopBar'
 import BottomNav from '@/components/layout/BottomNav'
 import { Settings, Share2, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import { getFollowCounts } from '@/lib/follows'
 import { formatCount, timeAgo } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
+  const [counts, setCounts] = useState({ followers: 0, following: 0 })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState(0)
 
@@ -58,6 +60,7 @@ export default function ProfilePage() {
 
       if (prof) setProfile(prof as Profile)
       if (exps) setExperiences(exps as unknown as Experience[])
+      setCounts(await getFollowCounts(supabase, user.id))
       setLoading(false)
     }
     fetchData()
@@ -128,18 +131,17 @@ export default function ProfilePage() {
           {profile.bio && <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3">{profile.bio}</p>}
 
           <div className="flex pt-4 border-t border-[rgba(0,0,0,0.08)]">
-            <div className="flex-1 text-center border-r border-[rgba(0,0,0,0.08)]">
-              <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{experiences.length}</div>
-              <div className="text-[11px] text-[#9B9B9B]">experiențe</div>
-            </div>
-            <div className="flex-1 text-center border-r border-[rgba(0,0,0,0.08)]">
-              <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{profile.xp}</div>
-              <div className="text-[11px] text-[#9B9B9B]">XP</div>
-            </div>
-            <div className="flex-1 text-center">
-              <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">Niv. {profile.guide_level}</div>
-              <div className="text-[11px] text-[#9B9B9B]">nivel</div>
-            </div>
+            {[
+              { value: formatCount(experiences.length), label: 'experiențe' },
+              { value: formatCount(counts.followers), label: 'urmăritori' },
+              { value: formatCount(counts.following), label: 'urmăresc' },
+              { value: formatCount(profile.xp), label: 'XP' },
+            ].map((s, i, arr) => (
+              <div key={s.label} className={`flex-1 text-center ${i < arr.length - 1 ? 'border-r border-[rgba(0,0,0,0.08)]' : ''}`}>
+                <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{s.value}</div>
+                <div className="text-[11px] text-[#9B9B9B]">{s.label}</div>
+              </div>
+            ))}
           </div>
         </div>
 

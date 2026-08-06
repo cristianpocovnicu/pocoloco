@@ -3,8 +3,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Home, Search, Users, Plus, Bell, Settings, ShieldCheck } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCount } from '@/lib/utils'
 import { createClient } from '@/lib/supabase-client'
+import { getFollowCounts } from '@/lib/follows'
 import UserMenu from './UserMenu'
 
 const NAV_LINKS = [
@@ -22,18 +23,24 @@ const NAV_BOTTOM = [
 export default function Sidebar() {
   const pathname = usePathname()
   const [isAdmin, setIsAdmin] = useState(false)
+  const [counts, setCounts] = useState<{ followers: number; following: number } | null>(null)
 
   useEffect(() => {
-    // Linkul spre dashboard apare doar pentru conturile cu rol de admin
     const supabase = createClient()
-    const checkAdmin = async (userId?: string) => {
-      if (!userId) { setIsAdmin(false); return }
+    const loadUser = async (userId?: string) => {
+      if (!userId) {
+        setIsAdmin(false)
+        setCounts(null)
+        return
+      }
+      // linkul spre dashboard apare doar pentru conturile cu rol de admin
       const { data } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
       setIsAdmin(data?.role === 'admin')
+      setCounts(await getFollowCounts(supabase, userId))
     }
-    supabase.auth.getUser().then(({ data }) => checkAdmin(data.user?.id))
+    supabase.auth.getUser().then(({ data }) => loadUser(data.user?.id))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      checkAdmin(session?.user?.id)
+      loadUser(session?.user?.id)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -102,6 +109,16 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-6 py-5 border-t border-[rgba(0,0,0,0.08)]">
+        {counts && (
+          <Link href="/profile" className="flex items-center gap-3 mb-3 px-1.5">
+            <span className="text-[12px] text-[#6B6B6B]">
+              <strong className="font-outfit font-semibold text-[#0F0F0F]">{formatCount(counts.followers)}</strong> urmăritori
+            </span>
+            <span className="text-[12px] text-[#6B6B6B]">
+              <strong className="font-outfit font-semibold text-[#0F0F0F]">{formatCount(counts.following)}</strong> urmăresc
+            </span>
+          </Link>
+        )}
         <UserMenu sidebar />
       </div>
     </aside>
