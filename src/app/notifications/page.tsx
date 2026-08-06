@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowUp, UserPlus, MessageCircle, CornerDownRight, Bell, Loader2, CheckCheck } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
+import EmptyState from '@/components/ui/EmptyState'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { fetchNotifications, markAllRead, type NotificationItem, type NotificationType } from '@/lib/notifications'
@@ -95,11 +96,12 @@ export default function NotificationsPage() {
             </Link>
           </div>
         ) : items.length === 0 ? (
-          <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-10 text-center">
-            <div className="text-4xl mb-3">🔔</div>
-            <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F] mb-1">Nicio notificare</p>
-            <p className="text-[13px] text-[#9B9B9B]">Când cineva îți apreciază sau comentează experiențele, apare aici.</p>
-          </div>
+          <EmptyState
+            illustration="bell"
+            title="Nicio notificare încă"
+            description="Aici ajung aprecierile, comentariile și urmăritorii noi. Scrie o experiență despre un loc care ți-a plăcut și n-o să dureze mult până se umple."
+            action={{ href: '/add-experience', label: '+ Adaugă o experiență' }}
+          />
         ) : (
           <div className="flex flex-col gap-2">
             {items.map(n => {

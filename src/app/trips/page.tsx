@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Bookmark, Calendar, Globe, Loader2, MapPin, Plus, Route, Search } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
+import EmptyState from '@/components/ui/EmptyState'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, colorFor, initialsOf, type MiniProfile } from '@/lib/profiles'
 import { cn, formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
@@ -127,20 +128,14 @@ export default function TripsPage() {
             <Loader2 size={26} className="animate-spin text-[#E8440A]" />
           </div>
         ) : trips.length === 0 ? (
-          <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-10 text-center">
-            <div className="text-4xl mb-3">🧭</div>
-            <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F] mb-1">
-              {query.trim() ? 'Niciun rezultat' : 'Nicio călătorie încă'}
-            </p>
-            <p className="text-[13px] text-[#9B9B9B] mb-4">
-              {query.trim() ? 'Încearcă alt termen.' : 'Fii primul care împarte un itinerar cu comunitatea.'}
-            </p>
-            {!query.trim() && (
-              <Link href="/trip/new" className="inline-flex bg-[#E8440A] text-white font-outfit text-sm font-semibold px-5 py-2.5 rounded-full">
-                + Creează o călătorie
-              </Link>
-            )}
-          </div>
+          <EmptyState
+            illustration="compass"
+            title={query.trim() ? 'Niciun rezultat' : 'Nicio călătorie încă'}
+            description={query.trim()
+              ? 'Încearcă alt termen sau schimbă sortarea.'
+              : 'Un itinerar bun le economisește altora zile de căutat. Pune-l pe al tău: locurile, pe zile, cu notițe.'}
+            action={query.trim() ? undefined : { href: '/trip/new', label: '+ Creează prima călătorie' }}
+          />
         ) : (
           <div className="flex flex-col gap-3">
             {trips.map(trip => {

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MessageCircle, Eye } from 'lucide-react'
 import { ExperienceCardSkeleton } from '@/components/ui/Skeleton'
 import { createClient } from '@/lib/supabase-client'
@@ -127,7 +128,7 @@ export default function PopularSection() {
                 {post.images && post.images.length > 0 && (
                   <div className="flex gap-1.5 px-3.5 pb-3">
                     {post.images.slice(0, 3).map((img, i) => (
-                      <img key={i} src={img} alt="" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                      <Image key={i} src={img} alt="" width={80} height={80} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
                     ))}
                   </div>
                 )}

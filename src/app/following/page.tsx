@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Loader2, MapPin, Route, Users } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
+import EmptyState from '@/components/ui/EmptyState'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
@@ -86,21 +87,15 @@ export default function FollowingPage() {
           </div>
         ) : items.length === 0 ? (
           <div>
-            <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-8 text-center mb-5">
-              <div className="text-4xl mb-3">👥</div>
-              <p className="font-outfit text-[16px] font-semibold text-[#0F0F0F] mb-1">
-                {loggedIn ? 'Niciun post de la cei urmăriți' : 'Intră în cont ca să-ți urmărești călătorii'}
-              </p>
-              <p className="text-[13px] text-[#9B9B9B]">
-                {loggedIn
-                  ? 'Urmărește mai mulți călători ca să-ți umpli feedul.'
-                  : 'Feedul „Urmaresc" adună postările oamenilor pe care îi urmărești.'}
-              </p>
-              {!loggedIn && (
-                <Link href="/login" className="inline-flex mt-4 bg-[#E8440A] text-white font-outfit text-sm font-semibold px-5 py-2.5 rounded-full">
-                  Intră în cont
-                </Link>
-              )}
+            <div className="mb-5">
+              <EmptyState
+                illustration="people"
+                title={loggedIn ? 'Feedul tău e gol deocamdată' : 'Intră în cont ca să-ți urmărești călătorii'}
+                description={loggedIn
+                  ? 'Urmărește câțiva călători și aici o să apară locurile pe care le descoperă ei — înaintea tuturor.'
+                  : 'Feedul „Urmaresc" adună postările oamenilor pe care îi urmărești, într-un singur loc.'}
+                action={loggedIn ? undefined : { href: '/login', label: 'Intră în cont' }}
+              />
             </div>
             <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">Sugestii pentru tine</h2>
             <UserSuggestionList users={suggestions} />
