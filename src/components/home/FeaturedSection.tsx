@@ -56,11 +56,12 @@ export default function FeaturedSection() {
     const load = async () => {
       const supabase = createClient()
 
-      // întâi călătoriile cele mai salvate
+      // cele promovate de admin primele, apoi cele mai salvate
       const { data: trips } = await supabase
         .from('trips')
         .select('id, title, cover_image, countries, duration_days, save_count, author_id')
         .eq('status', 'active')
+        .order('featured', { ascending: false })
         .order('save_count', { ascending: false })
         .limit(6)
 

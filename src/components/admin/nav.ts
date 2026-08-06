@@ -1,4 +1,4 @@
-import { LayoutDashboard, AlertTriangle, MapPin, Pencil, Users, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, AlertTriangle, MapPin, Pencil, Route, Users, type LucideIcon } from 'lucide-react'
 
 export type AdminNavItem = {
   href: string
@@ -27,6 +27,7 @@ export const ADMIN_NAV: { label: string; items: AdminNavItem[] }[] = [
     items: [
       { href: '/admin/locations', label: 'Locații', Icon: MapPin, badge: 'locations', badgeColor: 'bg-[#D97706]' },
       { href: '/admin/experiences', label: 'Experiențe', Icon: Pencil },
+      { href: '/admin/trips', label: 'Călătorii', Icon: Route },
     ],
   },
   {
