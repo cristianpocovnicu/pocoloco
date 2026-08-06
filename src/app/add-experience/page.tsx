@@ -5,6 +5,7 @@ import { ArrowLeft, Camera, X, Star, Loader2, MapPin, Search, Plus } from 'lucid
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 import { useToast } from '@/components/ui/Toast'
+import { fetchPointsSince, justNowWindow } from '@/lib/points'
 import CharCounter from '@/components/ui/CharCounter'
 import { attachGoogleCover } from '@/lib/location-cover'
 import {
@@ -184,6 +185,8 @@ function AddExperienceContent() {
   const handleSubmit = async () => {
     setLoading(true)
     setError('')
+    // reper pentru punctele câștigate cu publicarea asta
+    const since = justNowWindow()
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -253,7 +256,8 @@ function AddExperienceContent() {
 
       if (expError) throw expError
 
-      toast('Experiență publicată! 🎉')
+      const gained = await fetchPointsSince(supabase, user.id, since)
+      toast(gained > 0 ? `Experiență publicată! +${gained} puncte 🎉` : 'Experiență publicată! 🎉')
       router.push(finalLocationId ? `/location/${finalLocationId}` : '/')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'A apărut o eroare.')

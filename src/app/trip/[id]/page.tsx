@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Bookmark, Calendar, Globe, Loader2, MapPin, Pencil, PenLine, Share2, Star, Trash2, Users,
+  ArrowLeft, Bookmark, Calendar, Globe, Loader2, MapPin, Pencil, PenLine, Star, Trash2, Users,
 } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
+import ShareButton from '@/components/ui/ShareButton'
 import FollowButton from '@/components/profile/FollowButton'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
@@ -129,15 +130,6 @@ export default function TripPage() {
     if (!error) router.push('/trips')
   }
 
-  const handleShare = async () => {
-    const url = window.location.href
-    if (navigator.share) {
-      try { await navigator.share({ title: trip?.title, url }) } catch { /* anulat de user */ }
-    } else {
-      try { await navigator.clipboard.writeText(url) } catch { /* clipboard blocat */ }
-    }
-  }
-
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
       <Loader2 size={28} className="animate-spin text-[#E8440A]" />
@@ -235,13 +227,13 @@ export default function TripPage() {
               {saved ? 'Salvată' : 'Salvează călătoria'}
               {saveCount > 0 && <span className="opacity-70">· {formatCount(saveCount)}</span>}
             </button>
-            <button
-              onClick={handleShare}
+            <ShareButton
+              contentType="trip"
+              contentId={trip.id}
+              title={trip.title}
+              variant="icon"
               className="w-10 h-10 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0"
-              aria-label="Distribuie"
-            >
-              <Share2 size={16} className="text-[#6B6B6B]" />
-            </button>
+            />
           </div>
         </div>
 

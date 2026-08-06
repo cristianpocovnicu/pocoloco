@@ -5,6 +5,7 @@ import { countRows, fetchProfilesMap, CONTENT_TYPE_LABELS } from '@/lib/admin'
 import { timeAgo } from '@/lib/utils'
 import AdminHeader from '@/components/admin/AdminHeader'
 import FlaggedByVotes from '@/components/admin/FlaggedByVotes'
+import SharesCard from '@/components/admin/SharesCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -230,6 +231,11 @@ export default async function AdminOverviewPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Share-uri — semnalul cel mai puternic de calitate */}
+        <div className="mb-5">
+          <SharesCard />
         </div>
 
         {/* Semnalate de comunitate — votat negativ, dar încă neraportat */}

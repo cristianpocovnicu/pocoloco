@@ -6,6 +6,7 @@ import { AlertTriangle, Camera, Check, Eye, EyeOff, Loader2, LogOut, Settings as
 import BottomNav from '@/components/layout/BottomNav'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
+import InviteFriends from '@/components/referral/InviteFriends'
 import CharCounter from '@/components/ui/CharCounter'
 
 type Profile = {
@@ -316,6 +317,9 @@ export default function SettingsPage() {
             {savingPassword ? <><Loader2 size={16} className="animate-spin" /> Se salvează...</> : <><ShieldCheck size={16} /> Schimbă parola</>}
           </button>
         </section>
+
+        {/* Invitații */}
+        {profile && <InviteFriends userId={profile.id} />}
 
         {/* Cont */}
         <section className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-5">

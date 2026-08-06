@@ -2,17 +2,19 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
-import { Settings, Share2, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut, Pencil, Trash2 } from 'lucide-react'
+import { Settings, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import BadgeGrid from '@/components/profile/BadgeGrid'
 import SavedLocationList from '@/components/profile/SavedLocationList'
 import TravelMap from '@/components/profile/TravelMap'
+import PointsProgress from '@/components/profile/PointsProgress'
 import SavedTripList from '@/components/profile/SavedTripList'
 import { fetchSavedLocations, fetchSavedTrips, setLocationSaveStatus, type SavedLocation, type SavedTrip } from '@/lib/saves'
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
-import { formatCount, timeAgo, shareLink } from '@/lib/utils'
+import { formatCount, timeAgo } from '@/lib/utils'
+import ShareButton from '@/components/ui/ShareButton'
 import { useToast } from '@/components/ui/Toast'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -50,7 +52,6 @@ export default function ProfilePage() {
   const [badges, setBadges] = useState<{ earned: EarnedBadge[]; locked: Badge[] }>({ earned: [], locked: [] })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState(0)
-  const [shareNote, setShareNote] = useState('')
   const [editing, setEditing] = useState<EditableExperience | null>(null)
   const [wantToGo, setWantToGo] = useState<SavedLocation[]>([])
   const [visited, setVisited] = useState<SavedLocation[]>([])
@@ -134,18 +135,6 @@ export default function ProfilePage() {
     setMovingId(null)
   }
 
-  const handleShare = async () => {
-    if (!profile) return
-    const result = await shareLink(
-      `${window.location.origin}/profile/${profile.username}`,
-      `${profile.full_name} pe Pocoloco`
-    )
-    if (result === 'copied') {
-      setShareNote('Link copiat')
-      setTimeout(() => setShareNote(''), 2000)
-    }
-  }
-
   const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
 
   if (loading) return (
@@ -200,12 +189,12 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-            <button
-              onClick={handleShare}
-              className="bg-[#EEEDFB] text-[#5B4FCF] font-outfit text-[12px] font-semibold px-3 py-2 rounded-full flex items-center gap-1"
-            >
-              <Share2 size={13} /> {shareNote || 'Share'}
-            </button>
+            <ShareButton
+              contentType="profile"
+              contentId={profile.id}
+              url={`${typeof window !== 'undefined' ? window.location.origin : ''}/profile/${profile.username}`}
+              title={`${profile.full_name} pe Pocoloco`}
+            />
           </div>
           <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F]">{profile.full_name}</h1>
           <p className="text-[13px] text-[#9B9B9B] mb-2">@{profile.username}{profile.is_guide ? ' · Ghid Experimentat' : ''}</p>
@@ -225,6 +214,9 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+
+        {/* Progresul pe puncte, discret, sub statistici */}
+        <PointsProgress userId={profile.id} />
 
         {/* Harta călătorului — locurile bifate „Am fost" */}
         <TravelMap userId={profile.id} isOwn />

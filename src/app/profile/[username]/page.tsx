@@ -12,6 +12,7 @@ import { fetchBadges, type EarnedBadge } from '@/lib/badges'
 import BadgeGrid from '@/components/profile/BadgeGrid'
 import SavedLocationList from '@/components/profile/SavedLocationList'
 import TravelMap from '@/components/profile/TravelMap'
+import LevelBadge from '@/components/profile/LevelBadge'
 import { fetchSavedLocations, type SavedLocation } from '@/lib/saves'
 import { formatCount, timeAgo } from '@/lib/utils'
 import Image from 'next/image'
@@ -24,6 +25,8 @@ type PublicProfile = {
   avatar_url: string | null
   is_guide: boolean | null
   created_at: string
+  points_total?: number | null
+  points_level?: number | null
 }
 
 type Experience = {
@@ -57,7 +60,7 @@ export default function PublicProfilePage() {
 
       const { data: prof, error: profError } = await supabase
         .from('profiles')
-        .select('id, username, full_name, bio, avatar_url, is_guide, created_at')
+        .select('*')
         .eq('username', username)
         .maybeSingle()
 
@@ -173,9 +176,12 @@ export default function PublicProfilePage() {
           </div>
 
           <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F]">{profile.full_name || profile.username}</h1>
-          <p className="text-[13px] text-[#9B9B9B] mb-2">
-            @{profile.username}{profile.is_guide ? ' · Ghid Experimentat' : ''}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <p className="text-[13px] text-[#9B9B9B]">
+              @{profile.username}{profile.is_guide ? ' · Ghid Experimentat' : ''}
+            </p>
+            <LevelBadge points={profile.points_total} level={profile.points_level} />
+          </div>
           {profile.bio && <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3 whitespace-pre-line">{profile.bio}</p>}
           <p className="text-[11px] text-[#9B9B9B] mb-3">Membru din {new Date(profile.created_at).toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' })}</p>
 

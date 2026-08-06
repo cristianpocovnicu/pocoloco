@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import Footer from './Footer'
 import PageTransition from './PageTransition'
+import ReferralCapture from '@/components/referral/ReferralCapture'
 
 /**
  * Structura pe desktop, ca la Instagram:
@@ -23,6 +24,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full bg-[#F0EDE8]">
+      {/* nu randează nimic; doar reține invitația din link */}
+      <ReferralCapture />
       <div className="mx-auto flex min-h-screen w-full max-w-[1100px]">
         <Sidebar />
         <div className="flex-1 min-w-0">

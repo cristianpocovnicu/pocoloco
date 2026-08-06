@@ -10,6 +10,7 @@ import ItineraryLocationPicker, { type PickedLocation } from '@/components/trip/
 import TellUsMorePrompt, { type StopWithoutReview } from '@/components/trip/TellUsMorePrompt'
 import CharCounter from '@/components/ui/CharCounter'
 import { useToast } from '@/components/ui/Toast'
+import { fetchPointsSince, justNowWindow } from '@/lib/points'
 
 const STEPS = ['Detalii', 'Itinerar', 'Copertă', 'Publică']
 
@@ -90,6 +91,8 @@ export default function NewTripPage() {
   const handlePublish = async () => {
     setPublishing(true)
     setError('')
+    // reper pentru punctele câștigate cu publicarea asta
+    const since = justNowWindow()
 
     try {
       const supabase = createClient()
@@ -155,7 +158,9 @@ export default function NewTripPage() {
         .filter(item => !written.has(item.location.id))
         .map(item => ({ id: item.location.id, name: item.location.name, city: item.location.city }))
 
-      toast('Călătorie publicată! 🎉')
+      // punctele sunt scrise de triggere în aceeași tranzacție cu insertul
+      const gained = await fetchPointsSince(supabase, user.id, since)
+      toast(gained > 0 ? `Călătorie publicată! +${gained} puncte 🎉` : 'Călătorie publicată! 🎉')
 
       if (missing.length > 0) {
         setPublishedTripId(trip.id)

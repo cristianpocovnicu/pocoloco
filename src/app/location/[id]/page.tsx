@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bookmark, CheckCircle, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
-import { formatCount, timeAgo, shareLink, formatDistance, CATEGORY_ICONS } from '@/lib/utils'
+import { formatCount, timeAgo, formatDistance, CATEGORY_ICONS } from '@/lib/utils'
+import ShareButton from '@/components/ui/ShareButton'
 import { fetchMyVotes, netScore, HIDE_THRESHOLD_EXPERIENCE, type VoteType } from '@/lib/votes'
 import { fetchCommentsFor, type CommentWithAuthor } from '@/lib/comments'
 import BottomNav from '@/components/layout/BottomNav'
@@ -91,7 +92,6 @@ export default function LocationPage() {
   const [canModerate, setCanModerate] = useState(false)
   const [blocked, setBlocked] = useState(false)
   const [loadError, setLoadError] = useState(false)
-  const [shareNote, setShareNote] = useState('')
   const [editing, setEditing] = useState<EditableExperience | null>(null)
   const [relatedTrips, setRelatedTrips] = useState<RelatedTrip[]>([])
   const [nearby, setNearby] = useState<NearbyLocation[]>([])
@@ -247,14 +247,6 @@ export default function LocationPage() {
     setExperiences(prev => prev.filter(e => e.id !== expId))
   }
 
-  const handleShare = async () => {
-    const result = await shareLink(window.location.href, location?.name)
-    if (result === 'copied') {
-      setShareNote('Link copiat')
-      setTimeout(() => setShareNote(''), 2000)
-    }
-  }
-
   const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
 
   // toate pozele din experiențele locației, în ordinea în care au fost postate
@@ -375,13 +367,13 @@ export default function LocationPage() {
               Am fost
             </button>
 
-            <button
-              onClick={handleShare}
+            <ShareButton
+              contentType="location"
+              contentId={location.id}
+              title={location.name}
               className="bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-sm font-medium rounded-full px-3.5 py-2.5 flex items-center gap-2 flex-shrink-0"
-              aria-label="Distribuie"
-            >
-              <Share2 size={15} /> <span className="hidden md:inline">{shareNote || 'Share'}</span>
-            </button>
+              label=""
+            />
           </div>
         </div>
 
