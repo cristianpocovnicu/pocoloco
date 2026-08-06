@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
-import { Settings, Share2, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut } from 'lucide-react'
+import { Settings, Share2, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
+import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import { formatCount, timeAgo, shareLink } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -24,6 +25,8 @@ type Experience = {
   content: string
   images: string[]
   rating_experience: number
+  rating_access: number | null
+  rating_crowd: number | null
   upvotes: number
   comment_count: number
   created_at: string
@@ -40,6 +43,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState(0)
   const [shareNote, setShareNote] = useState('')
+  const [editing, setEditing] = useState<EditableExperience | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +76,18 @@ export default function ProfilePage() {
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
+  }
+
+  const handleDeleteExperience = async (expId: string) => {
+    if (!window.confirm('Ștergi experiența? Comentariile și voturile ei dispar odată cu ea.')) return
+
+    const supabase = createClient()
+    const { error } = await supabase.from('experiences').delete().eq('id', expId)
+    if (error) {
+      window.alert(`Nu am putut șterge experiența: ${error.message}`)
+      return
+    }
+    setExperiences(prev => prev.filter(e => e.id !== expId))
   }
 
   const handleShare = async () => {
@@ -204,13 +220,15 @@ export default function ProfilePage() {
                   </Link>
                 </div>
               ) : experiences.map(exp => (
-                <Link key={exp.id} href={`/location/${exp.location?.id}`} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5 block hover:border-[rgba(0,0,0,0.15)] transition-colors">
-                  <div className="flex items-start justify-between mb-1">
-                    <div>
-                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F]">{exp.location?.name}</h3>
+                // cardul e un div, nu un link: butoanele de editare n-au voie
+                // să stea într-un <a>
+                <div key={exp.id} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5">
+                  <div className="flex items-start justify-between mb-1 gap-2">
+                    <Link href={`/location/${exp.location?.id}`} className="min-w-0 hover:text-[#E8440A] transition-colors">
+                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] truncate">{exp.location?.name}</h3>
                       <p className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><MapPin size={10} /> {exp.location?.city}</p>
-                    </div>
-                    <div className="flex gap-0.5">
+                    </Link>
+                    <div className="flex gap-0.5 flex-shrink-0">
                       {[1,2,3,4,5].map(i => <Star key={i} size={12} className={i <= exp.rating_experience ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />)}
                     </div>
                   </div>
@@ -222,14 +240,41 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   )}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-2.5">
                     <span className="text-[11px] text-[#9B9B9B]">{timeAgo(exp.created_at)}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><ArrowUp size={11} /> {formatCount(exp.upvotes)}</span>
                       <span className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><MessageCircle size={11} /> {formatCount(exp.comment_count)}</span>
                     </div>
                   </div>
-                </Link>
+
+                  <div className="flex gap-1.5 pt-2.5 border-t border-[rgba(0,0,0,0.06)]">
+                    <button
+                      onClick={() => setEditing({
+                        id: exp.id,
+                        content: exp.content,
+                        rating_experience: exp.rating_experience,
+                        rating_access: exp.rating_access ?? null,
+                        rating_crowd: exp.rating_crowd ?? null,
+                      })}
+                      className="text-[11px] bg-[#EEEDFB] text-[#5B4FCF] px-3 py-1.5 rounded-lg font-medium flex items-center gap-1"
+                    >
+                      <Pencil size={11} /> Editează
+                    </button>
+                    <button
+                      onClick={() => handleDeleteExperience(exp.id)}
+                      className="text-[11px] bg-[#FEF2F2] text-[#DC2626] px-3 py-1.5 rounded-lg font-medium flex items-center gap-1"
+                    >
+                      <Trash2 size={11} /> Șterge
+                    </button>
+                    <Link
+                      href={`/location/${exp.location?.id}`}
+                      className="ml-auto text-[11px] text-[#6B6B6B] px-3 py-1.5 rounded-lg font-medium"
+                    >
+                      Vezi →
+                    </Link>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -255,6 +300,17 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+      {editing && (
+        <ExperienceEditModal
+          experience={editing}
+          onClose={() => setEditing(null)}
+          onSaved={updated => {
+            setExperiences(prev => prev.map(e => (e.id === updated.id ? { ...e, ...updated } : e)))
+            setEditing(null)
+          }}
+        />
+      )}
+
       <BottomNav />
     </main>
   )

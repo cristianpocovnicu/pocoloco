@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Bookmark, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2 } from 'lucide-react'
+import { ArrowLeft, Bookmark, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo, shareLink } from '@/lib/utils'
 import { fetchMyVotes, type VoteType } from '@/lib/votes'
@@ -11,6 +11,7 @@ import BottomNav from '@/components/layout/BottomNav'
 import VoteButtons from '@/components/experience/VoteButtons'
 import FollowButton from '@/components/profile/FollowButton'
 import CommentThread, { type CommentViewer } from '@/components/experience/CommentThread'
+import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 
 type Location = {
   id: string
@@ -57,6 +58,7 @@ export default function LocationPage() {
   const [blocked, setBlocked] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [shareNote, setShareNote] = useState('')
+  const [editing, setEditing] = useState<EditableExperience | null>(null)
 
   useEffect(() => {
     const fetch = async () => {
@@ -137,6 +139,18 @@ export default function LocationPage() {
       await supabase.from('saves').delete().eq('user_id', user.id).eq('location_id', id)
       setSaved(false)
     }
+  }
+
+  const handleDeleteExperience = async (expId: string) => {
+    if (!window.confirm('Ștergi experiența? Comentariile și voturile ei dispar odată cu ea.')) return
+
+    const supabase = createClient()
+    const { error } = await supabase.from('experiences').delete().eq('id', expId)
+    if (error) {
+      window.alert(`Nu am putut șterge experiența: ${error.message}`)
+      return
+    }
+    setExperiences(prev => prev.filter(e => e.id !== expId))
   }
 
   const handleShare = async () => {
@@ -337,7 +351,30 @@ export default function LocationPage() {
                         <div className="text-[11px] text-[#9B9B9B]">{timeAgo(exp.created_at)}</div>
                       </div>
                     </Link>
-                    {exp.author?.id && <FollowButton targetUserId={exp.author.id} size="sm" />}
+                    {viewer && exp.author?.id === viewer.id ? (
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => setEditing({
+                            id: exp.id,
+                            content: exp.content,
+                            rating_experience: exp.rating_experience,
+                            rating_access: exp.rating_access,
+                            rating_crowd: exp.rating_crowd,
+                          })}
+                          className="text-[11px] bg-[#EEEDFB] text-[#5B4FCF] px-2.5 py-1 rounded-lg font-medium flex items-center gap-1"
+                        >
+                          <Pencil size={11} /> Editează
+                        </button>
+                        <button
+                          onClick={() => handleDeleteExperience(exp.id)}
+                          className="text-[11px] bg-[#FEF2F2] text-[#DC2626] px-2.5 py-1 rounded-lg font-medium flex items-center gap-1"
+                        >
+                          <Trash2 size={11} /> Șterge
+                        </button>
+                      </div>
+                    ) : (
+                      exp.author?.id && <FollowButton targetUserId={exp.author.id} size="sm" />
+                    )}
                   </div>
 
                   {/* Stars */}
@@ -405,6 +442,18 @@ export default function LocationPage() {
           )}
         </div>
       </div>
+
+      {editing && (
+        <ExperienceEditModal
+          experience={editing}
+          onClose={() => setEditing(null)}
+          onSaved={updated => {
+            setExperiences(prev => prev.map(e => (e.id === updated.id ? { ...e, ...updated } : e)))
+            setEditing(null)
+          }}
+        />
+      )}
+
       <BottomNav />
     </main>
   )
