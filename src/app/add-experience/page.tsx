@@ -126,7 +126,7 @@ export default function AddExperiencePage() {
       if (expError) throw expError
 
       // Update XP
-      await supabase.rpc('increment_xp', { user_id: user.id, amount: 50 }).catch(() => {})
+      try { await supabase.rpc('increment_xp', { user_id: user.id, amount: 50 }) } catch {}
 
       router.push(finalLocationId ? `/location/${finalLocationId}` : '/')
     } catch (e: unknown) {
