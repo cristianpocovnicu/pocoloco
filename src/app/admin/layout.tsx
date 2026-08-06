@@ -1,10 +1,9 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { ShieldAlert } from 'lucide-react'
 import { createClient } from '@/lib/supabase-server'
 import { countRows, type AdminProfile } from '@/lib/admin'
-import AdminSidebar from '@/components/admin/AdminSidebar'
-import AdminMobileNav from '@/components/admin/AdminMobileNav'
+import AdminChrome from '@/components/admin/AdminChrome'
+import AdminClientGate from '@/components/admin/AdminClientGate'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,10 +26,15 @@ function Blocked({ title, message }: { title: string; message: string }) {
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
+  // Serverul nu vede sesiunea (cookie expirat sau necitit) — nu-l dăm afară,
+  // lăsăm browserul să verifice, acolo unde sesiunea sigur există.
+  if (!user) {
+    return <AdminClientGate>{children}</AdminClientGate>
+  }
+
+  // Rolul nu vine niciodată în tokenul de auth: îl citim din profiles.
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('id, username, full_name, avatar_url, role, status')
@@ -49,7 +53,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const admin = profile as AdminProfile | null
 
-  if (!admin || admin.role !== 'admin') {
+  // Profilul poate lipsi dacă RLS nu-l lasă citit de pe server; și aici
+  // browserul are ultimul cuvânt, în loc să blocăm pe loc.
+  if (!admin) {
+    return <AdminClientGate>{children}</AdminClientGate>
+  }
+
+  if (admin.role !== 'admin') {
     return (
       <Blocked
         title="Acces restricționat"
@@ -63,16 +73,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     countRows(supabase, 'locations', q => q.eq('status', 'pending')),
   ])
 
-  const counts = { pendingReports, pendingLocations }
-  const adminName = admin.full_name || admin.username || 'Admin'
-
   return (
-    <div className="min-h-screen bg-[#F4F3F1] md:flex">
-      <AdminSidebar counts={counts} adminName={adminName} adminUsername={admin.username} />
-      <div className="flex-1 min-w-0">
-        <AdminMobileNav counts={counts} />
-        <main>{children}</main>
-      </div>
-    </div>
+    <AdminChrome
+      counts={{ pendingReports, pendingLocations }}
+      adminName={admin.full_name || admin.username || 'Admin'}
+      adminUsername={admin.username}
+    >
+      {children}
+    </AdminChrome>
   )
 }
