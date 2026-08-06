@@ -82,6 +82,54 @@ export async function searchPlaces(
   }
 }
 
+export type GeocodeResult = {
+  latitude: number
+  longitude: number
+  /** ce a găsit Google — util ca adminul să verifice că e locul potrivit */
+  matchedName: string
+  formattedAddress: string
+}
+
+/**
+ * Caută un loc după text liber („Castelul Bran, Bran") și întoarce
+ * coordonatele primului rezultat. Un singur apel, spre deosebire de
+ * autocomplete + detalii, pentru că nu avem de ales dintr-o listă.
+ */
+export async function geocodePlace(query: string): Promise<GeocodeResult | null> {
+  if (!API_KEY || !query.trim()) return null
+
+  try {
+    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': API_KEY,
+        'X-Goog-FieldMask': 'places.displayName,places.location,places.formattedAddress',
+      },
+      body: JSON.stringify({
+        textQuery: query.trim(),
+        languageCode: 'ro',
+        maxResultCount: 1,
+      }),
+    })
+
+    if (!res.ok) return null
+    const data = await res.json()
+    const place = data.places?.[0]
+
+    if (!place?.location?.latitude || !place?.location?.longitude) return null
+
+    return {
+      latitude: place.location.latitude,
+      longitude: place.location.longitude,
+      matchedName: place.displayName?.text || '',
+      formattedAddress: place.formattedAddress || '',
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function getPlaceDetails(
   placeId: string,
   sessionToken: string

@@ -1,11 +1,13 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin } from 'lucide-react'
+import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, statusStyle, type MiniProfile } from '@/lib/admin'
 import { cn, timeAgo } from '@/lib/utils'
 import AdminHeader from '@/components/admin/AdminHeader'
+import CoordinatesRow from '@/components/admin/CoordinatesRow'
 import CoverImage from '@/components/ui/CoverImage'
+import { PLACES_ENABLED, geocodePlace } from '@/lib/places'
 
 type LocationRow = {
   id: string
@@ -17,6 +19,8 @@ type LocationRow = {
   added_by: string | null
   experience_count: number | null
   cover_image: string | null
+  latitude: number | null
+  longitude: number | null
   created_at: string
 }
 
@@ -37,12 +41,14 @@ export default function AdminLocationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('pending')
   const [query, setQuery] = useState('')
+  const [geocodingId, setGeocodingId] = useState<string | null>(null)
+  const [bulk, setBulk] = useState<{ done: number; total: number; found: number } | null>(null)
 
   const load = useCallback(async () => {
     const supabase = createClient()
     const { data, error: fetchError } = await supabase
       .from('locations')
-      .select('id, name, city, country, category, status, added_by, experience_count, cover_image, created_at')
+      .select('id, name, city, country, category, status, added_by, experience_count, cover_image, latitude, longitude, created_at')
       .order('created_at', { ascending: false })
       .limit(300)
 
@@ -86,12 +92,68 @@ export default function AdminLocationsPage() {
     setBusyId(null)
   }
 
+  const saveCoords = async (id: string, latitude: number | null, longitude: number | null) => {
+    const supabase = createClient()
+    const { error: updateError } = await supabase
+      .from('locations')
+      .update({ latitude, longitude })
+      .eq('id', id)
+
+    if (updateError) return updateError.message
+    setLocations(prev => prev.map(l => (l.id === id ? { ...l, latitude, longitude } : l)))
+    return null
+  }
+
+  /** Caută coordonatele după nume + oraș + țară și le salvează. */
+  const geocodeOne = async (loc: LocationRow): Promise<boolean> => {
+    const query = [loc.name, loc.city, loc.country].filter(Boolean).join(', ')
+    const result = await geocodePlace(query)
+    if (!result) return false
+
+    const saveError = await saveCoords(loc.id, result.latitude, result.longitude)
+    return !saveError
+  }
+
+  const handleGeocodeOne = async (loc: LocationRow) => {
+    setGeocodingId(loc.id)
+    setError(null)
+    const ok = await geocodeOne(loc)
+    if (!ok) setError(`Nu am găsit coordonate pentru „${loc.name}". Completează-le manual.`)
+    setGeocodingId(null)
+  }
+
+  /**
+   * Secvențial, nu în paralel: Places are limite de rată, iar o rafală de
+   * cereri s-ar întoarce cu erori în loc de coordonate.
+   */
+  const handleGeocodeAll = async () => {
+    const missing = locations.filter(l => l.latitude == null || l.longitude == null)
+    if (missing.length === 0) return
+    if (!window.confirm(`Caut coordonatele pentru ${missing.length} locații. Poate dura un minut. Continui?`)) return
+
+    setError(null)
+    setBulk({ done: 0, total: missing.length, found: 0 })
+
+    let found = 0
+    for (let i = 0; i < missing.length; i++) {
+      const ok = await geocodeOne(missing[i])
+      if (ok) found++
+      setBulk({ done: i + 1, total: missing.length, found })
+      // pauză scurtă, ca să nu lovim limita de rată
+      if (i < missing.length - 1) await new Promise(r => setTimeout(r, 250))
+    }
+
+    setTimeout(() => setBulk(null), 4000)
+  }
+
   const q = query.trim().toLowerCase()
   const visible = locations.filter(l => {
     if (filter !== 'all' && l.status !== filter) return false
     if (!q) return true
     return l.name.toLowerCase().includes(q) || (l.city || '').toLowerCase().includes(q)
   })
+
+  const missingCoords = locations.filter(l => l.latitude == null || l.longitude == null).length
 
   const counts = {
     pending: locations.filter(l => l.status === 'pending').length,
@@ -142,6 +204,43 @@ export default function AdminLocationsPage() {
           </div>
         </div>
 
+        {/* Geocodare în masă */}
+        {missingCoords > 0 && (
+          <div className="bg-white border border-[rgba(217,119,6,0.25)] rounded-2xl px-4 py-3 mb-4 flex flex-col md:flex-row md:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-[#0F0F0F]">
+                {missingCoords} {missingCoords === 1 ? 'locație nu are coordonate' : 'locații nu au coordonate'}
+              </p>
+              <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+                {PLACES_ENABLED
+                  ? 'Fără ele nu apar pe hartă și nu au vecini în „În apropiere".'
+                  : 'Completează-le manual sau configurează cheia Google Places — vezi docs/google-places-setup.md.'}
+              </p>
+            </div>
+
+            {bulk ? (
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <div className="w-32 h-1.5 bg-[#F1F1F1] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#5B4FCF] rounded-full transition-all"
+                    style={{ width: `${(bulk.done / bulk.total) * 100}%` }}
+                  />
+                </div>
+                <span className="text-[12px] text-[#6B6B6B] whitespace-nowrap">
+                  {bulk.done}/{bulk.total} · {bulk.found} găsite
+                </span>
+              </div>
+            ) : PLACES_ENABLED && (
+              <button
+                onClick={handleGeocodeAll}
+                className="bg-[#5B4FCF] text-white font-outfit text-[12px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 flex-shrink-0"
+              >
+                <Crosshair size={13} /> Geocodează toate
+              </button>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <div className="py-16 flex justify-center">
             <Loader2 size={24} className="animate-spin text-[#E8440A]" />
@@ -175,10 +274,19 @@ export default function AdminLocationsPage() {
                       📍 {loc.city || 'Fără oraș'}{loc.country ? `, ${loc.country}` : ''}
                       {loc.category ? ` · ${loc.category}` : ''}
                     </p>
-                    <p className="text-[11px] text-[#9B9B9B] mt-0.5">
+                    <p className="text-[11px] text-[#9B9B9B] mt-0.5 mb-2">
                       Adăugată de {author ? `@${author.username || author.full_name}` : 'user necunoscut'} · {timeAgo(loc.created_at)}
                       {loc.experience_count ? ` · ${loc.experience_count} experiențe` : ''}
                     </p>
+
+                    <CoordinatesRow
+                      latitude={loc.latitude}
+                      longitude={loc.longitude}
+                      geocoding={geocodingId === loc.id || !!bulk}
+                      placesEnabled={PLACES_ENABLED}
+                      onGeocode={() => handleGeocodeOne(loc)}
+                      onSave={(lat, lng) => saveCoords(loc.id, lat, lng)}
+                    />
                   </div>
 
                   <div className="flex gap-1.5 flex-wrap md:justify-end flex-shrink-0">
