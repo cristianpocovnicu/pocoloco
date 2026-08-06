@@ -28,6 +28,7 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | # | Fișier | Ce face |
 |---|--------|---------|
 | 0 | `supabase/checks/inspect_comments.sql` | doar citește: îți arată schema `comments` înainte de migrarea 5 |
+| 0 | `supabase/checks/inspect_trips.sql` | doar citește: schema `trips` / `trip_locations` / `saves` înainte de migrarea 8 |
 | 1 | `supabase/migrations/20260806_admin_dashboard.sql` | `profiles.role` / `status`, funcția `is_admin()`, politici de moderare |
 | 2 | `supabase/migrations/20260806_location_approval.sql` | status `pending` implicit pe locații, triggere, RLS |
 | 3 | `supabase/migrations/20260806_votes.sql` | tabelul `votes`, trigger pentru contoare, RLS |
@@ -35,6 +36,7 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 5 | `supabase/migrations/20260806_comments.sql` | `parent_id`, trigger pentru `comment_count`, RLS |
 | 6 | `supabase/migrations/20260806_notifications.sql` | tabelul `notifications` + triggerele care le generează |
 | 7 | `supabase/migrations/20260806_profile_on_signup.sql` | profil automat la înregistrare (necesar pentru Google) |
+| 8 | `supabase/migrations/20260806_trips.sql` | itinerar (`trip_locations`), salvarea călătoriilor, RLS pe `trips` / `saves` |
 
 Ordinea contează: migrările 2–7 folosesc `is_admin()` din prima, iar 6 atașează
 triggere pe tabelele create de 3, 4 și 5.
@@ -63,6 +65,17 @@ alter table public.locations disable row level security;
 Rulează întâi `checks/inspect_comments.sql`. Dacă ai deja un trigger care
 actualizează `experiences.comment_count`, șterge-l — altfel numărătoarea se
 dublează.
+
+### Atenție la migrarea 8 (călătorii)
+
+Rulează întâi `checks/inspect_trips.sql`. Două lucruri de urmărit:
+
+- ultima interogare din fișier îți arată salvările duplicate; dacă există,
+  indexurile unice pe `saves` nu se creează (primești un `notice`, nu o
+  eroare) — curăță duplicatele și rulează migrarea din nou
+- `saves.location_id` devine opțional, ca un rând să poată referi în schimb o
+  călătorie; constrângerea `saves_target_check` cere ca măcar una dintre
+  `location_id` / `trip_id` să fie completată
 
 ---
 
@@ -111,8 +124,5 @@ Authentication → URL Configuration.
 
 - **Apple Sign In** — butonul e dezactivat în interfață; necesită cont Apple
   Developer plătit.
-- **Călătorii** — există tabelul `trips` și o pagină minimă `/trip/[id]`, dar
-  nu există flux de creare a unei călătorii și nici itinerariul
-  (`trip_locations`).
-- **Secțiunea „Recomandate"** de pe homepage (`FeaturedSection.tsx`) e încă pe
-  date hardcodate.
+- **Editarea unei călătorii publicate** — se poate doar șterge și recrea.
+- **Harta din căutare** (`SearchMapView.tsx`) nu e conectată la nimic.

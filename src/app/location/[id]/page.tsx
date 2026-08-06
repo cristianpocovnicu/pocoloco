@@ -81,6 +81,14 @@ export default function LocationPage() {
           .from('profiles').select('role').eq('id', user.id).maybeSingle()
         isAdmin = prof?.role === 'admin'
         setViewer({ id: user.id, isAdmin })
+
+        // starea reală a butonului de salvare (o salvare per user per locație)
+        const { count } = await supabase
+          .from('saves')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('location_id', id)
+        setSaved((count ?? 0) > 0)
       }
 
       if (loc) {
@@ -118,8 +126,8 @@ export default function LocationPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
     if (!saved) {
-      await supabase.from('saves').insert({ user_id: user.id, location_id: id })
-      setSaved(true)
+      const { error } = await supabase.from('saves').insert({ user_id: user.id, location_id: id })
+      if (!error) setSaved(true)
     } else {
       await supabase.from('saves').delete().eq('user_id', user.id).eq('location_id', id)
       setSaved(false)
