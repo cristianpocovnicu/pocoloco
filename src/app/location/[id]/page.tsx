@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
-import { formatCount, timeAgo, shareLink } from '@/lib/utils'
+import { formatCount, timeAgo, shareLink, formatDistance, CATEGORY_ICONS } from '@/lib/utils'
 import { fetchMyVotes, type VoteType } from '@/lib/votes'
 import { fetchCommentsFor, type CommentWithAuthor } from '@/lib/comments'
 import BottomNav from '@/components/layout/BottomNav'
@@ -52,6 +52,16 @@ type Experience = {
   author: { id: string; username: string | null; full_name: string; is_guide: boolean } | null
 }
 
+type NearbyLocation = {
+  id: string
+  name: string
+  city: string | null
+  category: string | null
+  cover_image: string | null
+  score: number | null
+  distance_km: number
+}
+
 type RelatedTrip = {
   id: string
   title: string
@@ -80,6 +90,7 @@ export default function LocationPage() {
   const [shareNote, setShareNote] = useState('')
   const [editing, setEditing] = useState<EditableExperience | null>(null)
   const [relatedTrips, setRelatedTrips] = useState<RelatedTrip[]>([])
+  const [nearby, setNearby] = useState<NearbyLocation[]>([])
 
   useEffect(() => {
     const fetch = async () => {
@@ -157,6 +168,19 @@ export default function LocationPage() {
           .order('save_count', { ascending: false })
           .limit(6)
         setRelatedTrips((trips || []) as RelatedTrip[])
+      }
+
+      // locuri în apropiere — doar dacă știm unde suntem
+      const coords = loc as { latitude?: number | null; longitude?: number | null } | null
+      if (coords?.latitude != null && coords?.longitude != null) {
+        const { data: near } = await supabase.rpc('nearby_locations', {
+          p_lat: coords.latitude,
+          p_lng: coords.longitude,
+          p_radius_km: 10,
+          p_exclude_id: id,
+          p_limit: 6,
+        })
+        setNearby((near || []) as NearbyLocation[])
       }
 
       setLoading(false)
@@ -596,6 +620,42 @@ export default function LocationPage() {
             ))
           )}
         </div>
+
+        {/* În apropiere */}
+        {nearby.length > 0 && (
+          <div className="px-5 pb-8">
+            <h2 className="font-outfit text-[16px] font-semibold text-[#0F0F0F] mb-3">În apropiere</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+              {nearby.map(place => (
+                <Link
+                  key={place.id}
+                  href={`/location/${place.id}`}
+                  className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(0,0,0,0.15)] transition-colors"
+                >
+                  <div className="relative h-20 bg-[#F8F7F5] flex items-center justify-center text-2xl">
+                    {place.cover_image
+                      ? <CoverImage src={place.cover_image} sizes="(max-width: 768px) 50vw, 240px" />
+                      : (CATEGORY_ICONS[place.category || ''] || '📍')}
+                    {(place.score || 0) > 0 && (
+                      <span className="absolute top-1.5 right-1.5 bg-[#E8440A] text-white font-outfit text-[10px] font-bold px-1.5 py-0.5 rounded-lg">
+                        {place.score?.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="font-outfit text-[13px] font-semibold text-[#0F0F0F] leading-tight truncate">
+                      {place.name}
+                    </p>
+                    <p className="text-[11px] text-[#9B9B9B] truncate">{place.city || 'Fără oraș'}</p>
+                    <p className="text-[11px] text-[#E8440A] font-medium mt-0.5">
+                      {formatDistance(place.distance_km)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {showVisitPrompt && (

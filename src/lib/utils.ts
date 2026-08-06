@@ -20,6 +20,12 @@ export function timeAgo(date: string): string {
   return new Date(date).toLocaleDateString('ro-RO')
 }
 
+/** „850 m" sub un kilometru, „2,3 km" peste — cu virgulă, ca în română. */
+export function formatDistance(km: number): string {
+  if (km < 1) return `${Math.round(km * 1000)} m`
+  return `${km.toFixed(1).replace('.', ',')} km`
+}
+
 export function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
