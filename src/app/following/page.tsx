@@ -139,7 +139,7 @@ export default function FollowingPage() {
                     {item.kind === 'trip' && (
                       <p className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-1">{item.title}</p>
                     )}
-                    <p className="text-[14px] text-[#0F0F0F] leading-relaxed line-clamp-4">{item.text}</p>
+                    <p className="text-[14px] text-[#0F0F0F] leading-relaxed line-clamp-4 whitespace-pre-line">{item.text}</p>
                   </div>
 
                   {item.images.length > 0 && (

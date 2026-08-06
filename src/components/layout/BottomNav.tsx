@@ -1,15 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, Users, Plus, Bell } from 'lucide-react'
+import { Home, Search, BookOpen, Plus, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUnreadNotifications } from '@/lib/useUnreadNotifications'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Acasă', Icon: Home },
   { href: '/search', label: 'Caută', Icon: Search },
+  { href: '/trips', label: 'Ghiduri', Icon: BookOpen },
   { href: '/create', label: 'Creează', Icon: Plus },
-  { href: '/following', label: 'Urmaresc', Icon: Users },
   { href: '/notifications', label: 'Alerte', Icon: Bell },
 ]
 

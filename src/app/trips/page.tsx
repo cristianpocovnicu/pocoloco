@@ -217,7 +217,7 @@ export default function TripsPage() {
                     </div>
 
                     {trip.description && (
-                      <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-2 mb-2">{trip.description}</p>
+                      <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-2 mb-2 whitespace-pre-line">{trip.description}</p>
                     )}
 
                     <div className="flex items-center gap-1.5">

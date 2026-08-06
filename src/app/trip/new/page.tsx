@@ -431,7 +431,7 @@ export default function NewTripPage() {
                       <span key={c} className="text-[11px] text-[#5B4FCF] bg-[#EEEDFB] rounded-full px-2.5 py-1">{c}</span>
                     ))}
                   </div>
-                  {description && <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-3 mb-3">{description}</p>}
+                  {description && <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-3 mb-3 whitespace-pre-line">{description}</p>}
                   <p className="text-[12px] text-[#9B9B9B]">
                     {items.length} {items.length === 1 ? 'oprire' : 'opriri'} în itinerar
                   </p>

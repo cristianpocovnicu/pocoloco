@@ -508,7 +508,7 @@ function AddExperienceContent() {
                     <Star key={i} size={16} className={i <= ratingExp ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
                   ))}
                 </div>
-                <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-3">{content}</p>
+                <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-3 whitespace-pre-line">{content}</p>
                 {photos.length > 0 && (
                   <p className="text-[12px] text-[#9B9B9B] mt-2">{photos.length} fotografie atașată</p>
                 )}

@@ -205,7 +205,7 @@ export default function PopularSection() {
                     </div>
                     <span className="text-[11px] text-[#9B9B9B]">{timeAgo(post.created_at)}</span>
                   </div>
-                  <p className="text-[14px] text-[#0F0F0F] leading-relaxed line-clamp-3">{post.content}</p>
+                  <p className="text-[14px] text-[#0F0F0F] leading-relaxed line-clamp-3 whitespace-pre-line">{post.content}</p>
                 </div>
 
                 {post.images && post.images.length > 0 && (

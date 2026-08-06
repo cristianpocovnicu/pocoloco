@@ -189,7 +189,7 @@ export default function AdminExperiencesPage() {
                     </div>
                   </div>
 
-                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2 line-clamp-3">{exp.content}</p>
+                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2 line-clamp-3 whitespace-pre-line">{exp.content}</p>
 
                   {exp.images && exp.images.length > 0 && (
                     <div className="flex gap-1.5 mb-2">

@@ -182,7 +182,7 @@ export default function FlaggedByVotes() {
                   {item.upvotes} sus · {item.downvotes} jos
                 </span>
               </div>
-              <p className="text-[12px] text-[#6B6B6B] line-clamp-2">{item.content}</p>
+              <p className="text-[12px] text-[#6B6B6B] line-clamp-2 whitespace-pre-line">{item.content}</p>
               <p className="text-[11px] text-[#9B9B9B] mt-0.5">
                 {author ? `@${author.username || author.full_name}` : 'autor necunoscut'} · {timeAgo(item.createdAt)}
               </p>

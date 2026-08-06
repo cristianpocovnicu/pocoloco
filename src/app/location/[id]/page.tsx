@@ -395,7 +395,7 @@ export default function LocationPage() {
         {/* Description */}
         {location.description && (
           <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-            <p className="text-[14px] text-[#6B6B6B] leading-relaxed">{location.description}</p>
+            <p className="text-[14px] text-[#6B6B6B] leading-relaxed whitespace-pre-line">{location.description}</p>
           </div>
         )}
 
@@ -594,7 +594,7 @@ export default function LocationPage() {
                     </div>
                   ))}
 
-                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mt-2">{exp.content}</p>
+                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mt-2 whitespace-pre-line">{exp.content}</p>
 
                   {/* Tips */}
                   {exp.tips && exp.tips.length > 0 && (

@@ -175,7 +175,7 @@ export default function PublicProfilePage() {
           <p className="text-[13px] text-[#9B9B9B] mb-2">
             @{profile.username}{profile.is_guide ? ' · Ghid Experimentat' : ''}
           </p>
-          {profile.bio && <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3">{profile.bio}</p>}
+          {profile.bio && <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3 whitespace-pre-line">{profile.bio}</p>}
           <p className="text-[11px] text-[#9B9B9B] mb-3">Membru din {new Date(profile.created_at).toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' })}</p>
 
           <div className="flex pt-4 border-t border-[rgba(0,0,0,0.08)]">
@@ -248,7 +248,7 @@ export default function PublicProfilePage() {
                       ))}
                     </div>
                   </div>
-                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2 line-clamp-3">{exp.content}</p>
+                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2 line-clamp-3 whitespace-pre-line">{exp.content}</p>
                   {exp.images && exp.images.length > 0 && (
                     <div className="flex gap-1.5 mb-2">
                       {exp.images.slice(0, 3).map((img, i) => (

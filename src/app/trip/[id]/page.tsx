@@ -320,7 +320,7 @@ export default function TripPage() {
                               {item.location?.country ? `, ${item.location.country}` : ''}
                             </p>
                             {item.note && (
-                              <p className="text-[12px] text-[#6B6B6B] leading-relaxed mt-1.5 bg-[#F8F7F5] rounded-lg px-2.5 py-1.5">
+                              <p className="text-[12px] text-[#6B6B6B] leading-relaxed mt-1.5 bg-[#F8F7F5] rounded-lg px-2.5 py-1.5 whitespace-pre-line">
                                 {item.note}
                               </p>
                             )}
@@ -348,7 +348,7 @@ export default function TripPage() {
                                     ))}
                                   </div>
                                 </div>
-                                <p className="text-[12px] text-[#6B6B6B] leading-relaxed line-clamp-3">
+                                <p className="text-[12px] text-[#6B6B6B] leading-relaxed line-clamp-3 whitespace-pre-line">
                                   {stopExperiences[item.location.id].content}
                                 </p>
                                 {(stopExperiences[item.location.id].images?.length || 0) > 0 && (

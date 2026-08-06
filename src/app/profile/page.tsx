@@ -208,7 +208,7 @@ export default function ProfilePage() {
           </div>
           <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F]">{profile.full_name}</h1>
           <p className="text-[13px] text-[#9B9B9B] mb-2">@{profile.username}{profile.is_guide ? ' · Ghid Experimentat' : ''}</p>
-          {profile.bio && <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3">{profile.bio}</p>}
+          {profile.bio && <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3 whitespace-pre-line">{profile.bio}</p>}
 
           <div className="flex pt-4 border-t border-[rgba(0,0,0,0.08)]">
             {[
@@ -257,7 +257,7 @@ export default function ProfilePage() {
                       {[1,2,3,4,5].map(i => <Star key={i} size={12} className={i <= exp.rating_experience ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />)}
                     </div>
                   </div>
-                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2 line-clamp-2">{exp.content}</p>
+                  <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2 line-clamp-2 whitespace-pre-line">{exp.content}</p>
                   {exp.images && exp.images.length > 0 && (
                     <div className="flex gap-1.5 mb-2">
                       {exp.images.slice(0, 3).map((img, i) => (

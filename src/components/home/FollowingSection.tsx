@@ -147,7 +147,7 @@ export default function FollowingSection() {
                     {item.author?.full_name || item.author?.username || 'User'}
                   </span>
                 </div>
-                <p className="text-[13px] font-outfit font-semibold text-[#0F0F0F] leading-tight mb-1 line-clamp-2">
+                <p className="text-[13px] font-outfit font-semibold text-[#0F0F0F] leading-tight mb-1 line-clamp-2 whitespace-pre-line">
                   {item.kind === 'trip' ? item.title : item.text}
                 </p>
                 <p className="text-[11px] text-[#9B9B9B] truncate">📍 {subtitle}</p>
