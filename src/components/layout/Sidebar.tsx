@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Home, Search, Users, Plus, Bell, Settings, ShieldCheck } from 'lucide-react'
+import { Home, Search, Users, Plus, Bell, Settings, ShieldCheck, Route } from 'lucide-react'
 import { cn, formatCount } from '@/lib/utils'
 import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
@@ -12,6 +12,7 @@ import UserMenu from './UserMenu'
 const NAV_LINKS = [
   { href: '/', label: 'Acasă', Icon: Home },
   { href: '/search', label: 'Caută', Icon: Search },
+  { href: '/trips', label: 'Călătorii', Icon: Route },
   { href: '/following', label: 'Urmaresc', Icon: Users },
   { href: '/add-experience', label: 'Creează', Icon: Plus },
 ]
