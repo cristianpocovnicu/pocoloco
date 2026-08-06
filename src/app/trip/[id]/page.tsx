@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Bookmark, Calendar, Globe, Loader2, MapPin, Share2, Star, Trash2, Users,
+  ArrowLeft, Bookmark, Calendar, Globe, Loader2, MapPin, Pencil, Share2, Star, Trash2, Users,
 } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import FollowButton from '@/components/profile/FollowButton'
@@ -129,9 +129,17 @@ export default function TripPage() {
         </button>
         <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F] truncate flex-1">{trip.title}</span>
         {isOwner && (
-          <button onClick={handleDelete} className="w-8 h-8 rounded-full bg-[#FEF2F2] flex items-center justify-center flex-shrink-0" aria-label="Șterge călătoria">
-            <Trash2 size={15} className="text-[#DC2626]" />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href={`/trip/${trip.id}/edit`}
+              className="text-[12px] bg-[#EEEDFB] text-[#5B4FCF] font-outfit font-semibold px-3 py-1.5 rounded-full flex items-center gap-1"
+            >
+              <Pencil size={12} /> Editează
+            </Link>
+            <button onClick={handleDelete} className="w-8 h-8 rounded-full bg-[#FEF2F2] flex items-center justify-center" aria-label="Șterge călătoria">
+              <Trash2 size={15} className="text-[#DC2626]" />
+            </button>
+          </div>
         )}
       </div>
 
