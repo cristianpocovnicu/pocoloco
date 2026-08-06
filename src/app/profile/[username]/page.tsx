@@ -11,6 +11,7 @@ import { getFollowCounts, isFollowing } from '@/lib/follows'
 import { fetchBadges, type EarnedBadge } from '@/lib/badges'
 import BadgeGrid from '@/components/profile/BadgeGrid'
 import SavedLocationList from '@/components/profile/SavedLocationList'
+import TravelMap from '@/components/profile/TravelMap'
 import { fetchSavedLocations, type SavedLocation } from '@/lib/saves'
 import { formatCount, timeAgo } from '@/lib/utils'
 import Image from 'next/image'
@@ -192,6 +193,9 @@ export default function PublicProfilePage() {
             ))}
           </div>
         </div>
+
+        {/* Harta călătorului — doar locurile vizitate, „Vreau să merg" e privat */}
+        <TravelMap userId={profile.id} />
 
         {/* Insigne */}
         {badges.length > 0 && (

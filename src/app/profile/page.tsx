@@ -8,6 +8,7 @@ import { getFollowCounts } from '@/lib/follows'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import BadgeGrid from '@/components/profile/BadgeGrid'
 import SavedLocationList from '@/components/profile/SavedLocationList'
+import TravelMap from '@/components/profile/TravelMap'
 import SavedTripList from '@/components/profile/SavedTripList'
 import { fetchSavedLocations, fetchSavedTrips, setLocationSaveStatus, type SavedLocation, type SavedTrip } from '@/lib/saves'
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
@@ -224,6 +225,9 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+
+        {/* Harta călătorului — locurile bifate „Am fost" */}
+        <TravelMap userId={profile.id} isOwn />
 
         {/* Tabs */}
         <div className="flex bg-white border-b border-[rgba(0,0,0,0.08)] sticky top-[57px] z-20">
