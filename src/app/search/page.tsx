@@ -8,6 +8,8 @@ import Link from 'next/link'
 import { cn, CATEGORIES, CATEGORY_ICONS } from '@/lib/utils'
 import { fetchFollowingIds, type SuggestedUser } from '@/lib/follows'
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches'
+import { LocationRowSkeleton } from '@/components/ui/Skeleton'
+import CoverImage from '@/components/ui/CoverImage'
 
 // aceeași listă de categorii ca în restul aplicației, nu una paralelă
 const CHIPS = ['Toate', ...CATEGORIES]
@@ -230,9 +232,9 @@ export default function SearchPage() {
                     onClick={() => addRecentSearch(query)}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] border-b border-[rgba(0,0,0,0.05)] last:border-0"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <div className="relative w-8 h-8 rounded-lg bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
                       {loc.cover_image
-                        ? <img src={loc.cover_image} alt="" className="w-full h-full object-cover" />
+                        ? <CoverImage src={loc.cover_image} sizes="32px" />
                         : <span className="text-sm">{CATEGORY_ICONS[loc.category || ''] || '📍'}</span>}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -327,6 +329,16 @@ export default function SearchPage() {
             </div>
           )}
 
+          {/* prima încărcare: schelet, nu spinner */}
+          {loading && results.length === 0 && tab === 'locations' && (
+            <div className="flex flex-col gap-3">
+              <LocationRowSkeleton />
+              <LocationRowSkeleton />
+              <LocationRowSkeleton />
+              <LocationRowSkeleton />
+            </div>
+          )}
+
           {/* Fără rezultate: categorii, nu un zero sec */}
           {tab === 'locations' && results.length === 0 && !loading && !error && (
             <div>
@@ -373,9 +385,9 @@ export default function SearchPage() {
           <div className={cn('flex-col gap-3', tab === 'locations' ? 'flex' : 'hidden')}>
             {results.map(loc => (
               <Link key={loc.id} href={`/location/${loc.id}`} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex hover:border-[rgba(0,0,0,0.15)] transition-colors">
-                <div className="w-24 flex-shrink-0 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center text-4xl">
+                <div className="relative w-24 flex-shrink-0 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center text-4xl">
                   {loc.cover_image
-                    ? <img src={loc.cover_image} alt={loc.name} className="w-full h-full object-cover" />
+                    ? <CoverImage src={loc.cover_image} alt={loc.name} sizes="96px" />
                     : (CATEGORY_ICONS[loc.category || ''] || '📍')
                   }
                 </div>

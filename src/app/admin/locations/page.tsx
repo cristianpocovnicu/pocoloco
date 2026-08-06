@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, statusStyle, type MiniProfile } from '@/lib/admin'
 import { cn, timeAgo } from '@/lib/utils'
 import AdminHeader from '@/components/admin/AdminHeader'
+import CoverImage from '@/components/ui/CoverImage'
 
 type LocationRow = {
   id: string
@@ -157,9 +158,9 @@ export default function AdminLocationsPage() {
               const busy = busyId === loc.id
               return (
                 <div key={loc.id} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5 flex flex-col md:flex-row md:items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="relative w-12 h-12 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
                     {loc.cover_image
-                      ? <img src={loc.cover_image} alt="" className="w-full h-full object-cover" />
+                      ? <CoverImage src={loc.cover_image} sizes="48px" />
                       : <MapPin size={18} className="text-[#9B9B9B]" />}
                   </div>
 

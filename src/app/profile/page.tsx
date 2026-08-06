@@ -10,6 +10,7 @@ import BadgeGrid from '@/components/profile/BadgeGrid'
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
 import { formatCount, timeAgo, shareLink } from '@/lib/utils'
 import Link from 'next/link'
+import Image from 'next/image'
 
 type Profile = {
   id: string
@@ -145,9 +146,11 @@ export default function ProfilePage() {
           <div className="flex items-start justify-between mb-4">
             <div className="relative">
               {profile.avatar_url ? (
-                <img
+                <Image
                   src={profile.avatar_url}
                   alt=""
+                  width={80}
+                  height={80}
                   className="w-20 h-20 rounded-full object-cover"
                   style={{ boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}
                 />
@@ -238,7 +241,7 @@ export default function ProfilePage() {
                   {exp.images && exp.images.length > 0 && (
                     <div className="flex gap-1.5 mb-2">
                       {exp.images.slice(0, 3).map((img, i) => (
-                        <img key={i} src={img} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                        <Image key={i} src={img} alt="" width={56} height={56} className="w-14 h-14 rounded-lg object-cover" />
                       ))}
                     </div>
                   )}

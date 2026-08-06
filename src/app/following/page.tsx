@@ -7,6 +7,7 @@ import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { timeAgo } from '@/lib/utils'
+import Image from 'next/image'
 import {
   fetchFollowingFeed,
   fetchFollowingIds,
@@ -144,7 +145,7 @@ export default function FollowingPage() {
                   {item.images.length > 0 && (
                     <div className="flex gap-1.5 px-3.5 pb-3">
                       {item.images.slice(0, 3).map((img, i) => (
-                        <img key={i} src={img} alt="" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                        <Image key={i} src={img} alt="" width={80} height={80} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
                       ))}
                     </div>
                   )}

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, colorFor, initialsOf, type MiniProfile } from '@/lib/profiles'
 import { cn, formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
 import type { Trip } from '@/lib/trips'
+import CoverImage from '@/components/ui/CoverImage'
 
 type SortKey = 'popular' | 'recent'
 
@@ -155,7 +156,7 @@ export default function TripsPage() {
                 >
                   <div className="h-36 bg-gradient-to-br from-[#5B4FCF] to-[#8B7FE8] relative overflow-hidden">
                     {trip.cover_image
-                      ? <img src={trip.cover_image} alt="" className="w-full h-full object-cover" />
+                      ? <CoverImage src={trip.cover_image} />
                       : <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">🧭</div>}
                     {(trip.save_count || 0) > 0 && (
                       <span className="absolute top-2.5 right-2.5 bg-black/45 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">

@@ -12,6 +12,7 @@ import {
   type SuggestedUser,
 } from '@/lib/follows'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
+import CoverImage from '@/components/ui/CoverImage'
 
 export default function FollowingSection() {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -123,7 +124,7 @@ export default function FollowingSection() {
             >
               <div className="h-[110px] bg-[#F8F7F5] flex items-center justify-center text-4xl relative overflow-hidden">
                 {cover
-                  ? <img src={cover} alt="" className="w-full h-full object-cover" />
+                  ? <CoverImage src={cover} sizes="(max-width: 768px) 220px, 33vw" />
                   : <span>{item.kind === 'trip' ? '🧭' : '📍'}</span>}
                 <span className="absolute top-2 left-2 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase px-2 py-0.5 rounded-full">
                   {item.kind === 'trip' ? 'Calatorie' : 'Experienta'}

@@ -13,6 +13,8 @@ import FollowButton from '@/components/profile/FollowButton'
 import CommentThread, { type CommentViewer } from '@/components/experience/CommentThread'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import PhotoGallery from '@/components/location/PhotoGallery'
+import Image from 'next/image'
+import CoverImage from '@/components/ui/CoverImage'
 
 type Location = {
   id: string
@@ -263,7 +265,7 @@ export default function LocationPage() {
         {/* Cover image / gradient */}
         <div className="h-52 bg-gradient-to-br from-amber-200 to-amber-600 relative overflow-hidden">
           {location.cover_image
-            ? <img src={location.cover_image} alt={location.name} className="w-full h-full object-cover" />
+            ? <CoverImage src={location.cover_image} alt={location.name} priority />
             : <div className="w-full h-full flex items-center justify-center text-7xl opacity-40">🏔️</div>
           }
           {location.score > 0 && (
@@ -382,9 +384,9 @@ export default function LocationPage() {
                   href={`/trip/${trip.id}`}
                   className="min-w-[180px] max-w-[180px] border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex-shrink-0 hover:border-[rgba(0,0,0,0.15)] transition-colors"
                 >
-                  <div className="h-20 bg-gradient-to-br from-[#5B4FCF] to-[#8B7FE8] flex items-center justify-center">
+                  <div className="relative h-20 bg-gradient-to-br from-[#5B4FCF] to-[#8B7FE8] flex items-center justify-center">
                     {trip.cover_image
-                      ? <img src={trip.cover_image} alt="" className="w-full h-full object-cover" />
+                      ? <CoverImage src={trip.cover_image} sizes="180px" />
                       : <span className="text-2xl opacity-50">🧭</span>}
                   </div>
                   <div className="p-2.5">
@@ -495,7 +497,7 @@ export default function LocationPage() {
                 {exp.images && exp.images.length > 0 && (
                   <div className="flex gap-1.5 px-3.5 pb-3 overflow-x-auto scrollbar-hide">
                     {exp.images.map((img, i) => (
-                      <img key={i} src={img} alt="" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                      <Image key={i} src={img} alt="" width={80} height={80} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
                     ))}
                   </div>
                 )}

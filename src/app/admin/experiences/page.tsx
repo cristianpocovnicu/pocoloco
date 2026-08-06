@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf, fetchProfilesMap, statusStyle, type MiniProfile } from '@/lib/admin'
 import { cn, timeAgo } from '@/lib/utils'
 import AdminHeader from '@/components/admin/AdminHeader'
+import Image from 'next/image'
 
 type ExperienceRow = {
   id: string
@@ -193,7 +194,7 @@ export default function AdminExperiencesPage() {
                   {exp.images && exp.images.length > 0 && (
                     <div className="flex gap-1.5 mb-2">
                       {exp.images.slice(0, 4).map((img, i) => (
-                        <img key={i} src={img} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                        <Image key={i} src={img} alt="" width={48} height={48} className="w-12 h-12 rounded-lg object-cover" />
                       ))}
                     </div>
                   )}

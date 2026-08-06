@@ -10,6 +10,7 @@ import FollowButton from '@/components/profile/FollowButton'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
+import CoverImage from '@/components/ui/CoverImage'
 import {
   fetchItinerary, groupByDay, isTripSaved, setTripSaved,
   type ItineraryItem, type Trip,
@@ -146,7 +147,7 @@ export default function TripPage() {
       <div className="max-w-[680px] mx-auto">
         <div className="h-52 bg-gradient-to-br from-[#5B4FCF] to-[#8B7FE8] relative overflow-hidden">
           {trip.cover_image
-            ? <img src={trip.cover_image} alt={trip.title} className="w-full h-full object-cover" />
+            ? <CoverImage src={trip.cover_image} alt={trip.title} priority />
             : <div className="w-full h-full flex items-center justify-center text-7xl opacity-40">🧭</div>}
         </div>
 
@@ -257,9 +258,9 @@ export default function TripPage() {
                     {items.map((item, i) => (
                       <div key={item.id}>
                         <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5 flex items-start gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
+                          <div className="relative w-11 h-11 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
                             {item.location?.cover_image
-                              ? <img src={item.location.cover_image} alt="" className="w-full h-full object-cover" />
+                              ? <CoverImage src={item.location.cover_image} sizes="44px" />
                               : <MapPin size={17} className="text-[#9B9B9B]" />}
                           </div>
                           <div className="flex-1 min-w-0">

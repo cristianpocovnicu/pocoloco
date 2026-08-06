@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { fetchFollowingIds } from '@/lib/follows'
 import FollowButton from '@/components/profile/FollowButton'
+import Image from 'next/image'
 
 type Guide = {
   id: string
@@ -85,7 +86,7 @@ export default function GuidesSection() {
             <Link href={`/profile/${guide.username}`} className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="relative flex-shrink-0">
                 {guide.avatar_url ? (
-                  <img src={guide.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover" />
+                  <Image src={guide.avatar_url} alt="" width={44} height={44} className="w-11 h-11 rounded-full object-cover" />
                 ) : (
                   <div
                     className="w-11 h-11 rounded-full flex items-center justify-center font-outfit text-[14px] font-bold text-white"

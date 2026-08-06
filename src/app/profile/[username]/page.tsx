@@ -11,6 +11,7 @@ import { getFollowCounts, isFollowing } from '@/lib/follows'
 import { fetchBadges, type EarnedBadge } from '@/lib/badges'
 import BadgeGrid from '@/components/profile/BadgeGrid'
 import { formatCount, timeAgo } from '@/lib/utils'
+import Image from 'next/image'
 
 type PublicProfile = {
   id: string
@@ -131,9 +132,11 @@ export default function PublicProfilePage() {
           <div className="flex items-start justify-between mb-4">
             <div className="relative">
               {profile.avatar_url ? (
-                <img
+                <Image
                   src={profile.avatar_url}
                   alt=""
+                  width={80}
+                  height={80}
                   className="w-20 h-20 rounded-full object-cover"
                   style={{ boxShadow: '0 0 0 3px white, 0 0 0 5px #E8440A' }}
                 />
@@ -231,7 +234,7 @@ export default function PublicProfilePage() {
                   {exp.images && exp.images.length > 0 && (
                     <div className="flex gap-1.5 mb-2">
                       {exp.images.slice(0, 3).map((img, i) => (
-                        <img key={i} src={img} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                        <Image key={i} src={img} alt="" width={56} height={56} className="w-14 h-14 rounded-lg object-cover" />
                       ))}
                     </div>
                   )}

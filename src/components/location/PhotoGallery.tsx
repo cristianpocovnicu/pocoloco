@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import CoverImage from '@/components/ui/CoverImage'
 
 type Props = {
   images: string[]
@@ -45,7 +46,7 @@ export default function PhotoGallery({ images, previewCount = 6 }: Props) {
             className="aspect-square rounded-xl overflow-hidden bg-[#F8F7F5] relative group"
             aria-label={`Deschide fotografia ${i + 1}`}
           >
-            <img src={src} alt="" className="w-full h-full object-cover group-hover:opacity-90 transition-opacity" />
+            <CoverImage src={src} sizes="(max-width: 768px) 33vw, 220px" className="object-cover group-hover:opacity-90 transition-opacity" />
             {!showAll && hidden > 0 && i === shown.length - 1 && (
               <span className="absolute inset-0 bg-black/55 text-white font-outfit text-[15px] font-bold flex items-center justify-center">
                 +{hidden}

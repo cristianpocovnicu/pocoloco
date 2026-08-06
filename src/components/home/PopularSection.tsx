@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Eye, Loader2 } from 'lucide-react'
+import { MessageCircle, Eye } from 'lucide-react'
+import { ExperienceCardSkeleton } from '@/components/ui/Skeleton'
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo } from '@/lib/utils'
 import { fetchMyVotes, type VoteType } from '@/lib/votes'
@@ -61,10 +62,16 @@ export default function PopularSection() {
     fetchPosts()
   }, [])
 
+  // schelet cu aceeași siluetă ca postările, ca pagina să nu sară la încărcare
   if (loading) return (
-    <div className="flex items-center justify-center py-12">
-      <Loader2 size={24} className="animate-spin text-[#E8440A]" />
-    </div>
+    <section className="mb-7">
+      <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F] mb-3">Recent adăugate</h2>
+      <div className="flex flex-col gap-3">
+        <ExperienceCardSkeleton />
+        <ExperienceCardSkeleton />
+        <ExperienceCardSkeleton />
+      </div>
+    </section>
   )
 
   if (posts.length === 0) return (

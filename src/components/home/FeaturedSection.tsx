@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Bookmark, ArrowUp, Loader2 } from 'lucide-re
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, colorFor, initialsOf, type MiniProfile } from '@/lib/profiles'
 import { formatCount } from '@/lib/utils'
+import CoverImage from '@/components/ui/CoverImage'
 
 type FeaturedCard = {
   id: string
@@ -173,7 +174,7 @@ export default function FeaturedSection() {
             className="min-w-[240px] md:min-w-[calc(33%-8px)] h-[150px] md:h-[160px] rounded-2xl overflow-hidden relative flex-shrink-0 block"
           >
             {card.cover ? (
-              <img src={card.cover} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <CoverImage src={card.cover} sizes="(max-width: 768px) 240px, 33vw" />
             ) : (
               <div className={`absolute inset-0 bg-gradient-to-br ${GRADIENTS[i % GRADIENTS.length]} flex items-center justify-center text-5xl opacity-40`}>
                 {card.kind === 'trip' ? '🧭' : '📍'}

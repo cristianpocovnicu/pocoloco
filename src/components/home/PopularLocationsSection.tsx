@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { CATEGORY_ICONS } from '@/lib/utils'
+import CoverImage from '@/components/ui/CoverImage'
 
 type PopularLocation = {
   id: string
@@ -64,7 +65,7 @@ export default function PopularLocationsSection() {
           >
             <div className="h-24 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center relative">
               {loc.cover_image
-                ? <img src={loc.cover_image} alt="" className="w-full h-full object-cover" />
+                ? <CoverImage src={loc.cover_image} sizes="(max-width: 768px) 50vw, 340px" />
                 : <span className="text-3xl opacity-70">{CATEGORY_ICONS[loc.category || ''] || '📍'}</span>}
               {(loc.score || 0) > 0 && (
                 <span className="absolute top-2 right-2 bg-[#E8440A] text-white font-outfit text-[10px] font-bold px-1.5 py-0.5 rounded-lg">
