@@ -6,6 +6,7 @@ import { Home, Search, Users, Plus, Bell, Settings, ShieldCheck } from 'lucide-r
 import { cn, formatCount } from '@/lib/utils'
 import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
+import { countUnread } from '@/lib/notifications'
 import UserMenu from './UserMenu'
 
 const NAV_LINKS = [
@@ -24,19 +25,24 @@ export default function Sidebar() {
   const pathname = usePathname()
   const [isAdmin, setIsAdmin] = useState(false)
   const [counts, setCounts] = useState<{ followers: number; following: number } | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [unread, setUnread] = useState(0)
 
   useEffect(() => {
     const supabase = createClient()
-    const loadUser = async (userId?: string) => {
-      if (!userId) {
+    const loadUser = async (id?: string) => {
+      setUserId(id ?? null)
+      if (!id) {
         setIsAdmin(false)
         setCounts(null)
+        setUnread(0)
         return
       }
       // linkul spre dashboard apare doar pentru conturile cu rol de admin
-      const { data } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
+      const { data } = await supabase.from('profiles').select('role').eq('id', id).maybeSingle()
       setIsAdmin(data?.role === 'admin')
-      setCounts(await getFollowCounts(supabase, userId))
+      setCounts(await getFollowCounts(supabase, id))
+      setUnread(await countUnread(supabase, id))
     }
     supabase.auth.getUser().then(({ data }) => loadUser(data.user?.id))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -44,6 +50,31 @@ export default function Sidebar() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Badge-ul de notificări, actualizat în timp real
+  useEffect(() => {
+    if (!userId) return
+    const supabase = createClient()
+    const refresh = async () => setUnread(await countUnread(supabase, userId))
+
+    const channel = supabase
+      .channel(`notifications:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        refresh
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [userId])
+
+  // fallback dacă Realtime e oprit: recitim contorul la schimbarea paginii
+  useEffect(() => {
+    if (!userId) return
+    const supabase = createClient()
+    countUnread(supabase, userId).then(setUnread)
+  }, [pathname, userId])
 
   // Zona de admin are propriul sidebar
   if (pathname.startsWith('/admin')) return null
@@ -79,6 +110,7 @@ export default function Sidebar() {
 
         {NAV_BOTTOM.map(({ href, label, Icon }) => {
           const active = pathname === href
+          const badge = href === '/notifications' ? unread : 0
           return (
             <Link
               key={href}
@@ -91,8 +123,18 @@ export default function Sidebar() {
               )}
             >
               {active && <div className="absolute left-0 top-[20%] bottom-[20%] w-[3px] bg-[#E8440A] rounded-r" />}
-              <Icon size={21} strokeWidth={active ? 2.5 : 1.8} />
+              <div className="relative">
+                <Icon size={21} strokeWidth={active ? 2.5 : 1.8} />
+                {badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#E8440A] rounded-full border-2 border-white" />
+                )}
+              </div>
               {label}
+              {badge > 0 && (
+                <span className="ml-auto bg-[#E8440A] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
             </Link>
           )
         })}
