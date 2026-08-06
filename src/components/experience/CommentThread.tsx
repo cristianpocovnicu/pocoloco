@@ -14,6 +14,9 @@ import {
   type CommentWithAuthor,
 } from '@/lib/comments'
 import { cn, timeAgo } from '@/lib/utils'
+import VoteButtons from './VoteButtons'
+import HiddenByVotes from './HiddenByVotes'
+import { fetchMyCommentVotes, netScore, HIDE_THRESHOLD_COMMENT, type VoteType } from '@/lib/votes'
 import { useToast } from '@/components/ui/Toast'
 
 export type CommentViewer = { id: string; isAdmin: boolean } | null
@@ -45,6 +48,8 @@ export default function CommentThread({
   const [editDraft, setEditDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [myVotes, setMyVotes] = useState<Record<string, VoteType>>({})
+  const [revealed, setRevealed] = useState<string[]>([])
 
   useEffect(() => {
     if (viewerProp !== undefined) setViewer(viewerProp)
@@ -78,6 +83,21 @@ export default function CommentThread({
     return () => { active = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [experienceId])
+
+  // voturile proprii pe comentariile din fir
+  useEffect(() => {
+    if (comments.length === 0) return
+    let active = true
+    const load = async () => {
+      const supabase = createClient()
+      const votes = await fetchMyCommentVotes(supabase, comments.map(c => c.id))
+      if (active) setMyVotes(prev => ({ ...prev, ...votes }))
+    }
+    load()
+    return () => { active = false }
+    // doar când apar comentarii noi în listă, nu la fiecare schimbare de conținut
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comments.length])
 
   const thread = useMemo(() => buildThread(comments), [comments])
 
@@ -155,7 +175,17 @@ export default function CommentThread({
   const wasEdited = (comment: CommentWithAuthor) =>
     !!comment.updated_at && new Date(comment.updated_at).getTime() - new Date(comment.created_at).getTime() > 2000
 
-  const renderComment = (comment: CommentWithAuthor, isReply: boolean) => (
+  const renderComment = (comment: CommentWithAuthor, isReply: boolean) => {
+    // votat puternic negativ: strâns, dar la un click distanță
+    if (netScore(comment.upvotes, comment.downvotes) <= HIDE_THRESHOLD_COMMENT && !revealed.includes(comment.id)) {
+      return (
+        <div key={comment.id} className={cn(isReply && 'pl-4')}>
+          <HiddenByVotes kind="comment" onShow={() => setRevealed(prev => [...prev, comment.id])} />
+        </div>
+      )
+    }
+
+    return (
     <div key={comment.id} className={cn('flex gap-2', isReply && 'pl-4 border-l-2 border-[rgba(0,0,0,0.06)]')}>
       <div
         className={cn(
@@ -213,7 +243,14 @@ export default function CommentThread({
         </div>
 
         {editingId !== comment.id && (
-          <div className="flex items-center gap-3 mt-1 px-1">
+          <div className="flex items-center gap-2.5 mt-1 px-1 flex-wrap">
+            <VoteButtons
+              target={{ kind: 'comment', id: comment.id }}
+              upvotes={comment.upvotes || 0}
+              downvotes={comment.downvotes || 0}
+              myVote={myVotes[comment.id] ?? null}
+              size="sm"
+            />
             <button
               onClick={() => {
                 // răspunsul la un răspuns rămâne pe nivelul 2, sub același părinte
@@ -244,7 +281,8 @@ export default function CommentThread({
         )}
       </div>
     </div>
-  )
+    )
+  }
 
   const replyBox = (parentId: string) => (
     <div className="flex gap-2 pl-4 mt-2">

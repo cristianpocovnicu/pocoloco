@@ -6,8 +6,9 @@ import { MessageCircle, Eye } from 'lucide-react'
 import { ExperienceCardSkeleton } from '@/components/ui/Skeleton'
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo } from '@/lib/utils'
-import { fetchMyVotes, type VoteType } from '@/lib/votes'
+import { fetchMyVotes, netScore, HIDE_THRESHOLD_EXPERIENCE, type VoteType } from '@/lib/votes'
 import VoteButtons from '@/components/experience/VoteButtons'
+import HiddenByVotes from '@/components/experience/HiddenByVotes'
 
 type Post = {
   id: string
@@ -32,16 +33,24 @@ type Post = {
 
 const PAGE_SIZE = 10
 
+type Sort = 'popular' | 'recent'
+
 export default function PopularSection() {
   const [posts, setPosts] = useState<Post[]>([])
   const [myVotes, setMyVotes] = useState<Record<string, VoteType>>({})
+  const [sort, setSort] = useState<Sort>('popular')
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
+  const [revealed, setRevealed] = useState<string[]>([])
   const sentinel = useRef<HTMLDivElement>(null)
 
-  /** Cursor pe created_at, nu offset: postările noi nu decalează paginile. */
-  const loadPage = useCallback(async (before?: string) => {
+  /**
+   * „Recente" folosește cursor pe created_at, ca postările noi să nu
+   * decaleze paginile. „Populare" sortează după net_score, coloană
+   * generată în DB, unde un cursor n-ar avea sens — acolo paginăm cu range.
+   */
+  const loadPage = useCallback(async (sortKey: Sort, offset: number, before?: string) => {
     const supabase = createClient()
     // !inner + filtrul pe location.status => experiențele din locații
     // neaprobate (pending/rejected) nu apar deloc în feed
@@ -55,10 +64,16 @@ export default function PopularSection() {
       `)
       .eq('status', 'active')
       .eq('location.status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(PAGE_SIZE)
 
-    if (before) request = request.lt('created_at', before)
+    if (sortKey === 'popular') {
+      request = request
+        .order('net_score', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1)
+    } else {
+      request = request.order('created_at', { ascending: false }).limit(PAGE_SIZE)
+      if (before) request = request.lt('created_at', before)
+    }
 
     const { data, error } = await request
     if (error || !data) return { list: [] as Post[], done: true }
@@ -72,23 +87,24 @@ export default function PopularSection() {
 
   useEffect(() => {
     const load = async () => {
-      const { list, done } = await loadPage()
+      setLoading(true)
+      const { list, done } = await loadPage(sort, 0)
       setPosts(list)
       setHasMore(!done)
       setLoading(false)
     }
     load()
-  }, [loadPage])
+  }, [loadPage, sort])
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || posts.length === 0) return
     setLoadingMore(true)
 
-    const { list, done } = await loadPage(posts[posts.length - 1].created_at)
+    const { list, done } = await loadPage(sort, posts.length, posts[posts.length - 1].created_at)
     setPosts(prev => [...prev, ...list])
     setHasMore(!done)
     setLoadingMore(false)
-  }, [loadPage, loadingMore, hasMore, posts])
+  }, [loadPage, loadingMore, hasMore, posts, sort])
 
   // încarcă următoarea pagină când santinela intră în ecran
   useEffect(() => {
@@ -106,7 +122,7 @@ export default function PopularSection() {
   // schelet cu aceeași siluetă ca postările, ca pagina să nu sară la încărcare
   if (loading) return (
     <section className="mb-7">
-      <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F] mb-3">Recent adăugate</h2>
+      <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F] mb-3">Din comunitate</h2>
       <div className="flex flex-col gap-3">
         <ExperienceCardSkeleton />
         <ExperienceCardSkeleton />
@@ -128,13 +144,40 @@ export default function PopularSection() {
 
   return (
     <section className="mb-7">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F]">Recent adăugate</h2>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F]">Din comunitate</h2>
+        <div className="flex bg-white border border-[rgba(0,0,0,0.08)] rounded-full p-0.5 flex-shrink-0">
+          {([
+            { id: 'popular' as const, label: 'Populare' },
+            { id: 'recent' as const, label: 'Recente' },
+          ]).map(option => (
+            <button
+              key={option.id}
+              onClick={() => setSort(option.id)}
+              className={`px-3 py-1 rounded-full text-[12px] font-outfit font-medium transition-colors ${
+                sort === option.id ? 'bg-[#0F0F0F] text-white' : 'text-[#6B6B6B]'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="flex flex-col gap-3">
         {posts.map(post => {
           const initials = post.author?.full_name
             ?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '??'
+
+          if (netScore(post.upvotes, post.downvotes) <= HIDE_THRESHOLD_EXPERIENCE && !revealed.includes(post.id)) {
+            return (
+              <HiddenByVotes
+                key={post.id}
+                kind="experience"
+                onShow={() => setRevealed(prev => [...prev, post.id])}
+              />
+            )
+          }
+
           return (
             // cardul e link, dar footerul stă în afara lui — butoanele de vot
             // nu pot fi imbricate într-un <a>
@@ -180,7 +223,7 @@ export default function PopularSection() {
                     <MessageCircle size={12} /> {formatCount(post.comment_count)}
                   </div>
                   <VoteButtons
-                    experienceId={post.id}
+                    target={{ kind: 'experience', id: post.id }}
                     upvotes={post.upvotes}
                     downvotes={post.downvotes}
                     myVote={myVotes[post.id] ?? null}

@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo, shareLink, formatDistance, CATEGORY_ICONS } from '@/lib/utils'
-import { fetchMyVotes, type VoteType } from '@/lib/votes'
+import { fetchMyVotes, netScore, HIDE_THRESHOLD_EXPERIENCE, type VoteType } from '@/lib/votes'
 import { fetchCommentsFor, type CommentWithAuthor } from '@/lib/comments'
 import BottomNav from '@/components/layout/BottomNav'
 import VoteButtons from '@/components/experience/VoteButtons'
+import HiddenByVotes from '@/components/experience/HiddenByVotes'
 import FollowButton from '@/components/profile/FollowButton'
 import CommentThread, { type CommentViewer } from '@/components/experience/CommentThread'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
@@ -93,6 +94,7 @@ export default function LocationPage() {
   const [relatedTrips, setRelatedTrips] = useState<RelatedTrip[]>([])
   const [nearby, setNearby] = useState<NearbyLocation[]>([])
   const [nearbyCovers, setNearbyCovers] = useState<Record<string, string>>({})
+  const [revealed, setRevealed] = useState<string[]>([])
 
   useEffect(() => {
     const fetch = async () => {
@@ -141,7 +143,11 @@ export default function LocationPage() {
       }
 
       if (exps) {
-        const list = exps as unknown as Experience[]
+        // votate bine sus, la scor egal cele noi înaintea celor vechi
+        const list = (exps as unknown as Experience[]).sort((a, b) => {
+          const diff = netScore(b.upvotes, b.downvotes) - netScore(a.upvotes, a.downvotes)
+          return diff !== 0 ? diff : b.created_at.localeCompare(a.created_at)
+        })
         setExperiences(list)
         const ids = list.map(e => e.id)
         // un singur query pentru comentariile tuturor experiențelor de pe pagină
@@ -519,7 +525,17 @@ export default function LocationPage() {
               <p className="text-[14px] text-[#9B9B9B]">Nicio experiență încă. Fii primul!</p>
             </div>
           ) : (
-            experiences.map(exp => (
+            experiences.map(exp => {
+              const hidden = netScore(exp.upvotes, exp.downvotes) <= HIDE_THRESHOLD_EXPERIENCE
+                && !revealed.includes(exp.id)
+
+              if (hidden) return (
+                <div key={exp.id} className="mb-3">
+                  <HiddenByVotes kind="experience" onShow={() => setRevealed(prev => [...prev, exp.id])} />
+                </div>
+              )
+
+              return (
               <div key={exp.id} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden mb-3">
                 <div className="p-3.5">
                   <div className="flex items-center gap-2 mb-3">
@@ -603,7 +619,7 @@ export default function LocationPage() {
                 <div className="px-3.5 py-2.5 flex items-center justify-between border-t border-[rgba(0,0,0,0.06)]">
                   <div className="flex items-center gap-2">
                     <VoteButtons
-                      experienceId={exp.id}
+                      target={{ kind: 'experience', id: exp.id }}
                       upvotes={exp.upvotes}
                       downvotes={exp.downvotes}
                       myVote={myVotes[exp.id] ?? null}
@@ -623,7 +639,8 @@ export default function LocationPage() {
                   ))}
                 />
               </div>
-            ))
+              )
+            })
           )}
         </div>
 

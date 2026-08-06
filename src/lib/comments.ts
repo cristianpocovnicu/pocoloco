@@ -9,6 +9,8 @@ export type CommentWithAuthor = {
   content: string
   created_at: string
   updated_at: string | null
+  upvotes: number
+  downvotes: number
   author: MiniProfile | null
 }
 
@@ -28,7 +30,7 @@ export async function fetchCommentsFor(
 
   const { data, error } = await supabase
     .from('comments')
-    .select('id, experience_id, author_id, parent_id, content, created_at, updated_at')
+    .select('id, experience_id, author_id, parent_id, content, created_at, updated_at, upvotes, downvotes')
     .in('experience_id', ids)
     .order('created_at', { ascending: true })
 
@@ -68,7 +70,10 @@ export function buildThread(comments: CommentWithAuthor[]): CommentNode[] {
     )
   }
 
-  return roots.sort((a, b) => a.created_at.localeCompare(b.created_at))
+  return roots.sort((a, b) => {
+    const diff = ((b.upvotes || 0) - (b.downvotes || 0)) - ((a.upvotes || 0) - (a.downvotes || 0))
+    return diff !== 0 ? diff : a.created_at.localeCompare(b.created_at)
+  })
 }
 
 export async function addComment(
@@ -86,7 +91,7 @@ export async function addComment(
       parent_id: input.parentId,
       content,
     })
-    .select('id, experience_id, author_id, parent_id, content, created_at, updated_at')
+    .select('id, experience_id, author_id, parent_id, content, created_at, updated_at, upvotes, downvotes')
     .single()
 
   if (error || !data) return { comment: null, error: error?.message ?? 'Nu am putut salva comentariul.' }
