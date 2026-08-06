@@ -2,10 +2,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, ArrowUp, ArrowDown, MessageCircle, Pencil, Loader2, Globe } from 'lucide-react'
+import { ArrowLeft, Bookmark, CheckCircle, Share2, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Globe } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo } from '@/lib/utils'
+import { fetchMyVotes, type VoteType } from '@/lib/votes'
 import BottomNav from '@/components/layout/BottomNav'
+import VoteButtons from '@/components/experience/VoteButtons'
 
 type Location = {
   id: string
@@ -44,7 +46,7 @@ export default function LocationPage() {
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
-  const [voted, setVoted] = useState<Record<string, 'up' | 'down' | null>>({})
+  const [myVotes, setMyVotes] = useState<Record<string, VoteType>>({})
   // locațiile neaprobate sunt vizibile doar celui care le-a adăugat și adminilor
   const [canModerate, setCanModerate] = useState(false)
   const [blocked, setBlocked] = useState(false)
@@ -89,28 +91,15 @@ export default function LocationPage() {
         }
       }
 
-      if (exps) setExperiences(exps as unknown as Experience[])
+      if (exps) {
+        const list = exps as unknown as Experience[]
+        setExperiences(list)
+        setMyVotes(await fetchMyVotes(supabase, list.map(e => e.id)))
+      }
       setLoading(false)
     }
     fetch()
   }, [id])
-
-  const handleUpvote = async (expId: string) => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
-
-    const current = voted[expId]
-    if (current === 'up') {
-      await supabase.from('experiences').update({ upvotes: (experiences.find(e => e.id === expId)?.upvotes || 1) - 1 }).eq('id', expId)
-      setVoted(v => ({ ...v, [expId]: null }))
-      setExperiences(prev => prev.map(e => e.id === expId ? { ...e, upvotes: e.upvotes - 1 } : e))
-    } else {
-      await supabase.from('experiences').update({ upvotes: (experiences.find(e => e.id === expId)?.upvotes || 0) + 1 }).eq('id', expId)
-      setVoted(v => ({ ...v, [expId]: 'up' }))
-      setExperiences(prev => prev.map(e => e.id === expId ? { ...e, upvotes: e.upvotes + 1 } : e))
-    }
-  }
 
   const handleSave = async () => {
     const supabase = createClient()
@@ -348,12 +337,12 @@ export default function LocationPage() {
                 {/* Footer */}
                 <div className="px-3.5 py-2.5 flex items-center justify-between border-t border-[rgba(0,0,0,0.06)]">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => handleUpvote(exp.id)} className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] transition-colors ${voted[exp.id] === 'up' ? 'bg-[#EEEDFB] text-[#5B4FCF]' : 'bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B]'}`}>
-                      <ArrowUp size={12} /> {formatCount(exp.upvotes)}
-                    </button>
-                    <button className="flex items-center gap-1 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2.5 py-1 text-[12px] text-[#6B6B6B]">
-                      <ArrowDown size={12} />
-                    </button>
+                    <VoteButtons
+                      experienceId={exp.id}
+                      upvotes={exp.upvotes}
+                      downvotes={exp.downvotes}
+                      myVote={myVotes[exp.id] ?? null}
+                    />
                     <div className="flex items-center gap-1 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2.5 py-1 text-[12px] text-[#6B6B6B]">
                       <MessageCircle size={12} /> {formatCount(exp.comment_count)}
                     </div>
