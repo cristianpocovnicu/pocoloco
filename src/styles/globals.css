@@ -41,7 +41,7 @@ html, body {
 
 @media (min-width: 768px) {
   .content-wrap {
-    max-width: 680px;
+    max-width: 780px;
     margin: 0 auto;
     padding: 28px 24px 60px;
   }

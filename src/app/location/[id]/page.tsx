@@ -247,7 +247,7 @@ export default function LocationPage() {
         <div className="w-8 flex-shrink-0" />
       </div>
 
-      <div className="max-w-[680px] mx-auto">
+      <div className="max-w-[780px] mx-auto">
         {/* Banner de moderare — doar pentru autor și admini */}
         {canModerate && location.status !== 'approved' && (
           <div className={`px-5 py-3 flex items-start gap-2.5 border-b ${location.status === 'rejected' ? 'bg-[#FEF2F2] border-[rgba(220,38,38,0.15)]' : 'bg-[#FFFBEB] border-[rgba(217,119,6,0.15)]'}`}>

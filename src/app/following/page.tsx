@@ -71,7 +71,7 @@ export default function FollowingPage() {
   return (
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
       <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 sticky top-0 z-30">
-        <div className="max-w-[680px] mx-auto flex items-center gap-2">
+        <div className="max-w-[780px] mx-auto flex items-center gap-2">
           <Users size={18} className="text-[#E8440A]" />
           <span className="font-outfit text-[17px] font-semibold text-[#0F0F0F]">Urmaresc</span>
           {followingIds.length > 0 && (
@@ -80,7 +80,7 @@ export default function FollowingPage() {
         </div>
       </div>
 
-      <div className="max-w-[680px] mx-auto px-5 pt-4">
+      <div className="max-w-[780px] mx-auto px-5 pt-4">
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 size={26} className="animate-spin text-[#E8440A]" />

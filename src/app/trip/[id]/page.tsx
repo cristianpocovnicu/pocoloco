@@ -147,7 +147,7 @@ export default function TripPage() {
         )}
       </div>
 
-      <div className="max-w-[680px] mx-auto">
+      <div className="max-w-[780px] mx-auto">
         <div className="h-52 bg-gradient-to-br from-[#5B4FCF] to-[#8B7FE8] relative overflow-hidden">
           {trip.cover_image
             ? <CoverImage src={trip.cover_image} alt={trip.title} priority />

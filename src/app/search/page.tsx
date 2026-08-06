@@ -176,7 +176,7 @@ export default function SearchPage() {
 
   return (
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
-      <div className="max-w-[680px] mx-auto">
+      <div className="max-w-[780px] mx-auto">
         <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 pt-4 pb-3 sticky top-0 z-30">
           <div ref={searchBoxRef} className="relative mb-3">
             <div className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-4 py-2.5 flex items-center gap-2">

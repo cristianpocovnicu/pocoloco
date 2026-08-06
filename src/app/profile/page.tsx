@@ -140,7 +140,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="max-w-[680px] mx-auto">
+      <div className="max-w-[780px] mx-auto">
         {/* Hero */}
         <div className="bg-white px-5 pt-6 pb-5 border-b border-[rgba(0,0,0,0.08)]">
           <div className="flex items-start justify-between mb-4">
