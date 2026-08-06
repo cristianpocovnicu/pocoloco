@@ -49,6 +49,8 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 11 | `supabase/migrations/20260806_delete_user.sql` | funcția `delete_user()` — ștergerea contului din aplicație |
 | 12 | `supabase/migrations/20260806_badges.sql` | `badges`, `user_badges`, `check_and_award_badges()` + triggere |
 | 13 | `supabase/migrations/20260806_trip_featured.sql` | `trips.featured`, pentru promovarea din admin |
+| 14 | `supabase/migrations/20260806_visits.sql` | `saves.status` — listele „Vreau să merg" / „Am fost" |
+| 15 | `supabase/migrations/20260806_nearby.sql` | funcția `nearby_locations()` pentru secțiunea „În apropiere" |
 
 Ordinea contează: migrările 2–7 folosesc `is_admin()` din prima, iar 6 atașează
 triggere pe tabelele create de 3, 4 și 5.
@@ -122,6 +124,19 @@ select count(*) from public.locations l
 where l.added_by is not null
   and not exists (select 1 from auth.users u where u.id = l.added_by);
 ```
+
+### Atenție la migrarea 14 (jurnalul de călătorie)
+
+Extinde `saves`, tabelul folosit și pentru călătorii. Coloana nouă are default,
+deci rândurile existente rămân valide și devin „Vreau să merg" — exact ce erau.
+Triggerul de `save_count` pentru călătorii nu e atins.
+
+### Harta nu cere nimic
+
+Leaflet + OpenStreetMap, fără cheie și fără cont. Singura obligație e atribuirea
+„© OpenStreetMap", care e deja în hartă. Dacă traficul crește mult, politica de
+utilizare a serverelor OSM cere un tile server propriu sau un serviciu plătit —
+se schimbă un singur URL în `LocationMap.tsx`.
 
 ## 3. Realtime pentru notificări
 
