@@ -37,6 +37,8 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 6 | `supabase/migrations/20260806_notifications.sql` | tabelul `notifications` + triggerele care le generează |
 | 7 | `supabase/migrations/20260806_profile_on_signup.sql` | profil automat la înregistrare (necesar pentru Google) |
 | 8 | `supabase/migrations/20260806_trips.sql` | itinerar (`trip_locations`), salvarea călătoriilor, RLS pe `trips` / `saves` |
+| 9 | `supabase/migrations/20260806_onboarding.sql` | `travel_styles`, `favorite_regions`, `onboarding_completed` pe `profiles` |
+| 10 | `supabase/migrations/20260806_experience_owner.sql` | politici ca autorul să-și poată edita și șterge experiențele |
 
 Ordinea contează: migrările 2–7 folosesc `is_admin()` din prima, iar 6 atașează
 triggere pe tabelele create de 3, 4 și 5.
@@ -78,6 +80,25 @@ Rulează întâi `checks/inspect_trips.sql`. Două lucruri de urmărit:
   `location_id` / `trip_id` să fie completată
 
 ---
+
+### Atenție la migrarea 10 (experiențe)
+
+Migrarea adaugă politicile, dar **nu pornește RLS** pe `experiences`.
+Verifică întâi dacă e deja activat:
+
+```sql
+select tablename, rowsecurity from pg_tables
+where schemaname = 'public' and tablename = 'experiences';
+```
+
+Dacă `rowsecurity` e `false`, oricine are cheia anon poate scrie în tabel — merită
+pornit, dar abia după ce confirmi că politicile acoperă tot ce face aplicația:
+
+```sql
+alter table public.experiences enable row level security;
+```
+
+Testează imediat adăugarea unei experiențe. Rollback: `disable row level security`.
 
 ## 3. Realtime pentru notificări
 
@@ -125,4 +146,10 @@ Authentication → URL Configuration.
 - **Apple Sign In** — butonul e dezactivat în interfață; necesită cont Apple
   Developer plătit.
 - **Editarea unei călătorii publicate** — se poate doar șterge și recrea.
-- **Harta din căutare** (`SearchMapView.tsx`) nu e conectată la nimic.
+- **Editarea comentariilor** — politica RLS există, interfața nu.
+- **Căutarea de useri** — `/search` caută doar locații.
+- **Ștergerea contului** — cerută în politica de confidențialitate, dar se face
+  manual, pe email. Merită automatizată.
+- **Textele legale** din `/termeni` și `/confidentialitate` sunt un punct de
+  plecare scris pentru acest produs, nu verificat de un avocat. Completează
+  denumirea firmei operatoare și pune la punct `contact@pocoloco.travel`.
