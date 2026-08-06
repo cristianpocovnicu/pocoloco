@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Bookmark, Calendar, Globe, Loader2, MapPin, Pencil, Share2, Star, Trash2, Users,
+  ArrowLeft, Bookmark, Calendar, Globe, Loader2, MapPin, Pencil, PenLine, Share2, Star, Trash2, Users,
 } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import FollowButton from '@/components/profile/FollowButton'
@@ -11,11 +11,22 @@ import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
 import CoverImage from '@/components/ui/CoverImage'
+import Image from 'next/image'
 import { useToast } from '@/components/ui/Toast'
 import {
   fetchItinerary, groupByDay, isTripSaved, setTripSaved,
   type ItineraryItem, type Trip,
 } from '@/lib/trips'
+
+type StopExperience = {
+  id: string
+  location_id: string
+  content: string
+  images: string[] | null
+  rating_experience: number
+  upvotes: number
+  comment_count: number
+}
 
 type Author = {
   id: string
@@ -38,6 +49,7 @@ export default function TripPage() {
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  const [stopExperiences, setStopExperiences] = useState<Record<string, StopExperience>>({})
 
   useEffect(() => {
     const load = async () => {
@@ -63,6 +75,25 @@ export default function TripPage() {
       setAuthor((prof.data as Author) || null)
       setItinerary(stops)
       setSaved(alreadySaved)
+
+      // review-urile autorului la opririle din itinerar — călătoria e,
+      // în fond, colecția lor
+      const locationIds = stops.map(stop => stop.location?.id).filter(Boolean) as string[]
+      if (locationIds.length > 0) {
+        const { data: exps } = await supabase
+          .from('experiences')
+          .select('id, location_id, content, images, rating_experience, upvotes, comment_count')
+          .eq('author_id', t.author_id)
+          .eq('status', 'active')
+          .in('location_id', locationIds)
+
+        const byLocation: Record<string, StopExperience> = {}
+        for (const exp of (exps || []) as StopExperience[]) {
+          if (!byLocation[exp.location_id]) byLocation[exp.location_id] = exp
+        }
+        setStopExperiences(byLocation)
+      }
+
       setLoading(false)
     }
     load()
@@ -282,6 +313,52 @@ export default function TripPage() {
                               <p className="text-[12px] text-[#6B6B6B] leading-relaxed mt-1.5 bg-[#F8F7F5] rounded-lg px-2.5 py-1.5">
                                 {item.note}
                               </p>
+                            )}
+
+                            {/* review-ul autorului despre oprirea asta */}
+                            {item.location && stopExperiences[item.location.id] && (
+                              <Link
+                                href={`/location/${item.location.id}`}
+                                className="block mt-2.5 border border-[rgba(232,68,10,0.2)] bg-[#FFFBF9] rounded-xl p-2.5 hover:border-[rgba(232,68,10,0.4)] transition-colors"
+                              >
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <PenLine size={11} className="text-[#E8440A]" />
+                                  <span className="text-[11px] font-outfit font-semibold text-[#E8440A]">
+                                    Ce a scris {author?.full_name?.split(' ')[0] || 'autorul'}
+                                  </span>
+                                  <div className="flex gap-0.5 ml-auto">
+                                    {[1, 2, 3, 4, 5].map(n => (
+                                      <Star
+                                        key={n}
+                                        size={9}
+                                        className={n <= stopExperiences[item.location!.id].rating_experience
+                                          ? 'text-amber-400 fill-amber-400'
+                                          : 'text-gray-200 fill-gray-200'}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className="text-[12px] text-[#6B6B6B] leading-relaxed line-clamp-3">
+                                  {stopExperiences[item.location.id].content}
+                                </p>
+                                {(stopExperiences[item.location.id].images?.length || 0) > 0 && (
+                                  <div className="flex gap-1.5 mt-2">
+                                    {stopExperiences[item.location.id].images!.slice(0, 3).map((img, idx) => (
+                                      <Image
+                                        key={idx}
+                                        src={img}
+                                        alt=""
+                                        width={48}
+                                        height={48}
+                                        className="w-12 h-12 rounded-lg object-cover"
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+                                <span className="text-[11px] text-[#5B4FCF] font-medium mt-1.5 inline-block">
+                                  Citește tot →
+                                </span>
+                              </Link>
                             )}
                           </div>
                         </div>

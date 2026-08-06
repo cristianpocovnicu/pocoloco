@@ -6,21 +6,16 @@ import { ArrowLeft, Camera, Loader2, MapPin, Plus, Search, Trash2, X } from 'luc
 import { createClient } from '@/lib/supabase-client'
 import { TRANSPORT_TYPES } from '@/lib/utils'
 import CountryPicker from '@/components/trip/CountryPicker'
+import ItineraryLocationPicker, { type PickedLocation } from '@/components/trip/ItineraryLocationPicker'
+import TellUsMorePrompt, { type StopWithoutReview } from '@/components/trip/TellUsMorePrompt'
 import CharCounter from '@/components/ui/CharCounter'
 import { useToast } from '@/components/ui/Toast'
 
 const STEPS = ['Detalii', 'Itinerar', 'Copertă', 'Publică']
 
-type FoundLocation = {
-  id: string
-  name: string
-  city: string | null
-  category: string | null
-}
-
 type ItineraryDraft = {
   key: string
-  location: FoundLocation
+  location: PickedLocation
   day: number
   note: string
 }
@@ -32,6 +27,8 @@ export default function NewTripPage() {
 
   const [step, setStep] = useState(0)
   const [publishing, setPublishing] = useState(false)
+  const [publishedTripId, setPublishedTripId] = useState<string | null>(null)
+  const [stopsToReview, setStopsToReview] = useState<StopWithoutReview[]>([])
   const [error, setError] = useState('')
 
   // pas 1
@@ -42,9 +39,6 @@ export default function NewTripPage() {
   const [countries, setCountries] = useState<string[]>([])
 
   // pas 2
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<FoundLocation[]>([])
-  const [searching, setSearching] = useState(false)
   const [items, setItems] = useState<ItineraryDraft[]>([])
 
   // pas 3
@@ -58,37 +52,14 @@ export default function NewTripPage() {
     })
   }, [router])
 
-  const search = useCallback(async (q: string) => {
-    if (!q.trim()) { setResults([]); return }
-    setSearching(true)
-    const supabase = createClient()
-    // doar locații aprobate — itinerarul nu poate conține locuri nemoderate
-    const { data } = await supabase
-      .from('locations')
-      .select('id, name, city, category')
-      .eq('status', 'approved')
-      .ilike('name', `%${q.trim()}%`)
-      .order('experience_count', { ascending: false })
-      .limit(8)
-    setResults((data || []) as FoundLocation[])
-    setSearching(false)
-  }, [])
-
-  useEffect(() => {
-    const timer = setTimeout(() => search(query), 300)
-    return () => clearTimeout(timer)
-  }, [query, search])
-
-  const addLocation = (location: FoundLocation) => {
+  const addLocation = (location: PickedLocation) => {
     const lastDay = items.length > 0 ? Math.max(...items.map(i => i.day)) : 1
     setItems(prev => [...prev, {
-      key: `${location.id}-${prev.length}-${location.name.length}`,
+      key: `${location.id}-${prev.length}`,
       location,
       day: Math.min(lastDay, durationDays),
       note: '',
     }])
-    setQuery('')
-    setResults([])
   }
 
   const updateItem = (key: string, patch: Partial<ItineraryDraft>) =>
@@ -163,7 +134,29 @@ export default function NewTripPage() {
       const { error: itineraryError } = await supabase.from('trip_locations').insert(rows)
       if (itineraryError) throw new Error(`Itinerarul nu a putut fi salvat: ${itineraryError.message}`)
 
+      // opririle despre care userul n-a scris încă
+      const locationIds = items.map(item => item.location.id)
+      const { data: mine } = await supabase
+        .from('experiences')
+        .select('location_id')
+        .eq('author_id', user.id)
+        .eq('status', 'active')
+        .in('location_id', locationIds)
+
+      const written = new Set((mine || []).map((e: { location_id: string }) => e.location_id))
+      const missing = items
+        .filter(item => !written.has(item.location.id))
+        .map(item => ({ id: item.location.id, name: item.location.name, city: item.location.city }))
+
       toast('Călătorie publicată! 🎉')
+
+      if (missing.length > 0) {
+        setPublishedTripId(trip.id)
+        setStopsToReview(missing)
+        setPublishing(false)
+        return
+      }
+
       router.push(`/trip/${trip.id}`)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'A apărut o eroare.')
@@ -298,42 +291,11 @@ export default function NewTripPage() {
                 Ziua și nota sunt opționale: poți publica și doar cu lista de locuri.
               </p>
 
-              <div className="relative mb-4">
-                <div className="flex items-center gap-2 bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3">
-                  <Search size={15} className="text-[#9B9B9B] flex-shrink-0" />
-                  <input
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    placeholder="Caută o locație aprobată..."
-                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-[#9B9B9B]"
-                  />
-                  {searching && <Loader2 size={14} className="animate-spin text-[#9B9B9B]" />}
-                </div>
-
-                {results.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[rgba(0,0,0,0.08)] rounded-xl shadow-lg z-20 overflow-hidden">
-                    {results.map(loc => (
-                      <button
-                        key={loc.id}
-                        onClick={() => addLocation(loc)}
-                        className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)] last:border-0"
-                      >
-                        <MapPin size={15} className="text-[#E8440A] flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{loc.name}</div>
-                          <div className="text-[11px] text-[#9B9B9B] truncate">{loc.city || 'Fără oraș'}</div>
-                        </div>
-                        <Plus size={15} className="text-[#5B4FCF] flex-shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {query.trim() && !searching && results.length === 0 && (
-                  <p className="text-[12px] text-[#9B9B9B] mt-2">
-                    Niciun rezultat. Doar locațiile aprobate pot intra în itinerar.
-                  </p>
-                )}
+              <div className="mb-4">
+                <ItineraryLocationPicker
+                  onPick={addLocation}
+                  excludeIds={items.map(i => i.location.id)}
+                />
               </div>
 
               {items.length === 0 ? (
@@ -459,6 +421,13 @@ export default function NewTripPage() {
           )}
         </div>
       </div>
+
+      {publishedTripId && stopsToReview.length > 0 && (
+        <TellUsMorePrompt
+          stops={stopsToReview}
+          onClose={() => router.push(`/trip/${publishedTripId}`)}
+        />
+      )}
     </div>
   )
 }

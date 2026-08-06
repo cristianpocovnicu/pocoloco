@@ -9,10 +9,9 @@ import { createClient } from '@/lib/supabase-client'
 import { fetchItinerary, type Trip } from '@/lib/trips'
 import { TRANSPORT_TYPES } from '@/lib/utils'
 import CountryPicker from '@/components/trip/CountryPicker'
+import ItineraryLocationPicker, { type PickedLocation } from '@/components/trip/ItineraryLocationPicker'
 import CharCounter from '@/components/ui/CharCounter'
 import { useToast } from '@/components/ui/Toast'
-
-type FoundLocation = { id: string; name: string; city: string | null }
 
 type Row = {
   /** id-ul rândului din trip_locations; lipsește la opririle nou adăugate */
@@ -48,9 +47,6 @@ export default function EditTripPage() {
   const [rows, setRows] = useState<Row[]>([])
   const [initialRowIds, setInitialRowIds] = useState<string[]>([])
 
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<FoundLocation[]>([])
-  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -94,27 +90,7 @@ export default function EditTripPage() {
     load()
   }, [id])
 
-  const search = useCallback(async (q: string) => {
-    if (!q.trim()) { setResults([]); return }
-    setSearching(true)
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('locations')
-      .select('id, name, city')
-      .eq('status', 'approved')
-      .ilike('name', `%${q.trim()}%`)
-      .order('experience_count', { ascending: false })
-      .limit(8)
-    setResults((data || []) as FoundLocation[])
-    setSearching(false)
-  }, [])
-
-  useEffect(() => {
-    const timer = setTimeout(() => search(query), 300)
-    return () => clearTimeout(timer)
-  }, [query, search])
-
-  const addLocation = (loc: FoundLocation) => {
+  const addLocation = (loc: PickedLocation) => {
     setRows(prev => [...prev, {
       key: `new-${loc.id}-${prev.length}`,
       locationId: loc.id,
@@ -123,8 +99,6 @@ export default function EditTripPage() {
       day: Math.min(prev.length > 0 ? Math.max(...prev.map(r => r.day)) : 1, durationDays),
       note: '',
     }])
-    setQuery('')
-    setResults([])
   }
 
   const updateRow = (key: string, patch: Partial<Row>) =>
@@ -373,36 +347,11 @@ export default function EditTripPage() {
             Ordinea din listă dă ordinea opririlor. Ziua și nota sunt opționale.
           </p>
 
-          <div className="relative mb-4">
-            <div className="flex items-center gap-2 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3">
-              <Search size={15} className="text-[#9B9B9B] flex-shrink-0" />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Adaugă o oprire..."
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-[#9B9B9B]"
-              />
-              {searching && <Loader2 size={14} className="animate-spin text-[#9B9B9B]" />}
-            </div>
-
-            {results.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[rgba(0,0,0,0.08)] rounded-xl shadow-lg z-20 overflow-hidden">
-                {results.map(loc => (
-                  <button
-                    key={loc.id}
-                    onClick={() => addLocation(loc)}
-                    className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)] last:border-0"
-                  >
-                    <MapPin size={15} className="text-[#E8440A] flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{loc.name}</div>
-                      <div className="text-[11px] text-[#9B9B9B] truncate">{loc.city || 'Fără oraș'}</div>
-                    </div>
-                    <Plus size={15} className="text-[#5B4FCF] flex-shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="mb-4">
+            <ItineraryLocationPicker
+              onPick={addLocation}
+              excludeIds={rows.map(r => r.locationId)}
+            />
           </div>
 
           <div className="flex flex-col gap-2.5">
