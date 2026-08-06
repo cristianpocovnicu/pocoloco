@@ -14,7 +14,7 @@ const NAV_LINKS = [
   { href: '/search', label: 'Caută', Icon: Search },
   { href: '/trips', label: 'Călătorii', Icon: Route },
   { href: '/following', label: 'Urmaresc', Icon: Users },
-  { href: '/add-experience', label: 'Creează', Icon: Plus },
+  { href: '/create', label: 'Creează', Icon: Plus },
 ]
 
 const NAV_BOTTOM = [

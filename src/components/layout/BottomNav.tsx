@@ -8,7 +8,7 @@ import { useUnreadNotifications } from '@/lib/useUnreadNotifications'
 const NAV_ITEMS = [
   { href: '/', label: 'Acasă', Icon: Home },
   { href: '/search', label: 'Caută', Icon: Search },
-  { href: '/add-experience', label: 'Creează', Icon: Plus },
+  { href: '/create', label: 'Creează', Icon: Plus },
   { href: '/following', label: 'Urmaresc', Icon: Users },
   { href: '/notifications', label: 'Alerte', Icon: Bell },
 ]

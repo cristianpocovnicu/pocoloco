@@ -1,13 +1,16 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, ArrowLeft, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import SocialAuthButtons from '@/components/auth/SocialAuthButtons'
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // de unde a venit userul: /create trimite aici cu destinația păstrată
+  const next = searchParams.get('next') || '/'
   const [showPass, setShowPass] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -21,7 +24,7 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError('Email sau parolă incorectă.'); setLoading(false) }
-    else { router.push('/'); router.refresh() }
+    else { router.push(next); router.refresh() }
   }
 
   // linkul de recuperare duce în /auth/callback, care deschide sesiunea;
@@ -51,7 +54,7 @@ export default function LoginPage() {
       <div className="flex-1 px-6 pt-7 pb-10">
         <h1 className="font-outfit text-[26px] font-bold text-[#0F0F0F] mb-1.5">Bine ai revenit 👋</h1>
         <p className="text-[14px] text-[#6B6B6B] leading-relaxed mb-7">Intră în cont și continuă să explorezi lumea cu Pocoloco.</p>
-        <SocialAuthButtons />
+        <SocialAuthButtons next={next !== '/' ? next : undefined} />
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px bg-[rgba(0,0,0,0.08)]" />
           <span className="text-[12px] text-[#9B9B9B]">sau cu email</span>
@@ -84,5 +87,17 @@ export default function LoginPage() {
         <p className="text-[13px] text-[#6B6B6B] text-center">Nu ai cont? <Link href="/register" className="text-[#E8440A] font-semibold">Înregistrează-te gratuit</Link></p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 rounded-full border-2 border-[#E8440A] border-t-transparent animate-spin" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
