@@ -25,12 +25,14 @@ const NAV_BOTTOM = [
 export default function Sidebar() {
   const pathname = usePathname()
   const [isAdmin, setIsAdmin] = useState(false)
+  const [loggedIn, setLoggedIn] = useState(false)
   const [counts, setCounts] = useState<{ followers: number; following: number } | null>(null)
   const unread = useUnreadNotifications()
 
   useEffect(() => {
     const supabase = createClient()
     const loadUser = async (id?: string) => {
+      setLoggedIn(!!id)
       if (!id) {
         setIsAdmin(false)
         setCounts(null)
@@ -78,9 +80,10 @@ export default function Sidebar() {
           )
         })}
 
-        <div className="h-px bg-[rgba(0,0,0,0.08)] mx-6 my-3" />
+        {/* Notificările și setările n-au sens fără cont */}
+        {loggedIn && <div className="h-px bg-[rgba(0,0,0,0.08)] mx-6 my-3" />}
 
-        {NAV_BOTTOM.map(({ href, label, Icon }) => {
+        {loggedIn && NAV_BOTTOM.map(({ href, label, Icon }) => {
           const active = pathname === href
           const badge = href === '/notifications' ? unread : 0
           return (
