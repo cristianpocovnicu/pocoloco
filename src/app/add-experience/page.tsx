@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Camera, X, Star, Loader2, MapPin, Check } from 'lucide-react'
+import { ArrowLeft, Camera, X, Star, Loader2, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 
@@ -12,6 +12,29 @@ const TIPS_OPTIONS = [
 ]
 
 const STEPS = ['Locație', 'Poze', 'Rating', 'Povestea ta', 'Publică']
+
+function StarRating({ value, onChange, label, required }: {
+  value: number
+  onChange: (v: number) => void
+  label: string
+  required?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-[rgba(0,0,0,0.06)] last:border-0">
+      <div>
+        <div className="text-[13px] font-medium text-[#0F0F0F]">{label}</div>
+        <div className="text-[11px] text-[#9B9B9B]">{required ? 'Obligatoriu' : 'Opțional'}</div>
+      </div>
+      <div className="flex gap-1.5">
+        {[1,2,3,4,5].map(i => (
+          <button key={i} onClick={() => onChange(i === value ? 0 : i)}>
+            <Star size={24} className={i <= value ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function AddExperienceContent() {
   const router = useRouter()
@@ -34,10 +57,9 @@ function AddExperienceContent() {
   const [tips, setTips] = useState<string[]>([])
   const [isPublic, setIsPublic] = useState(true)
 
-  // Skip to step 1 if location already provided
   useEffect(() => {
     if (locationId && locationName) setStep(1)
-  }, [])
+  }, [locationId, locationName])
 
   const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -125,31 +147,12 @@ function AddExperienceContent() {
 
       if (expError) throw expError
 
-      // Update XP
-      try { await supabase.rpc('increment_xp', { user_id: user.id, amount: 50 }) } catch {}
-
       router.push(finalLocationId ? `/location/${finalLocationId}` : '/')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'A apărut o eroare.')
       setLoading(false)
     }
   }
-
-  const StarRating = ({ value, onChange, label, required }: { value: number, onChange: (v: number) => void, label: string, required?: boolean }) => (
-    <div className="flex items-center justify-between py-3 border-b border-[rgba(0,0,0,0.06)] last:border-0">
-      <div>
-        <div className="text-[13px] font-medium text-[#0F0F0F]">{label}</div>
-        <div className="text-[11px] text-[#9B9B9B]">{required ? 'Obligatoriu' : 'Opțional'}</div>
-      </div>
-      <div className="flex gap-1.5">
-        {[1,2,3,4,5].map(i => (
-          <button key={i} onClick={() => onChange(i === value ? 0 : i)}>
-            <Star size={24} className={i <= value ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-          </button>
-        ))}
-      </div>
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-[#F8F7F5]">
@@ -170,7 +173,10 @@ function AddExperienceContent() {
           </div>
         </div>
         {step < 4 && (
-          <button onClick={() => canProceed() && setStep(s => s + 1)} className={`font-outfit text-[13px] font-semibold px-4 py-2 rounded-full transition-all ${canProceed() ? 'bg-[#E8440A] text-white' : 'bg-[#F8F7F5] text-[#9B9B9B]'}`}>
+          <button
+            onClick={() => canProceed() && setStep(s => s + 1)}
+            className={`font-outfit text-[13px] font-semibold px-4 py-2 rounded-full transition-all ${canProceed() ? 'bg-[#E8440A] text-white' : 'bg-[#F8F7F5] text-[#9B9B9B]'}`}
+          >
             Continuă
           </button>
         )}
@@ -184,29 +190,42 @@ function AddExperienceContent() {
         </div>
 
         {error && (
-          <div className="mx-5 mt-3">
-            <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3">
-              <p className="text-[13px] text-[#DC2626]">{error}</p>
-            </div>
+          <div className="mx-5 mt-3 bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3">
+            <p className="text-[13px] text-[#DC2626]">{error}</p>
           </div>
         )}
 
         <div className="px-5 pt-6 pb-24">
+
           {step === 0 && (
             <div>
               <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Despre ce loc scrii?</h2>
               <p className="text-[14px] text-[#6B6B6B] mb-6">Introdu numele locului pe care l-ai vizitat.</p>
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Numele locului <span className="text-[#E8440A]">*</span></label>
+                  <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">
+                    Numele locului <span className="text-[#E8440A]">*</span>
+                  </label>
                   <div className="relative">
                     <MapPin size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9B9B9B]" />
-                    <input type="text" value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="Ex: Castelul Bran, Lacul Roșu..." className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl pl-10 pr-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]" />
+                    <input
+                      type="text"
+                      value={locationName}
+                      onChange={e => setLocationName(e.target.value)}
+                      placeholder="Ex: Castelul Bran, Lacul Roșu..."
+                      className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl pl-10 pr-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
+                    />
                   </div>
                 </div>
                 <div>
                   <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Oraș / Regiune</label>
-                  <input type="text" value={locationCity} onChange={e => setLocationCity(e.target.value)} placeholder="Ex: Brașov, România" className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]" />
+                  <input
+                    type="text"
+                    value={locationCity}
+                    onChange={e => setLocationCity(e.target.value)}
+                    placeholder="Ex: Brașov, România"
+                    className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
+                  />
                 </div>
               </div>
             </div>
@@ -221,13 +240,19 @@ function AddExperienceContent() {
                 {photoUrls.map((url, i) => (
                   <div key={i} className="relative w-[calc(33%-8px)] aspect-square rounded-xl overflow-hidden">
                     <img src={url} alt="" className="w-full h-full object-cover" />
-                    <button onClick={() => removePhoto(i)} className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center">
+                    <button
+                      onClick={() => removePhoto(i)}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center"
+                    >
                       <X size={12} className="text-white" />
                     </button>
                   </div>
                 ))}
                 {photos.length < 5 && (
-                  <button onClick={() => fileRef.current?.click()} className="w-[calc(33%-8px)] aspect-square rounded-xl border-2 border-dashed border-[rgba(232,68,10,0.3)] bg-[#FFF0EB] flex flex-col items-center justify-center gap-2">
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    className="w-[calc(33%-8px)] aspect-square rounded-xl border-2 border-dashed border-[rgba(232,68,10,0.3)] bg-[#FFF0EB] flex flex-col items-center justify-center gap-2"
+                  >
                     <Camera size={24} className="text-[#E8440A]" />
                     <span className="text-[11px] text-[#E8440A] font-medium">Adaugă</span>
                   </button>
@@ -253,15 +278,29 @@ function AddExperienceContent() {
             <div>
               <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Povestește-ne!</h2>
               <p className="text-[14px] text-[#6B6B6B] mb-4">Ce ai trăit? Sfaturi practice, momente speciale.</p>
-              <textarea value={content} onChange={e => setContent(e.target.value)} rows={6} placeholder="Ex: Am ajuns dimineața devreme și practic n-am avut coadă..." className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed" />
+              <textarea
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                rows={6}
+                placeholder="Ex: Am ajuns dimineața devreme și practic n-am avut coadă..."
+                className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed"
+              />
               <div className="flex items-center justify-between mt-1.5 mb-5">
                 <span className="text-[11px] text-[#9B9B9B]">Minim 20 caractere</span>
-                <span className={`text-[11px] font-medium ${content.length >= 20 ? 'text-[#059669]' : 'text-[#9B9B9B]'}`}>{content.length} / 2000</span>
+                <span className={`text-[11px] font-medium ${content.length >= 20 ? 'text-[#059669]' : 'text-[#9B9B9B]'}`}>
+                  {content.length} / 2000
+                </span>
               </div>
-              <div className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">Tips rapide <span className="text-[12px] text-[#9B9B9B] font-normal">— opțional</span></div>
+              <div className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">
+                Tips rapide <span className="text-[12px] text-[#9B9B9B] font-normal">— opțional</span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {TIPS_OPTIONS.map(tip => (
-                  <button key={tip} onClick={() => toggleTip(tip)} className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${tips.includes(tip) ? 'bg-[#FFF0EB] text-[#E8440A] border-[rgba(232,68,10,0.25)]' : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'}`}>
+                  <button
+                    key={tip}
+                    onClick={() => toggleTip(tip)}
+                    className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${tips.includes(tip) ? 'bg-[#FFF0EB] text-[#E8440A] border-[rgba(232,68,10,0.25)]' : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'}`}
+                  >
                     {tips.includes(tip) && '✓ '}{tip}
                   </button>
                 ))}
@@ -280,13 +319,19 @@ function AddExperienceContent() {
                   {locationCity && <span className="text-[13px] text-[#9B9B9B]">· {locationCity}</span>}
                 </div>
                 <div className="flex gap-1 mb-3">
-                  {[1,2,3,4,5].map(i => <Star key={i} size={16} className={i <= ratingExp ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />)}
+                  {[1,2,3,4,5].map(i => (
+                    <Star key={i} size={16} className={i <= ratingExp ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
+                  ))}
                 </div>
                 <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-3">{content}</p>
-                {photos.length > 0 && <p className="text-[12px] text-[#9B9B9B] mt-2">{photos.length} foto{photos.length > 1 ? 'grafii' : 'grafie'} atașată</p>}
+                {photos.length > 0 && (
+                  <p className="text-[12px] text-[#9B9B9B] mt-2">{photos.length} fotografie atașată</p>
+                )}
                 {tips.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {tips.map(t => <span key={t} className="text-[11px] bg-[#FFF0EB] text-[#E8440A] px-2 py-0.5 rounded-full">✓ {t}</span>)}
+                    {tips.map(t => (
+                      <span key={t} className="text-[11px] bg-[#FFF0EB] text-[#E8440A] px-2 py-0.5 rounded-full">✓ {t}</span>
+                    ))}
                   </div>
                 )}
               </div>
@@ -295,24 +340,41 @@ function AddExperienceContent() {
                   <div className="font-outfit text-[14px] font-semibold text-[#0F0F0F]">Vizibilitate</div>
                   <div className="text-[12px] text-[#9B9B9B]">{isPublic ? 'Oricine poate vedea' : 'Doar tu poți vedea'}</div>
                 </div>
-                <button onClick={() => setIsPublic(!isPublic)} className={`w-12 h-6 rounded-full transition-colors relative ${isPublic ? 'bg-[#E8440A]' : 'bg-[#D1D5DB]'}`}>
+                <button
+                  onClick={() => setIsPublic(!isPublic)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isPublic ? 'bg-[#E8440A]' : 'bg-[#D1D5DB]'}`}
+                >
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isPublic ? 'right-0.5' : 'left-0.5'}`} />
                 </button>
               </div>
-              <button onClick={handleSubmit} disabled={loading} className="w-full bg-[#E8440A] text-white font-outfit text-[15px] font-bold py-4 rounded-full flex items-center justify-center gap-2 disabled:opacity-70">
-                {loading ? <><Loader2 size={18} className="animate-spin" /> Se publică...</> : '🚀 Publică experiența'}
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full bg-[#E8440A] text-white font-outfit text-[15px] font-bold py-4 rounded-full flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {loading ? (
+                  <><Loader2 size={18} className="animate-spin" /> Se publică...</>
+                ) : (
+                  '🚀 Publică experiența'
+                )}
               </button>
             </div>
           )}
-export default function AddExperiencePage() {
-  return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E8440A]"></div></div>}>
-      <AddExperienceContent />
-    </Suspense>
-  )
-}
+
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AddExperiencePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 rounded-full border-2 border-[#E8440A] border-t-transparent animate-spin" />
+      </div>
+    }>
+      <AddExperienceContent />
+    </Suspense>
   )
 }
