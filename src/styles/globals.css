@@ -73,6 +73,41 @@ html, body {
   }
 }
 
+/* Tranziție la schimbarea paginii */
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.page-fade {
+  animation: pageFadeIn 220ms ease-out;
+}
+
+/* Confirmare vizuală la vot / salvare / follow */
+@keyframes pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.animate-pop {
+  animation: pop 320ms ease-out;
+}
+
+/* Toast */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-toast-in {
+  animation: toastIn 200ms ease-out;
+}
+
+/* Cine preferă mai puțină mișcare nu primește animații */
+@media (prefers-reduced-motion: reduce) {
+  .page-fade, .animate-pop, .animate-toast-in {
+    animation: none;
+  }
+}
+
 @layer components {
   .btn-primary {
     @apply bg-[#E8440A] text-white font-outfit font-semibold rounded-full px-5 py-2.5 text-sm flex items-center gap-1.5 cursor-pointer hover:bg-[#D03D09] transition-colors;

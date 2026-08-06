@@ -26,6 +26,7 @@ export default function VoteButtons({
   const [vote, setVote] = useState<VoteType | null>(myVote)
   const [counts, setCounts] = useState({ up: upvotes, down: downvotes })
   const [pending, setPending] = useState(false)
+  const [popping, setPopping] = useState<VoteType | null>(null)
   // după prima interacțiune, starea locală e sursa adevărului
   const touched = useRef(false)
 
@@ -50,6 +51,10 @@ export default function VoteButtons({
     // update optimist — DB-ul recalculează contoarele prin trigger
     const optimisticVote = vote === type ? null : type
     setVote(optimisticVote)
+    if (optimisticVote) {
+      setPopping(type)
+      setTimeout(() => setPopping(null), 350)
+    }
     setCounts(c => ({
       up: c.up + ((vote === 'up' ? -1 : 0) + (optimisticVote === 'up' ? 1 : 0)),
       down: c.down + ((vote === 'down' ? -1 : 0) + (optimisticVote === 'down' ? 1 : 0)),
@@ -77,7 +82,8 @@ export default function VoteButtons({
           'flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] transition-colors disabled:opacity-60',
           vote === 'up'
             ? 'bg-[#5B4FCF] text-white'
-            : 'bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] hover:bg-[#EEEDFB] hover:text-[#5B4FCF]'
+            : 'bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] hover:bg-[#EEEDFB] hover:text-[#5B4FCF]',
+          popping === 'up' && 'animate-pop'
         )}
       >
         <ArrowUp size={12} /> {formatCount(counts.up)}
@@ -91,7 +97,8 @@ export default function VoteButtons({
           'flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] transition-colors disabled:opacity-60',
           vote === 'down'
             ? 'bg-[#E8440A] text-white'
-            : 'bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] hover:bg-[#FFF0EB] hover:text-[#E8440A]'
+            : 'bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] hover:bg-[#FFF0EB] hover:text-[#E8440A]',
+          popping === 'down' && 'animate-pop'
         )}
       >
         <ArrowDown size={12} /> {counts.down > 0 ? formatCount(counts.down) : ''}

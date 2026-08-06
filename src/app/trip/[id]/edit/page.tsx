@@ -8,6 +8,7 @@ import {
 import { createClient } from '@/lib/supabase-client'
 import { fetchItinerary, type Trip } from '@/lib/trips'
 import { TRANSPORT_TYPES } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 type FoundLocation = { id: string; name: string; city: string | null }
 
@@ -25,6 +26,7 @@ type Row = {
 export default function EditTripPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const toast = useToast()
 
   const [loading, setLoading] = useState(true)
   const [allowed, setAllowed] = useState(false)
@@ -229,6 +231,7 @@ export default function EditTripPage() {
         if (insertError) throw new Error(`Nu am putut adăuga opririle noi: ${insertError.message}`)
       }
 
+      toast('Modificările au fost salvate')
       router.push(`/trip/${id}`)
       router.refresh()
     } catch (e: unknown) {

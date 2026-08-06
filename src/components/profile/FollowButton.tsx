@@ -5,11 +5,14 @@ import { UserPlus, UserCheck, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { isFollowing as checkFollowing, setFollow } from '@/lib/follows'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 type Props = {
   targetUserId: string
   /** dacă părintele știe deja starea, evităm un query în plus */
   initialFollowing?: boolean
+  /** numele afișat în confirmare; fără el mesajul rămâne generic */
+  targetName?: string | null
   size?: 'sm' | 'md'
   className?: string
   onChange?: (following: boolean) => void
@@ -18,6 +21,7 @@ type Props = {
 export default function FollowButton({
   targetUserId,
   initialFollowing,
+  targetName,
   size = 'md',
   className,
   onChange,
@@ -27,6 +31,8 @@ export default function FollowButton({
   const [meId, setMeId] = useState<string | null>(null)
   const [ready, setReady] = useState(initialFollowing !== undefined)
   const [pending, setPending] = useState(false)
+  const [justChanged, setJustChanged] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     let active = true
@@ -60,8 +66,17 @@ export default function FollowButton({
     setFollowing(next) // optimist
 
     const error = await setFollow(supabase, user.id, targetUserId, next)
-    if (error) setFollowing(!next)
-    else onChange?.(next)
+    if (error) {
+      setFollowing(!next)
+      toast('Nu am putut salva. Încearcă din nou.', 'error')
+    } else {
+      onChange?.(next)
+      setJustChanged(true)
+      setTimeout(() => setJustChanged(false), 350)
+      toast(next
+        ? `Urmărești acum pe ${targetName || 'acest călător'}`
+        : 'Nu mai urmărești')
+    }
 
     setPending(false)
   }
@@ -79,6 +94,7 @@ export default function FollowButton({
         following
           ? 'bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] hover:bg-[#FEF2F2] hover:text-[#DC2626] hover:border-[rgba(220,38,38,0.2)]'
           : 'bg-[#E8440A] text-white hover:bg-[#D03D09]',
+        justChanged && 'animate-pop',
         className
       )}
     >

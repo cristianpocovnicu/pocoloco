@@ -13,6 +13,7 @@ import FollowButton from '@/components/profile/FollowButton'
 import CommentThread, { type CommentViewer } from '@/components/experience/CommentThread'
 import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import PhotoGallery from '@/components/location/PhotoGallery'
+import { useToast } from '@/components/ui/Toast'
 import Image from 'next/image'
 import CoverImage from '@/components/ui/CoverImage'
 
@@ -57,6 +58,7 @@ type RelatedTrip = {
 export default function LocationPage() {
   const { id } = useParams()
   const router = useRouter()
+  const toast = useToast()
   const [location, setLocation] = useState<Location | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [loading, setLoading] = useState(true)
@@ -166,10 +168,11 @@ export default function LocationPage() {
     if (!user) { router.push('/login'); return }
     if (!saved) {
       const { error } = await supabase.from('saves').insert({ user_id: user.id, location_id: id })
-      if (!error) setSaved(true)
+      if (!error) { setSaved(true); toast('Salvat în „Vreau să merg"') }
     } else {
       await supabase.from('saves').delete().eq('user_id', user.id).eq('location_id', id)
       setSaved(false)
+      toast('Scos din salvate')
     }
   }
 
@@ -461,7 +464,7 @@ export default function LocationPage() {
                         </button>
                       </div>
                     ) : (
-                      exp.author?.id && <FollowButton targetUserId={exp.author.id} size="sm" />
+                      exp.author?.id && <FollowButton targetUserId={exp.author.id} targetName={exp.author.full_name} size="sm" />
                     )}
                   </div>
 

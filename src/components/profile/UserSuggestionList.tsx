@@ -53,6 +53,7 @@ export default function UserSuggestionList({ users, followingIds }: Props) {
           </Link>
           <FollowButton
             targetUserId={u.id}
+            targetName={u.full_name || u.username}
             initialFollowing={followingIds ? followingIds.includes(u.id) : false}
             size="sm"
             className="flex-shrink-0"

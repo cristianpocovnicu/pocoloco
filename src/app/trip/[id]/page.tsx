@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
 import CoverImage from '@/components/ui/CoverImage'
+import { useToast } from '@/components/ui/Toast'
 import {
   fetchItinerary, groupByDay, isTripSaved, setTripSaved,
   type ItineraryItem, type Trip,
@@ -26,6 +27,7 @@ type Author = {
 export default function TripPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const toast = useToast()
 
   const [trip, setTrip] = useState<Trip | null>(null)
   const [author, setAuthor] = useState<Author | null>(null)
@@ -79,6 +81,7 @@ export default function TripPage() {
     setSaveCount(c => Math.max(0, c + (next ? 1 : -1)))
 
     const error = await setTripSaved(supabase, user.id, trip.id, next)
+    if (!error) toast(next ? 'Călătorie salvată' : 'Scoasă din salvate')
     if (error) {
       setSaved(!next)
       setSaveCount(c => Math.max(0, c + (next ? -1 : 1)))
@@ -223,7 +226,7 @@ export default function TripPage() {
                 <div className="text-[11px] text-[#9B9B9B]">{timeAgo(trip.created_at)}</div>
               </div>
             </Link>
-            <FollowButton targetUserId={author.id} size="sm" />
+            <FollowButton targetUserId={author.id} targetName={author.full_name || author.username} size="sm" />
           </div>
         )}
 

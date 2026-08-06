@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import { useToast } from '@/components/ui/Toast'
 
 export type EditableExperience = {
   id: string
@@ -46,6 +47,7 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
   const [ratingAccess, setRatingAccess] = useState(experience.rating_access || 0)
   const [ratingCrowd, setRatingCrowd] = useState(experience.rating_crowd || 0)
   const [saving, setSaving] = useState(false)
+  const toast = useToast()
   const [error, setError] = useState<string | null>(null)
 
   // Escape închide, iar fundalul nu mai derulează sub modal
@@ -92,6 +94,7 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
       return
     }
 
+    toast('Experiență actualizată')
     onSaved({ ...experience, ...patch })
   }
 

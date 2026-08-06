@@ -110,6 +110,7 @@ export default function GuidesSection() {
             </Link>
             <FollowButton
               targetUserId={guide.id}
+              targetName={guide.full_name || guide.username}
               initialFollowing={followingIds.includes(guide.id)}
               size="sm"
               className="flex-shrink-0"

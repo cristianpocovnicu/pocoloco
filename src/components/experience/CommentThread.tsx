@@ -14,6 +14,7 @@ import {
   type CommentWithAuthor,
 } from '@/lib/comments'
 import { cn, timeAgo } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 export type CommentViewer = { id: string; isAdmin: boolean } | null
 
@@ -33,6 +34,7 @@ export default function CommentThread({
   onCountChange,
 }: Props) {
   const router = useRouter()
+  const toast = useToast()
   const [comments, setComments] = useState<CommentWithAuthor[]>(initialComments || [])
   const [viewer, setViewer] = useState<CommentViewer>(viewerProp ?? null)
   const [loading, setLoading] = useState(initialComments === undefined)
@@ -101,6 +103,7 @@ export default function CommentThread({
     } else {
       setComments(prev => [...prev, comment])
       onCountChange?.(1)
+      toast(parentId ? 'Răspuns trimis' : 'Comentariu adăugat')
       if (parentId) { setReplyTo(null); setReplyDraft('') } else { setDraft('') }
     }
     setSending(false)

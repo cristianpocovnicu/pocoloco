@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import '@/styles/globals.css'
 import Sidebar from '@/components/layout/Sidebar'
 import Footer from '@/components/layout/Footer'
+import PageTransition from '@/components/layout/PageTransition'
+import { ToastProvider } from '@/components/ui/Toast'
 
 export const metadata: Metadata = {
   // fără metadataBase, imaginile OG relative nu se rezolvă în absolut
@@ -44,16 +46,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ro">
       <body>
-        <div className="flex min-h-screen">
-          <Sidebar />
-          {/* Zona de continut — se intinde pe tot spatiul ramas si centreaza continutul */}
-          <div className="flex-1 min-w-0 flex flex-col items-center">
-            <div className="w-full">
-              {children}
-              <Footer />
+        <ToastProvider>
+          <div className="flex min-h-screen">
+            <Sidebar />
+            {/* Zona de continut — se intinde pe tot spatiul ramas si centreaza continutul */}
+            <div className="flex-1 min-w-0 flex flex-col items-center">
+              <div className="w-full">
+                <PageTransition>{children}</PageTransition>
+                <Footer />
+              </div>
             </div>
           </div>
-        </div>
+        </ToastProvider>
       </body>
     </html>
   )

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Camera, Loader2, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { TRANSPORT_TYPES } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 const STEPS = ['Detalii', 'Itinerar', 'Copertă', 'Publică']
 
@@ -25,6 +26,7 @@ type ItineraryDraft = {
 export default function NewTripPage() {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
 
   const [step, setStep] = useState(0)
   const [publishing, setPublishing] = useState(false)
@@ -165,6 +167,7 @@ export default function NewTripPage() {
       const { error: itineraryError } = await supabase.from('trip_locations').insert(rows)
       if (itineraryError) throw new Error(`Itinerarul nu a putut fi salvat: ${itineraryError.message}`)
 
+      toast('Călătorie publicată! 🎉')
       router.push(`/trip/${trip.id}`)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'A apărut o eroare.')

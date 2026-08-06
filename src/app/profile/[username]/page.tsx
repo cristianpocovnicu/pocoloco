@@ -161,6 +161,7 @@ export default function PublicProfilePage() {
             ) : (
               <FollowButton
                 targetUserId={profile.id}
+                targetName={profile.full_name || profile.username}
                 initialFollowing={followsThem}
                 onChange={f => setCounts(c => ({ ...c, followers: c.followers + (f ? 1 : -1) }))}
               />

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Camera, X, Star, Loader2, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
+import { useToast } from '@/components/ui/Toast'
 
 const TIPS_OPTIONS = [
   'Merită prețul', 'Bun pentru familie', 'Parcare ușoară',
@@ -40,6 +41,7 @@ function AddExperienceContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fileRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
 
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -147,6 +149,7 @@ function AddExperienceContent() {
 
       if (expError) throw expError
 
+      toast('Experiență publicată! 🎉')
       router.push(finalLocationId ? `/location/${finalLocationId}` : '/')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'A apărut o eroare.')
