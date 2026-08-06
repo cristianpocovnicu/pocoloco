@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, Users, Route, Bell } from 'lucide-react'
+import { Home, Search, Users, Plus, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import UserMenu from './UserMenu'
 
@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Acasă', Icon: Home },
   { href: '/search', label: 'Caută', Icon: Search },
   { href: '/following', label: 'Urmaresc', Icon: Users },
-  { href: '/trip', label: 'Călătorii', Icon: Route },
+  { href: '/add-experience', label: 'Creează', Icon: Plus },
 ]
 
 export default function TopNav() {
@@ -42,7 +42,7 @@ export default function TopNav() {
         })}
       </div>
 
-      <div className="flex items-center gap-2.5 ml-auto">
+      <div className="flex items-center gap-3 ml-auto">
         <div className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-4 py-2 flex items-center gap-2 w-44 cursor-pointer">
           <Search size={14} className="text-[#9B9B9B]" />
           <span className="text-sm text-[#9B9B9B]">Caută...</span>
