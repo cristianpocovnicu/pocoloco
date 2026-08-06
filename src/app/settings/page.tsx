@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Camera, Check, Eye, EyeOff, Loader2, LogOut, Settings as SettingsIcon, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, Camera, Check, Eye, EyeOff, Loader2, LogOut, Settings as SettingsIcon, ShieldCheck, Trash2 } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
@@ -38,6 +38,11 @@ export default function SettingsPage() {
   const [showPass, setShowPass] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -136,6 +141,34 @@ export default function SettingsPage() {
       setPasswordConfirm('')
     }
     setSavingPassword(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm.trim().toUpperCase() !== 'ȘTERGE') {
+      setDeleteError('Scrie ȘTERGE ca să confirmi.')
+      return
+    }
+
+    setDeleting(true)
+    setDeleteError(null)
+
+    const supabase = createClient()
+    // funcția din DB șterge tot ce ține de userul curent, inclusiv auth.users
+    const { error } = await supabase.rpc('delete_user')
+
+    if (error) {
+      setDeleteError(
+        /function .* does not exist/i.test(error.message)
+          ? 'Ștergerea nu e disponibilă încă pe server. Scrie-ne la contact@pocoloco.travel.'
+          : error.message
+      )
+      setDeleting(false)
+      return
+    }
+
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
   }
 
   const handleLogout = async () => {
@@ -288,10 +321,63 @@ export default function SettingsPage() {
           <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-4">Cont</h2>
           <button
             onClick={handleLogout}
-            className="w-full bg-[#FEF2F2] text-[#DC2626] font-outfit text-[14px] font-semibold py-3 rounded-full flex items-center justify-center gap-2"
+            className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-[14px] font-semibold py-3 rounded-full flex items-center justify-center gap-2"
           >
             <LogOut size={16} /> Deconectează-te
           </button>
+        </section>
+
+        {/* Zona periculoasă */}
+        <section className="bg-white border border-[rgba(220,38,38,0.25)] rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle size={16} className="text-[#DC2626]" />
+            <h2 className="font-outfit text-[15px] font-semibold text-[#DC2626]">Zona periculoasă</h2>
+          </div>
+          <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-4">
+            Ștergerea contului este definitivă. Dispar profilul tău, experiențele, călătoriile,
+            comentariile, voturile, salvările și cine urmărești. Locurile pe care le-ai adăugat
+            și care au fost aprobate rămân în Pocoloco, fără numele tău, pentru că experiențele
+            altora depind de ele.
+          </p>
+
+          {!deleteOpen ? (
+            <button
+              onClick={() => setDeleteOpen(true)}
+              className="w-full bg-[#FEF2F2] text-[#DC2626] font-outfit text-[14px] font-semibold py-3 rounded-full flex items-center justify-center gap-2"
+            >
+              <Trash2 size={16} /> Șterge contul
+            </button>
+          ) : (
+            <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl p-4">
+              <p className="text-[13px] text-[#0F0F0F] mb-3">
+                Scrie <strong>ȘTERGE</strong> în câmpul de mai jos ca să confirmi.
+              </p>
+              <input
+                value={deleteConfirm}
+                onChange={e => setDeleteConfirm(e.target.value)}
+                placeholder="ȘTERGE"
+                autoFocus
+                className="w-full bg-white border border-[rgba(220,38,38,0.25)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#DC2626] transition-colors mb-3"
+              />
+              {deleteError && <p className="text-[13px] text-[#DC2626] mb-3">{deleteError}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setDeleteOpen(false); setDeleteConfirm(''); setDeleteError(null) }}
+                  disabled={deleting}
+                  className="flex-1 bg-white border border-[rgba(0,0,0,0.08)] text-[#6B6B6B] font-outfit text-[14px] font-medium py-3 rounded-full disabled:opacity-60"
+                >
+                  Anulează
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || deleteConfirm.trim().toUpperCase() !== 'ȘTERGE'}
+                  className="flex-1 bg-[#DC2626] text-white font-outfit text-[14px] font-bold py-3 rounded-full flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deleting ? <><Loader2 size={16} className="animate-spin" /> Se șterge...</> : 'Șterge definitiv'}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
       <BottomNav />
