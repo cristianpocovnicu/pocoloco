@@ -50,3 +50,4 @@ manuali în Supabase și Google Cloud Console:
 
 - [`docs/configurare-manuala.md`](docs/configurare-manuala.md) — toate migrările în ordine + restul setărilor
 - [`docs/google-auth-setup.md`](docs/google-auth-setup.md) — autentificarea cu Google, pas cu pas
+- [`docs/google-places-setup.md`](docs/google-places-setup.md) — sugestii de locații din Google Places (opțional)

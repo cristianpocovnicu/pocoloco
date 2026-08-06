@@ -13,10 +13,17 @@ pentru dezvoltare locală:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+
+# opțional — fără ea, căutarea de locații merge doar în baza proprie
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=<cheie Places API (New)>
 ```
 
-Ambele se găsesc în Supabase → Settings → API. `.env.local` e în `.gitignore`,
-deci nu ajunge în repo.
+Primele două se găsesc în Supabase → Settings → API. Pentru a treia, vezi
+[`google-places-setup.md`](./google-places-setup.md). `.env.local` e în
+`.gitignore`, deci nu ajunge în repo.
+
+Variabilele `NEXT_PUBLIC_*` sunt înghețate în bundle la build: după ce le
+schimbi în Vercel, trebuie redeploy.
 
 ---
 

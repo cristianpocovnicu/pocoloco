@@ -1,10 +1,15 @@
 'use client'
 import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Camera, X, Star, Loader2, MapPin } from 'lucide-react'
+import { ArrowLeft, Camera, X, Star, Loader2, MapPin, Search, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 import { useToast } from '@/components/ui/Toast'
+import {
+  PLACES_ENABLED, getPlaceDetails, newSessionToken, searchPlaces, type PlaceSuggestion,
+} from '@/lib/places'
+
+type DbLocation = { id: string; name: string; city: string | null; country: string | null }
 
 const TIPS_OPTIONS = [
   'Merită prețul', 'Bun pentru familie', 'Parcare ușoară',
@@ -50,6 +55,16 @@ function AddExperienceContent() {
   const [locationId, setLocationId] = useState<string | null>(searchParams.get('location'))
   const [locationName, setLocationName] = useState(searchParams.get('name') || '')
   const [locationCity, setLocationCity] = useState('')
+  const [locationCountry, setLocationCountry] = useState('România')
+  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null } | null>(null)
+
+  // căutarea de locație: întâi în baza noastră, apoi Google (dacă e configurat)
+  const [locationQuery, setLocationQuery] = useState('')
+  const [dbResults, setDbResults] = useState<DbLocation[]>([])
+  const [placeResults, setPlaceResults] = useState<PlaceSuggestion[]>([])
+  const [searchingLocation, setSearchingLocation] = useState(false)
+  const [pickedFromGoogle, setPickedFromGoogle] = useState(false)
+  const sessionToken = useRef(newSessionToken())
   const [photos, setPhotos] = useState<File[]>([])
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
   const [ratingExp, setRatingExp] = useState(0)
@@ -61,7 +76,79 @@ function AddExperienceContent() {
 
   useEffect(() => {
     if (locationId && locationName) setStep(1)
-  }, [locationId, locationName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // căutare: locațiile aprobate din baza noastră + sugestii Google, în paralel
+  useEffect(() => {
+    const term = locationQuery.trim()
+    if (term.length < 2) { setDbResults([]); setPlaceResults([]); return }
+
+    const timer = setTimeout(async () => {
+      setSearchingLocation(true)
+      const supabase = createClient()
+
+      const [dbRes, places] = await Promise.all([
+        supabase
+          .from('locations')
+          .select('id, name, city, country')
+          .eq('status', 'approved')
+          .ilike('name', `%${term}%`)
+          .order('experience_count', { ascending: false })
+          .limit(5),
+        searchPlaces(term, sessionToken.current),
+      ])
+
+      setDbResults((dbRes.data || []) as DbLocation[])
+      // nu repetăm în lista Google locurile pe care le avem deja
+      const known = new Set((dbRes.data || []).map((l: DbLocation) => l.name.toLowerCase()))
+      setPlaceResults(places.filter(p => !known.has(p.mainText.toLowerCase())).slice(0, 5))
+      setSearchingLocation(false)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [locationQuery])
+
+  const pickExisting = (loc: DbLocation) => {
+    setLocationId(loc.id)
+    setLocationName(loc.name)
+    setLocationCity(loc.city || '')
+    setLocationCountry(loc.country || 'România')
+    setCoords(null)
+    setPickedFromGoogle(false)
+    setLocationQuery('')
+  }
+
+  const pickPlace = async (place: PlaceSuggestion) => {
+    setSearchingLocation(true)
+    const details = await getPlaceDetails(place.placeId, sessionToken.current)
+    sessionToken.current = newSessionToken()
+
+    setLocationId(null)
+    setLocationName(details?.name || place.mainText)
+    setLocationCity(details?.city || place.secondaryText.split(',')[0] || '')
+    setLocationCountry(details?.country || 'România')
+    setCoords(details ? { lat: details.latitude, lng: details.longitude } : null)
+    setPickedFromGoogle(true)
+    setLocationQuery('')
+    setSearchingLocation(false)
+  }
+
+  const useAsNewLocation = () => {
+    setLocationId(null)
+    setLocationName(locationQuery.trim())
+    setCoords(null)
+    setPickedFromGoogle(false)
+    setLocationQuery('')
+  }
+
+  const clearLocation = () => {
+    setLocationId(null)
+    setLocationName('')
+    setLocationCity('')
+    setCoords(null)
+    setPickedFromGoogle(false)
+  }
 
   const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -122,7 +209,10 @@ function AddExperienceContent() {
             .insert({
               name: locationName.trim(),
               city: locationCity.trim(),
-              country: 'România',
+              country: locationCountry.trim() || 'România',
+              // coordonatele vin de la Google, când locul a fost ales de acolo
+              latitude: coords?.lat ?? null,
+              longitude: coords?.lng ?? null,
               status: 'pending',
               added_by: user.id,
             })
@@ -203,43 +293,128 @@ function AddExperienceContent() {
           {step === 0 && (
             <div>
               <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Despre ce loc scrii?</h2>
-              <p className="text-[14px] text-[#6B6B6B] mb-6">Introdu numele locului pe care l-ai vizitat.</p>
-              <div className="flex flex-col gap-4">
+              <p className="text-[14px] text-[#6B6B6B] mb-6">Caută locul pe care l-ai vizitat.</p>
+
+              {locationName ? (
+                /* Loc ales — arătăm ce am reținut, cu opțiunea de a schimba */
+                <div className="flex flex-col gap-4">
+                  <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#FFF0EB] flex items-center justify-center flex-shrink-0">
+                        <MapPin size={18} className="text-[#E8440A]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-outfit text-[15px] font-semibold text-[#0F0F0F] truncate">{locationName}</p>
+                        <p className="text-[12px] text-[#9B9B9B] truncate">
+                          {locationCity || 'Fără oraș'}{locationCountry ? `, ${locationCountry}` : ''}
+                        </p>
+                        <span className={`inline-block mt-1.5 text-[10px] font-outfit font-bold px-2 py-0.5 rounded-full ${locationId ? 'bg-[#ECFDF5] text-[#059669]' : 'bg-[#FFFBEB] text-[#D97706]'}`}>
+                          {locationId ? 'DEJA PE POCOLOCO' : 'LOC NOU'}
+                        </span>
+                      </div>
+                      <button onClick={clearLocation} className="text-[12px] text-[#5B4FCF] font-medium flex-shrink-0">
+                        Schimbă
+                      </button>
+                    </div>
+                  </div>
+
+                  {!locationId && (
+                    <>
+                      <div>
+                        <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Oraș / Regiune</label>
+                        <input
+                          type="text"
+                          value={locationCity}
+                          onChange={e => setLocationCity(e.target.value)}
+                          placeholder="Ex: Brașov"
+                          className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
+                        />
+                      </div>
+                      <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.2)] rounded-xl px-4 py-3 flex items-start gap-2.5">
+                        <span className="text-base leading-none mt-0.5">⏳</span>
+                        <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+                          Locul ăsta nu există încă pe Pocoloco. Îl adăugăm noi, dar apare în căutare
+                          și în feed doar după ce un administrator îl aprobă. Experiența ta rămâne salvată.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                /* Căutare */
                 <div>
-                  <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">
-                    Numele locului <span className="text-[#E8440A]">*</span>
-                  </label>
                   <div className="relative">
-                    <MapPin size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9B9B9B]" />
+                    <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9B9B9B]" />
                     <input
                       type="text"
-                      value={locationName}
-                      onChange={e => setLocationName(e.target.value)}
+                      value={locationQuery}
+                      onChange={e => setLocationQuery(e.target.value)}
                       placeholder="Ex: Castelul Bran, Lacul Roșu..."
-                      className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl pl-10 pr-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
+                      autoFocus
+                      className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl pl-10 pr-10 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
                     />
+                    {searchingLocation && (
+                      <Loader2 size={15} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-[#9B9B9B]" />
+                    )}
                   </div>
-                </div>
-                <div>
-                  <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Oraș / Regiune</label>
-                  <input
-                    type="text"
-                    value={locationCity}
-                    onChange={e => setLocationCity(e.target.value)}
-                    placeholder="Ex: Brașov, România"
-                    className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
-                  />
-                </div>
-                {!locationId && (
-                  <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.2)] rounded-xl px-4 py-3 flex items-start gap-2.5">
-                    <span className="text-base leading-none mt-0.5">⏳</span>
-                    <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
-                      Dacă locul nu există încă pe Pocoloco, îl adăugăm noi — dar apare în căutare
-                      și în feed doar după ce un administrator îl aprobă. Experiența ta rămâne salvată.
+
+                  {locationQuery.trim().length >= 2 && (
+                    <div className="mt-3 bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden">
+                      {dbResults.map(loc => (
+                        <button
+                          key={loc.id}
+                          onClick={() => pickExisting(loc)}
+                          className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
+                        >
+                          <MapPin size={15} className="text-[#E8440A] flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{loc.name}</div>
+                            <div className="text-[11px] text-[#9B9B9B] truncate">{loc.city || 'Fără oraș'}</div>
+                          </div>
+                          <span className="text-[9px] font-outfit font-bold px-1.5 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] flex-shrink-0">
+                            POCOLOCO
+                          </span>
+                        </button>
+                      ))}
+
+                      {placeResults.map(place => (
+                        <button
+                          key={place.placeId}
+                          onClick={() => pickPlace(place)}
+                          className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
+                        >
+                          <MapPin size={15} className="text-[#5B4FCF] flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{place.mainText}</div>
+                            <div className="text-[11px] text-[#9B9B9B] truncate">{place.secondaryText}</div>
+                          </div>
+                          <span className="text-[9px] font-outfit font-bold px-1.5 py-0.5 rounded-full bg-[#EEEDFB] text-[#5B4FCF] flex-shrink-0">
+                            GOOGLE
+                          </span>
+                        </button>
+                      ))}
+
+                      {/* mereu disponibil: locul scris de mână */}
+                      <button
+                        onClick={useAsNewLocation}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left"
+                      >
+                        <Plus size={15} className="text-[#6B6B6B] flex-shrink-0" />
+                        <span className="text-[13px] text-[#6B6B6B] truncate">
+                          Adaugă „<strong className="text-[#0F0F0F]">{locationQuery.trim()}</strong>&rdquo; ca loc nou
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  {!PLACES_ENABLED && (
+                    <p className="text-[11px] text-[#9B9B9B] mt-3 leading-relaxed">
+                      Căutarea acoperă locurile deja aprobate pe Pocoloco. Sugestiile Google
+                      se activează după configurarea cheii — vezi docs/google-places-setup.md.
                     </p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
