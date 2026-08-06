@@ -3,18 +3,29 @@ import { fetchProfilesMap, type MiniProfile } from './profiles'
 
 export type FollowCounts = { followers: number; following: number }
 
-/** Câți îl urmăresc și pe câți urmărește userul dat. */
+/**
+ * Câți îl urmăresc și pe câți urmărește userul dat.
+ *
+ * Numărăm cu select('*') pentru că tabelul follows nu are neapărat o
+ * coloană `id` (cheia poate fi perechea follower/following) — un
+ * select('id') pe un tabel fără coloana asta întoarce 400.
+ * Orice eroare degradează la 0, ca să nu pice pagina din cauza contorului.
+ */
 export async function getFollowCounts(
   supabase: SupabaseClient,
   userId: string
 ): Promise<FollowCounts> {
-  const [followersRes, followingRes] = await Promise.all([
-    supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', userId),
-    supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', userId),
-  ])
-  return {
-    followers: followersRes.count ?? 0,
-    following: followingRes.count ?? 0,
+  try {
+    const [followersRes, followingRes] = await Promise.all([
+      supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
+      supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
+    ])
+    return {
+      followers: followersRes.count ?? 0,
+      following: followingRes.count ?? 0,
+    }
+  } catch {
+    return { followers: 0, following: 0 }
   }
 }
 
@@ -23,8 +34,16 @@ export async function fetchFollowingIds(
   supabase: SupabaseClient,
   userId: string
 ): Promise<string[]> {
-  const { data } = await supabase.from('follows').select('following_id').eq('follower_id', userId)
-  return (data || []).map((r: { following_id: string }) => r.following_id)
+  try {
+    const { data, error } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', userId)
+    if (error) return []
+    return (data || []).map((r: { following_id: string }) => r.following_id)
+  } catch {
+    return []
+  }
 }
 
 export async function isFollowing(
@@ -32,13 +51,17 @@ export async function isFollowing(
   followerId: string,
   targetId: string
 ): Promise<boolean> {
-  const { data } = await supabase
-    .from('follows')
-    .select('id')
-    .eq('follower_id', followerId)
-    .eq('following_id', targetId)
-    .maybeSingle()
-  return !!data
+  try {
+    const { count, error } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', followerId)
+      .eq('following_id', targetId)
+    if (error) return false
+    return (count ?? 0) > 0
+  } catch {
+    return false
+  }
 }
 
 /** Urmărește / nu mai urmări. Întoarce mesajul de eroare sau null. */

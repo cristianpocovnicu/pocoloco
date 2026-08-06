@@ -28,13 +28,19 @@ export const NOTIFICATION_TEXT: Record<NotificationType, string> = {
   reply: 'ți-a răspuns la comentariu',
 }
 
+/** Notificări necitite. Dacă tabelul lipsește sau query-ul eșuează, întoarce 0. */
 export async function countUnread(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { count } = await supabase
-    .from('notifications')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('read', false)
-  return count ?? 0
+  try {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('read', false)
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
 }
 
 /**

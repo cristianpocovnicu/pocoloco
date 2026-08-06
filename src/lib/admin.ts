@@ -19,10 +19,15 @@ export async function countRows(
   table: string,
   filter?: (q: any) => any // eslint-disable-line @typescript-eslint/no-explicit-any
 ): Promise<number> {
-  let q: any = supabase.from(table).select('id', { count: 'exact', head: true }) // eslint-disable-line @typescript-eslint/no-explicit-any
-  if (filter) q = filter(q)
-  const { count } = await q
-  return count ?? 0
+  try {
+    // select('*') și nu select('id'): nu toate tabelele au coloana id
+    let q: any = supabase.from(table).select('*', { count: 'exact', head: true }) // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (filter) q = filter(q)
+    const { count } = await q
+    return count ?? 0
+  } catch {
+    return 0
+  }
 }
 
 /** Etichete + culori pentru statusuri, ca să arate la fel peste tot în admin. */
