@@ -1,9 +1,10 @@
 'use client'
 import { useRef, useState } from 'react'
-import { Camera, ChevronDown, Loader2, Plus, Star, X } from 'lucide-react'
+import { CalendarDays, Camera, ChevronDown, Loader2, Plus, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import CharCounter from '@/components/ui/CharCounter'
 import { ratingLabels } from '@/lib/activities'
+import { MONTHS_RO, currentYear, selectableYears } from '@/lib/period'
 import type { StopDraft } from '@/lib/story'
 
 const TIPS_OPTIONS = [
@@ -72,6 +73,64 @@ export function Section({
       </button>
 
       {open && <div className="pb-3">{children}</div>}
+    </div>
+  )
+}
+
+/**
+ * Luna și anul vizitei. Amândouă opționale, dar luna n-are sens singură:
+ * alegerea unei luni completează automat anul curent, iar ștergerea
+ * anului scoate și luna.
+ */
+export function PeriodPicker({
+  year,
+  month,
+  onChange,
+}: {
+  year: number | null
+  month: number | null
+  onChange: (patch: { visitedYear: number | null; visitedMonth: number | null }) => void
+}) {
+  const years = selectableYears()
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[12px] text-[#6B6B6B] flex items-center gap-1.5">
+        <CalendarDays size={13} className="text-[#9B9B9B]" />
+        Când ai fost? <span className="text-[#9B9B9B]">(opțional)</span>
+      </span>
+
+      <div className="flex items-center gap-1.5 ml-auto">
+        <select
+          value={month ?? ''}
+          onChange={e => {
+            const value = e.target.value ? Number(e.target.value) : null
+            onChange({ visitedMonth: value, visitedYear: value && !year ? currentYear() : year })
+          }}
+          aria-label="Luna"
+          className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-lg px-2 py-1.5 text-[12px] text-[#0F0F0F] outline-none focus:border-[#E8440A] transition-colors"
+        >
+          <option value="">luna</option>
+          {MONTHS_RO.map((name, i) => (
+            <option key={name} value={i + 1}>{name}</option>
+          ))}
+        </select>
+
+        <select
+          value={year ?? ''}
+          onChange={e => {
+            const value = e.target.value ? Number(e.target.value) : null
+            onChange({ visitedYear: value, visitedMonth: value ? month : null })
+          }}
+          aria-label="Anul"
+          className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-lg px-2 py-1.5 text-[12px] text-[#0F0F0F] outline-none focus:border-[#E8440A] transition-colors"
+        >
+          <option value="">anul</option>
+          {years.map(value => (
+            <option key={value} value={value}>{value}</option>
+          ))}
+        </select>
+      </div>
     </div>
   )
 }

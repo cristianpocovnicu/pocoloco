@@ -4,10 +4,13 @@ import { Loader2, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import CharCounter from '@/components/ui/CharCounter'
 import { useToast } from '@/components/ui/Toast'
+import { PeriodPicker } from '@/components/create/StopSections'
 
 export type EditableExperience = {
   id: string
   content: string
+  visited_year?: number | null
+  visited_month?: number | null
   rating_experience: number | null
   rating_access: number | null
   rating_crowd: number | null
@@ -44,6 +47,8 @@ function StarRow({ label, value, onChange, required }: {
 
 export default function ExperienceEditModal({ experience, onClose, onSaved }: Props) {
   const [content, setContent] = useState(experience.content || '')
+  const [visitedYear, setVisitedYear] = useState<number | null>(experience.visited_year ?? null)
+  const [visitedMonth, setVisitedMonth] = useState<number | null>(experience.visited_month ?? null)
   const [ratingExp, setRatingExp] = useState(experience.rating_experience || 0)
   const [ratingAccess, setRatingAccess] = useState(experience.rating_access || 0)
   const [ratingCrowd, setRatingCrowd] = useState(experience.rating_crowd || 0)
@@ -69,6 +74,8 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
 
     const patch = {
       content: content.trim(),
+      visited_year: visitedYear,
+      visited_month: visitedYear ? visitedMonth : null,
       // notarea e opțională peste tot; 0 în ecran înseamnă NULL în bază
       rating_experience: ratingExp || null,
       rating_access: ratingAccess || null,
@@ -130,6 +137,17 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
             <StarRow label="Experiență generală" value={ratingExp} onChange={setRatingExp} />
             <StarRow label="Acces și organizare" value={ratingAccess} onChange={setRatingAccess} />
             <StarRow label="Aglomerație și așteptare" value={ratingCrowd} onChange={setRatingCrowd} />
+          </div>
+
+          <div className="bg-[#F8F7F5] rounded-2xl border border-[rgba(0,0,0,0.08)] px-4 py-3 mb-5">
+            <PeriodPicker
+              year={visitedYear}
+              month={visitedMonth}
+              onChange={patch => {
+                setVisitedYear(patch.visitedYear)
+                setVisitedMonth(patch.visitedMonth)
+              }}
+            />
           </div>
 
           <div className="flex gap-2">

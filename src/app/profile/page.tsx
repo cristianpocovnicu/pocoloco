@@ -39,6 +39,8 @@ type Experience = {
   activity_area?: string | null
   content: string
   images: string[]
+  visited_year: number | null
+  visited_month: number | null
   rating_experience: number | null
   rating_access: number | null
   rating_crowd: number | null
@@ -305,6 +307,8 @@ export default function ProfilePage() {
                       onClick={() => setEditing({
                         id: exp.id,
                         content: exp.content,
+                        visited_year: exp.visited_year,
+                        visited_month: exp.visited_month,
                         rating_experience: exp.rating_experience,
                         rating_access: exp.rating_access ?? null,
                         rating_crowd: exp.rating_crowd ?? null,

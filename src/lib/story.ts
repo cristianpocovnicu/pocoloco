@@ -23,6 +23,9 @@ export type StopDraft = {
   activityTitle: string
   activityCategory: string | null
   activityArea: string
+  /** când a fost acolo — ambele opționale, luna doar cu an */
+  visitedYear: number | null
+  visitedMonth: number | null
   /** conținut, tot opțional */
   images: string[]
   ratingExperience: number
@@ -67,6 +70,8 @@ export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
     activityTitle: '',
     activityCategory: null,
     activityArea: '',
+    visitedYear: null,
+    visitedMonth: null,
     images: [],
     ratingExperience: 0,
     ratingAccess: 0,
@@ -278,6 +283,8 @@ export async function publishStory(
     rating_experience: stop.ratingExperience || null,
     rating_access: stop.ratingAccess || null,
     rating_crowd: stop.ratingCrowd || null,
+    visited_year: stop.visitedYear,
+    visited_month: stop.visitedYear ? stop.visitedMonth : null,
     note: stop.note.trim() || null,
     create_experience: stopHasContent(stop),
   }))
@@ -304,6 +311,8 @@ export async function publishStory(
         rating_experience: single.rating_experience,
         rating_access: single.rating_access,
         rating_crowd: single.rating_crowd,
+        visited_year: single.visited_year,
+        visited_month: single.visited_month,
         status: 'active',
       })
       .select('id')

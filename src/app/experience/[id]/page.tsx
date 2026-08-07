@@ -15,6 +15,7 @@ import { fetchMyVotes, type VoteType } from '@/lib/votes'
 import { fetchCommentsFor, type CommentWithAuthor } from '@/lib/comments'
 import { activityCategory, ratingLabels, type ExperienceKind } from '@/lib/activities'
 import { timeAgo } from '@/lib/utils'
+import { formatVisitedPeriod } from '@/lib/period'
 
 type Experience = {
   id: string
@@ -25,6 +26,8 @@ type Experience = {
   content: string
   images: string[] | null
   tips: string[] | null
+  visited_year: number | null
+  visited_month: number | null
   rating_experience: number | null
   rating_access: number | null
   rating_crowd: number | null
@@ -66,7 +69,7 @@ export default function ExperiencePage() {
         .from('experiences')
         .select(`
           id, kind, title, activity_category, activity_area, content, images, tips,
-          rating_experience, rating_access, rating_crowd,
+          rating_experience, rating_access, rating_crowd, visited_year, visited_month,
           upvotes, downvotes, comment_count, created_at, status, author_id, location_id,
           author:profiles!author_id(id, username, full_name, is_guide),
           location:locations!location_id(id, name, city)
@@ -116,6 +119,7 @@ export default function ExperiencePage() {
     </div>
   )
 
+  const visited = formatVisitedPeriod(experience.visited_year, experience.visited_month)
   const category = activityCategory(experience.activity_category)
   const labels = ratingLabels(experience.kind)
   const images = experience.images || []
@@ -199,7 +203,10 @@ export default function ExperiencePage() {
                 <p className="text-[13px] font-semibold text-[#0F0F0F] truncate">
                   {experience.author.full_name || experience.author.username}
                 </p>
-                <p className="text-[11px] text-[#9B9B9B]">{timeAgo(experience.created_at)}</p>
+                <p className="text-[11px] text-[#9B9B9B]">
+                  {timeAgo(experience.created_at)}
+                  {visited && <span> · a fost în {visited}</span>}
+                </p>
               </div>
             </Link>
             {viewer && viewer.id !== experience.author.id && (

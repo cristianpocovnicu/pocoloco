@@ -79,7 +79,16 @@ opriri) se decide din ce ai scris, nu dintr-un meniu.
 **Reguli de limbaj**, valabile de aici înainte: în flux nu apar cuvintele
 „experiență", „călătorie", „ghid", „itinerar". Apar în rezultat — pagina
 publicată, toast-uri, restul aplicației. În flux se vorbește la persoana a
-doua: „unde ai fost", „ce ai făcut", „ai mai fost undeva".
+doua: „unde ai fost", „ce ai făcut", „ai mai fost undeva". Nici „oprire"
+sau „obiectiv" nu apar: cardurile se numesc cu numele locului, iar cât nu
+are unul, titlul e întrebarea.
+
+**Amendament (8 august 2026):** „călătorie" e permis într-un singur loc —
+cardul „Detaliile călătoriei". Acolo se ajunge doar cu două locuri deja
+adăugate, adică după ce userul a înțeles din ce a făcut ce construiește;
+cuvântul numește rezultatul, nu îl anunță și nu-i cere o decizie. În rest
+interdicția rămâne întreagă, iar „experiență", „ghid" și „itinerar" rămân
+interzise peste tot în flux.
 
 **Ce a adus în plus:** povești neterminate (`creation_drafts`, migrarea
 29), salvate automat, cu banner la revenire și card discret în profil;

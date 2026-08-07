@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Bookmark, CheckCircle, MapPin, Route, Star, MessageCircle, Pencil, Loader2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo, formatDistance, CATEGORY_ICONS } from '@/lib/utils'
+import { formatVisitedPeriod } from '@/lib/period'
 import ShareButton from '@/components/ui/ShareButton'
 import { fetchMyVotes, netScore, HIDE_THRESHOLD_EXPERIENCE, type VoteType } from '@/lib/votes'
 import { fetchCommentsFor, type CommentWithAuthor } from '@/lib/comments'
@@ -47,6 +48,8 @@ type Experience = {
   content: string
   images: string[]
   tips: string[]
+  visited_year: number | null
+  visited_month: number | null
   rating_experience: number | null
   rating_access: number | null
   rating_crowd: number | null
@@ -553,7 +556,12 @@ export default function LocationPage() {
                       <div className="min-w-0">
                         <span className="text-[13px] font-semibold text-[#0F0F0F]">{exp.author?.full_name}</span>
                         {exp.author?.is_guide && <span className="ml-1.5 text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-medium">Ghid</span>}
-                        <div className="text-[11px] text-[#9B9B9B]">{timeAgo(exp.created_at)}</div>
+                        <div className="text-[11px] text-[#9B9B9B]">
+                          {timeAgo(exp.created_at)}
+                          {formatVisitedPeriod(exp.visited_year, exp.visited_month) && (
+                            <span> · a fost în {formatVisitedPeriod(exp.visited_year, exp.visited_month)}</span>
+                          )}
+                        </div>
                       </div>
                     </Link>
                     {viewer && exp.author?.id === viewer.id ? (
@@ -562,6 +570,8 @@ export default function LocationPage() {
                           onClick={() => setEditing({
                             id: exp.id,
                             content: exp.content,
+                            visited_year: exp.visited_year,
+                            visited_month: exp.visited_month,
                             rating_experience: exp.rating_experience,
                             rating_access: exp.rating_access,
                             rating_crowd: exp.rating_crowd,

@@ -103,7 +103,12 @@ function CreateScreen() {
 
   const addStop = () => {
     dirty.current = true
-    const stop = newStop()
+    // perioada se moștenește: de obicei toate locurile sunt din aceeași
+    // ieșire, iar valoarea rămâne modificabilă pe fiecare card
+    const reference = stops.find(s => s.visitedYear)
+    const stop = newStop(reference
+      ? { visitedYear: reference.visitedYear, visitedMonth: reference.visitedMonth }
+      : {})
     setStops(prev => [...prev, stop])
     setExpandedKey(stop.key)
   }
@@ -347,7 +352,7 @@ function CreateScreen() {
 
           {usableStops.length > 1 && !trip.title.trim() && (
             <p className="max-w-[680px] mx-auto text-[11px] text-[#9B9B9B] mt-1.5">
-              Mai lipsește numele ieșirii.
+              Mai lipsește numele călătoriei.
             </p>
           )}
         </div>

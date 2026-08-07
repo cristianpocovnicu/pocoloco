@@ -1,7 +1,7 @@
 'use client'
 import { Camera, ChevronDown, ChevronUp, MessageSquare, Star, Trash2 } from 'lucide-react'
 import SubjectPicker from './SubjectPicker'
-import { PhotoEditor, RatingEditor, Section, StoryEditor } from './StopSections'
+import { PeriodPicker, PhotoEditor, RatingEditor, Section, StoryEditor } from './StopSections'
 import { stopHasSubject, stopLabel, stopSubtitle, type StopDraft } from '@/lib/story'
 
 type Props = {
@@ -123,6 +123,17 @@ export default function StopCard({
 
       {stopHasSubject(stop) && (
         <div className="mt-3">
+          {/* Perioada stă lângă „unde", nu în secțiunea de notare: ține de
+              vizită, nu de cât de bun a fost locul. Un singur rând, deci
+              nu îngreunează nici cardurile de după primul. */}
+          <div className="pb-3 border-b border-[rgba(0,0,0,0.06)] mb-1">
+            <PeriodPicker
+              year={stop.visitedYear}
+              month={stop.visitedMonth}
+              onChange={onChange}
+            />
+          </div>
+
           {/* după primul, ajunge și doar numele cu o notă */}
           {index > 0 && (
             <input
