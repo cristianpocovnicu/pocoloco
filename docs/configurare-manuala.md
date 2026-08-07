@@ -64,6 +64,8 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 26 | `supabase/migrations/20260807_points_6_backfill.sql` | reconstruiește punctele din istoricul existent (rulează ultima) |
 | 27 | `supabase/migrations/20260808_experience_kinds.sql` | `experiences.kind`: vizite la un loc vs. activități; `location_id` devine opțional |
 | 28 | `supabase/migrations/20260808_trip_activity_stops.sql` | o oprire din itinerar poate fi o activitate, nu doar o locație |
+| 29 | `supabase/migrations/20260808_creation_drafts.sql` | `creation_drafts` — povestea neterminată din ecranul de creare |
+| 30 | `supabase/migrations/20260808_publish_story.sql` | `publish_story()` — publicarea, într-o singură tranzacție |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).
