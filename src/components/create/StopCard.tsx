@@ -2,6 +2,7 @@
 import { Camera, ChevronDown, ChevronUp, MessageSquare, Star, Trash2 } from 'lucide-react'
 import SubjectPicker from './SubjectPicker'
 import { PeriodPicker, PhotoEditor, RatingEditor, Section, StoryEditor } from './StopSections'
+import { useState } from 'react'
 import { stopHasSubject, stopLabel, stopSubtitle, type StopDraft } from '@/lib/story'
 
 type Props = {
@@ -40,6 +41,9 @@ export default function StopCard({
   // la primul loc totul e deschis de la început; la următoarele, doar
   // căutarea și nota, restul la cerere
   const alwaysOpen = index === 0
+
+  /** o zonă aleasă din greșeală așteaptă un răspuns înainte de orice */
+  const [regionPending, setRegionPending] = useState(false)
 
   const photoSummary = stop.images.length > 0
     ? `${stop.images.length} ${stop.images.length === 1 ? 'poză' : 'poze'}`
@@ -127,9 +131,10 @@ export default function StopCard({
         onChange={onChange}
         autoFocus={index === 0 && !stopHasSubject(stop)}
         onUseAsOutingName={index === 0 ? onUseAsOutingName : undefined}
+        onDecisionPending={setRegionPending}
       />
 
-      {stopHasSubject(stop) && (
+      {stopHasSubject(stop) && !regionPending && (
         <div className="mt-3">
           {/* Perioada stă lângă „unde", nu în secțiunea de notare: ține de
               vizită, nu de cât de bun a fost locul. Un singur rând, deci

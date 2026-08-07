@@ -22,6 +22,12 @@ type Props = {
    * selecția.
    */
   onUseAsOutingName?: (name: string) => void
+  /**
+   * Cât timp întrebarea despre zonă e pe ecran, cardul nu trebuie să arate
+   * restul formularului: ar cere o decizie și s-ar purta simultan ca și cum
+   * ar fi fost luată.
+   */
+  onDecisionPending?: (pending: boolean) => void
 }
 
 /**
@@ -31,7 +37,13 @@ type Props = {
  * se potrivește oferă două ieșiri: locul e nou, sau nu e un loc, e ceva ce
  * ai făcut. Aceeași căutare pentru oprirea 1 și pentru restul.
  */
-export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOutingName }: Props) {
+export default function SubjectPicker({
+  stop,
+  onChange,
+  autoFocus,
+  onUseAsOutingName,
+  onDecisionPending,
+}: Props) {
   const [query, setQuery] = useState('')
   /** numele zonei alese, cât timp întrebăm dacă chiar despre ea e vorba */
   const [broadRegion, setBroadRegion] = useState<string | null>(null)
@@ -42,6 +54,11 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
   const [placeResults, setPlaceResults] = useState<PlaceSuggestion[]>([])
   const [searching, setSearching] = useState(false)
   const sessionToken = useRef(newSessionToken())
+
+  // cardul ascunde secțiunile cât timp întrebarea așteaptă răspuns
+  useEffect(() => {
+    onDecisionPending?.(!!broadRegion)
+  }, [broadRegion, onDecisionPending])
 
   useEffect(() => {
     const term = query.trim()
@@ -239,33 +256,32 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
         </button>
       </div>
 
-      {broadRegion && (
+      {/* Cât nu s-a răspuns, cardul nu arată nimic altceva: întrebarea și
+          formularul complet nu pot sta pe ecran în același timp. */}
+      {broadRegion ? (
         <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.25)] rounded-xl px-3.5 py-3">
-          <p className="text-[13px] font-medium text-[#0F0F0F] mb-0.5">
-            Ai ales {broadRegion} — pare o zonă întreagă, nu un loc anume.
+          <p className="text-[13px] font-medium text-[#0F0F0F] mb-2.5 leading-relaxed">
+            Ai fost în mai multe locuri din {broadRegion}, sau povestești despre {broadRegion} ca destinație?
           </p>
-          <p className="text-[12px] text-[#6B6B6B] leading-relaxed mb-2.5">
-            Dacă ai fost în mai multe locuri pe acolo, spune-le pe rând: fiecare primește
-            pozele și povestea lui.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button"
-              onClick={useRegionAsName}
-              className="bg-[#E8440A] text-white font-outfit text-[12px] font-semibold px-3.5 py-2 rounded-full"
-            >
-              E toată povestea mea de acolo
-            </button>
-            <button type="button"
-              onClick={e => { e.preventDefault(); setBroadRegion(null) }}
-              className="text-[12px] text-[#6B6B6B] font-medium px-2"
-            >
-              Vreau să povestesc chiar despre {broadRegion}
-            </button>
-          </div>
-        </div>
-      )}
 
-      {!stop.locationId && (
+          <button type="button"
+            onClick={useRegionAsName}
+            className="bg-[#E8440A] text-white font-outfit text-[12px] font-semibold px-3.5 py-2 rounded-full"
+          >
+            Am fost în mai multe locuri — le adaug pe rând
+          </button>
+          <p className="text-[11px] text-[#9B9B9B] leading-relaxed mt-1.5 mb-3">
+            {broadRegion} devine numele poveștii; tu începi cu primul loc.
+          </p>
+
+          <button type="button"
+            onClick={e => { e.preventDefault(); setBroadRegion(null) }}
+            className="text-[12px] text-[#6B6B6B] font-medium underline underline-offset-2"
+          >
+            Povestesc despre {broadRegion} ca întreg
+          </button>
+        </div>
+      ) : !stop.locationId && (
         <>
           <input
             value={stop.locationCity}
