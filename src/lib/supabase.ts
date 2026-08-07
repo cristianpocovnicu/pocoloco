@@ -61,6 +61,7 @@ export type Trip = {
   description: string
   duration_days: number
   transport_type: string
+  transport_types: string[]
   person_count: number
   countries: string[]
   cover_image: string | null

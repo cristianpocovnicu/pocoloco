@@ -40,7 +40,7 @@ export default function EditTripPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [durationDays, setDurationDays] = useState(1)
-  const [transportType, setTransportType] = useState('car')
+  const [transportTypes, setTransportTypes] = useState<string[]>(['car'])
   const [countries, setCountries] = useState<string[]>([])
   const [isGuide, setIsGuide] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -76,7 +76,12 @@ export default function EditTripPage() {
         setTitle(trip.title)
         setDescription(trip.description || '')
         setDurationDays(trip.duration_days || 1)
-        setTransportType(trip.transport_type || 'car')
+        // călătoriile de dinaintea migrării 39 au doar coloana veche
+        setTransportTypes(
+          trip.transport_types?.length
+            ? trip.transport_types
+            : trip.transport_type ? [trip.transport_type] : []
+        )
         setCountries(trip.countries || [])
         setCoverUrl(trip.cover_image)
         setInitialCover(trip.cover_image)
@@ -169,7 +174,9 @@ export default function EditTripPage() {
           title: title.trim(),
           description: description.trim() || null,
           duration_days: durationDays,
-          transport_type: transportType,
+          transport_types: transportTypes,
+          // oglinda pentru codul și datele care încă citesc coloana veche
+          transport_type: transportTypes[0] || null,
           countries,
           cover_image: finalCover,
           ...(coverChanged ? { cover_source: finalCover ? 'user' : 'auto' } : {}),
@@ -317,17 +324,25 @@ export default function EditTripPage() {
             </div>
 
             <div>
-              <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Transport</label>
+              <label className="text-[12px] font-medium text-[#6B6B6B] block">Cum te-ai deplasat</label>
+              <p className="text-[11px] text-[#9B9B9B] mb-1.5">Până acolo și pe loc — poți bifa mai multe.</p>
               <div className="flex flex-wrap gap-2">
-                {TRANSPORT_TYPES.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => setTransportType(t.id)}
-                    className={`px-3 py-2 rounded-full text-[12px] font-medium border transition-all ${transportType === t.id ? 'bg-[#FFF0EB] text-[#E8440A] border-[rgba(232,68,10,0.25)]' : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'}`}
-                  >
-                    {t.emoji} {t.label}
-                  </button>
-                ))}
+                {TRANSPORT_TYPES.map(t => {
+                  const picked = transportTypes.includes(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      aria-pressed={picked}
+                      onClick={() => setTransportTypes(prev =>
+                        picked ? prev.filter(id => id !== t.id) : [...prev, t.id]
+                      )}
+                      className={`px-3 py-2 rounded-full text-[12px] font-medium border transition-all ${picked ? 'bg-[#FFF0EB] text-[#E8440A] border-[rgba(232,68,10,0.25)]' : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'}`}
+                    >
+                      {t.emoji} {t.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

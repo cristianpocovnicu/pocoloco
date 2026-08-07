@@ -197,6 +197,7 @@ Lucruri decise, dar nefăcute — niciunul nu blochează altceva.
 | Curățenie în Storage | pozele poveștilor abandonate rămân orfane; e nevoie de un job periodic peste `storage.objects` |
 | Trip privat | toate călătoriile sunt publice, deci bonusul de +8 se acordă necondiționat până apare opțiunea |
 | Full-text pe conținutul experiențelor | amânat până volumul o cere; azi recenziile se găsesc prin locul lor |
+| Transport per segment (de la X la Y cu...) | granularitate pe care userii n-o completează; transportul rămâne la nivel de călătorie — mai multe mijloace, o singură dată, în metadate (migrarea 39) |
 
 ---
 

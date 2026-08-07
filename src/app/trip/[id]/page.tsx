@@ -11,7 +11,7 @@ import FollowButton from '@/components/profile/FollowButton'
 import { createClient } from '@/lib/supabase-client'
 import { useAuthGate } from '@/components/auth/AuthGate'
 import { colorFor, initialsOf } from '@/lib/profiles'
-import { formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
+import { formatCount, timeAgo, tripTransports } from '@/lib/utils'
 import { activityLabel } from '@/lib/activities'
 import CoverImage from '@/components/ui/CoverImage'
 import TripKindBadge from '@/components/trip/TripKindBadge'
@@ -150,7 +150,7 @@ export default function TripPage() {
     </div>
   )
 
-  const transport = TRANSPORT_TYPES.find(t => t.id === trip.transport_type)
+  const transports = tripTransports(trip)
   const days = groupByDay(itinerary)
 
   return (
@@ -194,11 +194,18 @@ export default function TripPage() {
                 <Calendar size={12} /> {trip.duration_days} zile
               </span>
             )}
-            {transport && (
-              <span className="text-[12px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-3 py-1">
-                {transport.emoji} {transport.label}
+            {/* transportul e al călătoriei întregi, deci apare o dată, aici,
+                lângă durată și țări — nu între opriri, unde ar sugera că
+                descrie fiecare segment */}
+            {transports.map(t => (
+              <span
+                key={t.id}
+                title={t.label}
+                className="text-[12px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-3 py-1"
+              >
+                {t.emoji} {t.label}
               </span>
-            )}
+            ))}
             {itinerary.length > 0 && (
               <span className="text-[12px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-3 py-1 flex items-center gap-1.5">
                 <MapPin size={12} /> {itinerary.length} opriri
@@ -381,13 +388,12 @@ export default function TripPage() {
                           </div>
                         </div>
 
-                        {/* conector de transport între opriri */}
+                        {/* doar firul care leagă opririle; transportul nu se
+                            repetă aici, pentru că nu știm cum s-a mers de la
+                            una la alta */}
                         {i < items.length - 1 && (
-                          <div className="flex items-center gap-2 py-1.5 pl-[26px]">
+                          <div className="py-1.5 pl-[26px]">
                             <div className="w-px h-5 bg-[rgba(0,0,0,0.12)]" />
-                            <span className="text-[11px] text-[#9B9B9B] flex items-center gap-1">
-                              {transport?.emoji || '→'} {transport?.label || 'mai departe'}
-                            </span>
                           </div>
                         )}
                       </div>

@@ -127,6 +127,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
         title: name,
         duration_days: 1,
         transport_type: 'car',
+        transport_types: ['car'],
         countries: [],
         status: 'active',
       })

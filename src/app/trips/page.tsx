@@ -8,7 +8,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import TripKindBadge from '@/components/trip/TripKindBadge'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, colorFor, initialsOf, type MiniProfile } from '@/lib/profiles'
-import { cn, formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
+import { cn, formatCount, timeAgo, tripTransports } from '@/lib/utils'
 import type { Trip } from '@/lib/trips'
 import CoverImage from '@/components/ui/CoverImage'
 
@@ -70,7 +70,7 @@ export default function TripsPage() {
   /** Cardul unei călătorii — același, în ambele secțiuni. */
   const renderTrip = (trip: Trip) => {
     const author = authors[trip.author_id]
-    const transport = TRANSPORT_TYPES.find(t => t.id === trip.transport_type)
+    const transports = tripTransports(trip)
     const stops = stopCounts[trip.id] || 0
 
     return (
@@ -105,9 +105,14 @@ export default function TripsPage() {
                 <MapPin size={10} /> {stops} opriri
               </span>
             )}
-            {transport && (
-              <span className="text-[11px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5">
-                {transport.emoji} {transport.label}
+            {transports.length > 0 && (
+              <span
+                title={transports.map(t => t.label).join(', ')}
+                className="text-[11px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5"
+              >
+                {/* pe card e loc de o etichetă doar când e un singur mijloc */}
+                {transports.map(t => t.emoji).join(' ')}
+                {transports.length === 1 && ` ${transports[0].label}`}
               </span>
             )}
             {trip.countries && trip.countries.length > 0 && (

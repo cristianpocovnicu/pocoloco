@@ -49,7 +49,8 @@ export type TripDraft = {
   /** povestea întregii ieșiri, nu a unui loc anume — trips.description */
   description: string
   durationDays: number
-  transportType: string
+  /** mijloacele întregii ieșiri — până acolo și pe loc, nu per segment */
+  transportTypes: string[]
   coverImage: string | null
   /** dedus din locurile alese la intrarea în pasul 2, apoi editabil */
   countries: string[]
@@ -122,7 +123,7 @@ export function emptyTrip(): TripDraft {
     title: '',
     description: '',
     durationDays: 1,
-    transportType: 'car',
+    transportTypes: ['car'],
     coverImage: null,
     countries: [],
   }
@@ -220,7 +221,8 @@ export async function loadDraft(
     // un payload vechi sau stricat poate avea null unde codul așteaptă
     // string; normalizăm la intrare, nu la fiecare folosire
     const base = emptyTrip()
-    const saved = (payload.trip || {}) as Partial<TripDraft>
+    // transportType: cheia dinaintea listei, poate exista în drafturi vechi
+    const saved = (payload.trip || {}) as Partial<TripDraft> & { transportType?: unknown }
 
     return {
       stops: payload.stops.map(stop => newStop(stop)),
@@ -229,7 +231,12 @@ export async function loadDraft(
         ...saved,
         title: typeof saved.title === 'string' ? saved.title : base.title,
         description: typeof saved.description === 'string' ? saved.description : base.description,
-        transportType: typeof saved.transportType === 'string' ? saved.transportType : base.transportType,
+        // draftul de dinaintea listei ținea un singur text
+        transportTypes: Array.isArray(saved.transportTypes)
+          ? saved.transportTypes.filter(t => typeof t === 'string')
+          : typeof saved.transportType === 'string'
+            ? [saved.transportType]
+            : base.transportTypes,
         durationDays: Number.isFinite(saved.durationDays) ? (saved.durationDays as number) : base.durationDays,
         countries: Array.isArray(saved.countries) ? saved.countries.filter(c => typeof c === 'string') : base.countries,
       },
@@ -412,7 +419,9 @@ export async function publishStory(
     // publish_story o ia din payload; până acum nu i-o trimitea nimeni
     description: draft.trip.description.trim() || null,
     duration_days: Math.max(draft.trip.durationDays, 1),
-    transport_type: draft.trip.transportType,
+    // lista e sursa; coloana veche primește primul element, ca oglindă
+    transport_types: draft.trip.transportTypes,
+    transport_type: draft.trip.transportTypes[0] || 'car',
     // Doar coperta atinsă de user pleacă spre DB. Cea „implicit prima
     // poză" e doar evidențiere în ecran: dacă n-a apăsat nimeni pe ea,
     // publish_story pune aceeași imagine, dar marcată 'auto'.

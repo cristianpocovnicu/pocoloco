@@ -6,7 +6,10 @@ export type Trip = {
   title: string
   description: string | null
   duration_days: number | null
+  /** coloana veche, un singur mijloc — oglinda primului element */
   transport_type: string | null
+  /** mijloacele călătoriei, de la migrarea 39 */
+  transport_types?: string[] | null
   person_count: number | null
   countries: string[] | null
   cover_image: string | null

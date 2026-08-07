@@ -122,21 +122,32 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
       </div>
 
       <div className="py-3 border-t border-[rgba(0,0,0,0.06)]">
-        <span className="text-[13px] text-[#6B6B6B] block mb-2">Cum ai ajuns</span>
+        <span className="text-[13px] text-[#6B6B6B] block">Cum te-ai deplasat</span>
+        <span className="text-[11px] text-[#9B9B9B] block mb-2">
+          Până acolo și pe loc — poți bifa mai multe.
+        </span>
         <div className="flex flex-wrap gap-1.5">
-          {TRANSPORT_TYPES.map(type => (
+          {TRANSPORT_TYPES.map(type => {
+            const picked = trip.transportTypes.includes(type.id)
+            return (
             <button type="button"
               key={type.id}
-              onClick={() => onChange({ transportType: type.id })}
+              aria-pressed={picked}
+              onClick={() => onChange({
+                transportTypes: picked
+                  ? trip.transportTypes.filter(id => id !== type.id)
+                  : [...trip.transportTypes, type.id],
+              })}
               className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
-                trip.transportType === type.id
+                picked
                   ? 'bg-[#FFF0EB] text-[#E8440A] border-[rgba(232,68,10,0.25)]'
                   : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'
               }`}
             >
               {type.emoji} {type.label}
             </button>
-          ))}
+            )
+          })}
         </div>
       </div>
 

@@ -91,3 +91,25 @@ export const TRANSPORT_TYPES = [
   { id: 'boat', label: 'Cu barca', emoji: '⛵' },
   { id: 'plane', label: 'Cu avionul', emoji: '✈️' },
 ]
+
+/**
+ * Mijloacele de transport ale unei călătorii, în ordinea din listă.
+ *
+ * Citește coloana nouă (`transport_types`) și cade pe cea veche
+ * (`transport_type`) pentru călătoriile de dinaintea migrării 39 și
+ * pentru orice rând care n-a apucat să fie normalizat. Valorile
+ * necunoscute se ignoră: lista de mai sus e singura sursă de etichete.
+ */
+export function tripTransports(
+  trip: { transport_types?: string[] | null; transport_type?: string | null }
+) {
+  const ids = trip.transport_types?.length
+    ? trip.transport_types
+    : trip.transport_type
+      ? [trip.transport_type]
+      : []
+
+  return ids
+    .map(id => TRANSPORT_TYPES.find(t => t.id === id))
+    .filter((t): t is (typeof TRANSPORT_TYPES)[number] => Boolean(t))
+}
