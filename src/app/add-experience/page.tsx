@@ -120,6 +120,12 @@ function CreateScreen() {
     setTrip(prev => ((prev.title || '').trim() ? prev : { ...prev, title: name }))
   }
 
+  /** Editarea din chip suprascrie: e o acțiune explicită, nu o sugestie. */
+  const setOutingName = (name: string) => {
+    dirty.current = true
+    setTrip(prev => ({ ...prev, title: name }))
+  }
+
   const addStop = () => {
     dirty.current = true
     // perioada se moștenește: de obicei toate locurile sunt din aceeași
@@ -422,6 +428,8 @@ ${text}` : text,
                   open={sections[stop.key] || { photos: false, ratings: false, story: false }}
                   onToggleSection={section => toggleSection(stop.key, section)}
                   onUseAsOutingName={useRegionAsOutingName}
+                  outingName={trip.title}
+                  onOutingNameChange={setOutingName}
                 />
               ))}
             </div>
