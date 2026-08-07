@@ -1,0 +1,339 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { attachGoogleCover } from '@/lib/location-cover'
+import type { ExperienceKind } from '@/lib/activities'
+
+/**
+ * O oprire din ecranul de creare.
+ *
+ * Pozele sunt ținute ca URL-uri, nu ca fișiere: se urcă în Storage imediat
+ * ce le alegi, altfel n-ar supraviețui într-un draft.
+ */
+export type StopDraft = {
+  key: string
+  kind: ExperienceKind
+  /** loc */
+  locationId: string | null
+  locationName: string
+  locationCity: string
+  locationCountry: string
+  lat: number | null
+  lng: number | null
+  placeId: string | null
+  /** activitate */
+  activityTitle: string
+  activityCategory: string | null
+  activityArea: string
+  /** conținut, tot opțional */
+  images: string[]
+  ratingExperience: number
+  ratingAccess: number
+  ratingCrowd: number
+  content: string
+  tips: string[]
+  /** nota scurtă de itinerar, doar pentru opririle care nu devin experiențe */
+  note: string
+}
+
+export type TripDraft = {
+  title: string
+  durationDays: number
+  transportType: string
+  coverImage: string | null
+}
+
+export type StoryDraft = {
+  stops: StopDraft[]
+  trip: TripDraft
+}
+
+let counter = 0
+export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
+  counter += 1
+  return {
+    key: `stop-${Date.now()}-${counter}`,
+    kind: 'place_visit',
+    locationId: null,
+    locationName: '',
+    locationCity: '',
+    locationCountry: 'România',
+    lat: null,
+    lng: null,
+    placeId: null,
+    activityTitle: '',
+    activityCategory: null,
+    activityArea: '',
+    images: [],
+    ratingExperience: 0,
+    ratingAccess: 0,
+    ratingCrowd: 0,
+    content: '',
+    tips: [],
+    note: '',
+    ...partial,
+  }
+}
+
+export function emptyTrip(): TripDraft {
+  return { title: '', durationDays: 1, transportType: 'car', coverImage: null }
+}
+
+/** Are oprirea un subiect — un loc ales sau o activitate cu nume? */
+export function stopHasSubject(stop: StopDraft): boolean {
+  return stop.kind === 'activity'
+    ? stop.activityTitle.trim().length > 0
+    : stop.locationName.trim().length > 0
+}
+
+/** A scris ceva despre oprire? Doar atunci devine experiență. */
+export function stopHasContent(stop: StopDraft): boolean {
+  return stop.images.length > 0
+    || stop.ratingExperience > 0
+    || stop.ratingAccess > 0
+    || stop.ratingCrowd > 0
+    || stop.content.trim().length > 0
+    || stop.tips.length > 0
+}
+
+export function stopLabel(stop: StopDraft): string {
+  const label = stop.kind === 'activity' ? stop.activityTitle : stop.locationName
+  return label.trim() || 'Fără nume'
+}
+
+export function stopSubtitle(stop: StopDraft): string {
+  return stop.kind === 'activity'
+    ? stop.activityArea.trim()
+    : [stop.locationCity, stop.locationCountry].map(s => s.trim()).filter(Boolean).join(', ')
+}
+
+/**
+ * Numele propus pentru o ieșire cu mai multe opriri: orașul comun, altfel
+ * țara comună. E doar o sugestie — se poate rescrie.
+ */
+export function suggestTripTitle(stops: StopDraft[]): string {
+  const cities = stops.map(s => s.locationCity.trim()).filter(Boolean)
+  const countries = stops.map(s => s.locationCountry.trim()).filter(Boolean)
+  const areas = stops.map(s => s.activityArea.trim()).filter(Boolean)
+
+  const common = (values: string[]) => {
+    if (values.length === 0) return ''
+    const first = values[0].toLowerCase()
+    return values.every(v => v.toLowerCase() === first) ? values[0] : ''
+  }
+
+  return common(cities) || common(areas) || common(countries) || ''
+}
+
+// ---------------------------------------------------------------------
+// Draft
+// ---------------------------------------------------------------------
+
+/**
+ * Pozele urcate într-un draft abandonat rămân orfane în bucket. Nu le
+ * ștergem de aici: ar însemna să urmărim fiecare poză scoasă din listă,
+ * iar utilizatorul poate reveni pe draft. Curățenia e o problemă separată,
+ * de rezolvat cu un job periodic peste storage.objects.
+ */
+export async function loadDraft(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<StoryDraft | null> {
+  try {
+    const { data, error } = await supabase
+      .from('creation_drafts')
+      .select('payload')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    // tabelul vine din migrarea 29; fără el fluxul merge, doar că nu ține minte
+    if (error || !data) return null
+
+    const payload = (data as { payload: unknown }).payload as StoryDraft | null
+    if (!payload || !Array.isArray(payload.stops) || payload.stops.length === 0) return null
+
+    return {
+      stops: payload.stops.map(stop => newStop(stop)),
+      trip: { ...emptyTrip(), ...(payload.trip || {}) },
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function saveDraft(
+  supabase: SupabaseClient,
+  userId: string,
+  draft: StoryDraft
+): Promise<void> {
+  try {
+    await supabase
+      .from('creation_drafts')
+      .upsert(
+        { user_id: userId, payload: draft as unknown as Record<string, unknown> },
+        { onConflict: 'user_id' }
+      )
+  } catch {
+    // salvarea automată nu are voie să deranjeze pe nimeni
+  }
+}
+
+export async function deleteDraft(supabase: SupabaseClient, userId: string): Promise<void> {
+  try {
+    await supabase.from('creation_drafts').delete().eq('user_id', userId)
+  } catch {
+    // idem
+  }
+}
+
+// ---------------------------------------------------------------------
+// Publicare
+// ---------------------------------------------------------------------
+
+export type PublishResult = {
+  tripId: string | null
+  experienceId: string | null
+  /** unde ducem userul după publicare */
+  href: string
+}
+
+/** Locul scris de mână sau ales din Google devine locație, în moderare. */
+async function resolveLocation(
+  supabase: SupabaseClient,
+  userId: string,
+  stop: StopDraft
+): Promise<string | null> {
+  if (stop.locationId) return stop.locationId
+  if (!stop.locationName.trim()) return null
+
+  const { data: existing } = await supabase
+    .from('locations')
+    .select('id')
+    .ilike('name', stop.locationName.trim())
+    .limit(1)
+    .maybeSingle()
+
+  if (existing) return (existing as { id: string }).id
+
+  const { data: created, error } = await supabase
+    .from('locations')
+    .insert({
+      name: stop.locationName.trim(),
+      city: stop.locationCity.trim(),
+      country: stop.locationCountry.trim() || 'România',
+      latitude: stop.lat,
+      longitude: stop.lng,
+      google_place_id: stop.placeId,
+      status: 'pending',
+      added_by: userId,
+    })
+    .select('id')
+    .single()
+
+  if (error || !created) throw new Error(`Nu am putut salva locul „${stop.locationName.trim()}".`)
+
+  const id = (created as { id: string }).id
+  // coperta din Google, în fundal — nu ține publicarea în loc
+  if (stop.placeId) void attachGoogleCover(supabase, id, stop.placeId)
+  return id
+}
+
+/**
+ * Publică tot ce e pe ecran.
+ *
+ * Pentru mai multe opriri trece prin `publish_story()`: corpul funcției e
+ * o tranzacție, deci ori intră tot, ori nimic. Pentru o singură oprire
+ * insertul direct e deja atomic, așa că merge și fără migrarea 30.
+ */
+export async function publishStory(
+  supabase: SupabaseClient,
+  userId: string,
+  draft: StoryDraft
+): Promise<PublishResult> {
+  const stops = draft.stops.filter(stopHasSubject)
+  if (stops.length === 0) throw new Error('Nu ai spus încă unde ai fost.')
+
+  // locațiile se rezolvă întâi: funcția de publicare primește doar id-uri
+  const locationIds: (string | null)[] = []
+  for (const stop of stops) {
+    locationIds.push(stop.kind === 'activity' ? null : await resolveLocation(supabase, userId, stop))
+  }
+
+  const payload = stops.map((stop, i) => ({
+    kind: stop.kind,
+    location_id: locationIds[i],
+    title: stop.kind === 'activity' ? stop.activityTitle.trim() : null,
+    activity_category: stop.kind === 'activity' ? stop.activityCategory : null,
+    activity_area: stop.kind === 'activity' ? (stop.activityArea.trim() || null) : null,
+    content: stop.content.trim(),
+    images: stop.images,
+    tips: stop.tips,
+    rating_experience: stop.ratingExperience,
+    rating_access: stop.ratingAccess || null,
+    rating_crowd: stop.ratingCrowd || null,
+    note: stop.note.trim() || null,
+    create_experience: stopHasContent(stop),
+  }))
+
+  // O singură oprire: un insert, fără călătorie inventată în jurul ei
+  if (stops.length === 1) {
+    const single = payload[0]
+    if (!single.create_experience && single.kind === 'place_visit') {
+      throw new Error('Adaugă măcar o poză, o notă sau câteva cuvinte.')
+    }
+
+    const { data, error } = await supabase
+      .from('experiences')
+      .insert({
+        kind: single.kind,
+        location_id: single.location_id,
+        title: single.title,
+        activity_category: single.activity_category,
+        activity_area: single.activity_area,
+        author_id: userId,
+        content: single.content,
+        images: single.images,
+        tips: single.tips,
+        rating_experience: single.rating_experience,
+        rating_access: single.rating_access,
+        rating_crowd: single.rating_crowd,
+        status: 'active',
+      })
+      .select('id')
+      .single()
+
+    if (error || !data) throw new Error(error?.message || 'Nu am putut publica.')
+    const id = (data as { id: string }).id
+    return { tripId: null, experienceId: id, href: `/experience/${id}` }
+  }
+
+  const trip = {
+    title: draft.trip.title.trim() || suggestTripTitle(stops) || 'Ieșirea mea',
+    duration_days: Math.max(draft.trip.durationDays, 1),
+    transport_type: draft.trip.transportType,
+    cover_image: draft.trip.coverImage || stops.find(s => s.images[0])?.images[0] || null,
+    countries: Array.from(new Set(
+      stops.map(s => s.locationCountry.trim()).filter(Boolean)
+    )),
+  }
+
+  const { data, error } = await supabase.rpc('publish_story', {
+    p_stops: payload,
+    p_trip: trip,
+  })
+
+  if (error) {
+    throw new Error(
+      error.message?.includes('publish_story')
+        ? 'Publicarea mai multor opriri are nevoie de migrarea 30 (publish_story).'
+        : error.message || 'Nu am putut publica.'
+    )
+  }
+
+  const result = (data || {}) as { trip_id?: string | null; experience_id?: string | null }
+  if (!result.trip_id) throw new Error('Nu am putut publica.')
+
+  return {
+    tripId: result.trip_id,
+    experienceId: result.experience_id ?? null,
+    href: `/trip/${result.trip_id}`,
+  }
+}

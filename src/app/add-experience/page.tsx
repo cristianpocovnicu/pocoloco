@@ -1,730 +1,363 @@
 'use client'
-import { useState, useRef, useEffect, Suspense } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Camera, X, Star, Loader2, MapPin, Search, Plus } from 'lucide-react'
 import Link from 'next/link'
+import { ArrowLeft, Loader2, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { useToast } from '@/components/ui/Toast'
-import { fetchPointsSince, justNowWindow } from '@/lib/points'
-import CharCounter from '@/components/ui/CharCounter'
-import { attachGoogleCover } from '@/lib/location-cover'
-import { ACTIVITY_CATEGORIES, ratingLabels, type ExperienceKind } from '@/lib/activities'
+import StopCard from '@/components/create/StopCard'
+import OutingCard from '@/components/create/OutingCard'
 import AddToTripDialog from '@/components/trip/AddToTripDialog'
 import {
-  PLACES_ENABLED, getPlaceDetails, newSessionToken, searchPlaces, type PlaceSuggestion,
-} from '@/lib/places'
+  deleteDraft,
+  emptyTrip,
+  loadDraft,
+  newStop,
+  publishStory,
+  saveDraft,
+  stopHasSubject,
+  stopLabel,
+  type StopDraft,
+  type StoryDraft,
+  type TripDraft,
+} from '@/lib/story'
+import { fetchPointsSince, justNowWindow } from '@/lib/points'
 
-type DbLocation = { id: string; name: string; city: string | null; country: string | null }
+type SectionState = Record<string, { photos: boolean; ratings: boolean; story: boolean }>
 
-const TIPS_OPTIONS = [
-  'Merită prețul', 'Bun pentru familie', 'Parcare ușoară',
-  'Aglomerat weekend', 'Mergi dimineața', 'Rezervă online',
-  'Accesibil cu copii', 'Gratuit', 'Peisaj spectaculos'
-]
+const SAVE_DEBOUNCE_MS = 1500
 
-const STEPS = ['Subiect', 'Poze', 'Rating', 'Povestea ta', 'Publică']
-
-function StarRating({ value, onChange, label, required }: {
-  value: number
-  onChange: (v: number) => void
-  label: string
-  required?: boolean
-}) {
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-[rgba(0,0,0,0.06)] last:border-0">
-      <div>
-        <div className="text-[13px] font-medium text-[#0F0F0F]">{label}</div>
-        <div className="text-[11px] text-[#9B9B9B]">{required ? 'Obligatoriu' : 'Opțional'}</div>
-      </div>
-      <div className="flex gap-1.5">
-        {[1,2,3,4,5].map(i => (
-          <button key={i} onClick={() => onChange(i === value ? 0 : i)}>
-            <Star size={24} className={i <= value ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function AddExperienceContent() {
+/**
+ * Ecranul de creare: unul singur, care crește pe măsură ce ai ce spune.
+ *
+ * Nu există pași și nu există „înapoi": tot terenul e vizibil de la
+ * început — prima oprire, invitația de a mai adăuga una, detaliile ieșirii
+ * (blocate până există a doua oprire). Nimic nu cere o decizie despre ce
+ * fel de conținut faci; asta se decide singură, la publicare.
+ */
+function CreateScreen() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const fileRef = useRef<HTMLInputElement>(null)
   const toast = useToast()
 
-  const [step, setStep] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  // 'place_visit' = povestea unui loc, 'activity' = ceva ce ai făcut
-  const [kind, setKind] = useState<ExperienceKind>('place_visit')
-  const [activityTitle, setActivityTitle] = useState('')
-  const [activityCategory, setActivityCategory] = useState<string | null>(null)
-  const [activityArea, setActivityArea] = useState('')
-  // experiența publicată, cât ține ecranul „adaugi într-o călătorie?"
+  const [userId, setUserId] = useState<string | null>(null)
+  const [stops, setStops] = useState<StopDraft[]>([])
+  const [trip, setTrip] = useState<TripDraft>(emptyTrip())
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
+  const [sections, setSections] = useState<SectionState>({})
+  const [loading, setLoading] = useState(true)
+  const [publishing, setPublishing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  /** draftul găsit la intrare, cât timp userul nu s-a hotărât */
+  const [pendingDraft, setPendingDraft] = useState<StoryDraft | null>(null)
+  /** publicat singur — atunci întrebăm dacă face parte dintr-o ieșire veche */
   const [published, setPublished] = useState<{ id: string; locationId: string | null; title: string } | null>(null)
 
-  const [locationId, setLocationId] = useState<string | null>(searchParams.get('location'))
-  const [locationName, setLocationName] = useState(searchParams.get('name') || '')
-  const [locationCity, setLocationCity] = useState('')
-  const [locationCountry, setLocationCountry] = useState('România')
-  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null } | null>(null)
+  const dirty = useRef(false)
 
-  // căutarea de locație: întâi în baza noastră, apoi Google (dacă e configurat)
-  const [locationQuery, setLocationQuery] = useState('')
-  const [dbResults, setDbResults] = useState<DbLocation[]>([])
-  const [placeResults, setPlaceResults] = useState<PlaceSuggestion[]>([])
-  const [searchingLocation, setSearchingLocation] = useState(false)
-  const [pickedFromGoogle, setPickedFromGoogle] = useState(false)
-  // reținut ca să putem cere poza locului după ce salvăm locația
-  const [pickedPlaceId, setPickedPlaceId] = useState<string | null>(null)
-  const sessionToken = useRef(newSessionToken())
-  const [photos, setPhotos] = useState<File[]>([])
-  const [photoUrls, setPhotoUrls] = useState<string[]>([])
-  const [ratingExp, setRatingExp] = useState(0)
-  const [ratingAccess, setRatingAccess] = useState(0)
-  const [ratingCrowd, setRatingCrowd] = useState(0)
-  const [content, setContent] = useState('')
-  const [tips, setTips] = useState<string[]>([])
-  const [isPublic, setIsPublic] = useState(true)
-
+  // ---- pornire: draftul salvat, sau o oprire goală (poate pre-completată)
   useEffect(() => {
-    if (locationId && locationName) setStep(1)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // căutare: locațiile aprobate din baza noastră + sugestii Google, în paralel
-  useEffect(() => {
-    const term = locationQuery.trim()
-    if (term.length < 2) { setDbResults([]); setPlaceResults([]); return }
-
-    const timer = setTimeout(async () => {
-      setSearchingLocation(true)
-      const supabase = createClient()
-
-      const [dbRes, places] = await Promise.all([
-        supabase
-          .from('locations')
-          .select('id, name, city, country')
-          .eq('status', 'approved')
-          .ilike('name', `%${term}%`)
-          .order('experience_count', { ascending: false })
-          .limit(5),
-        searchPlaces(term, sessionToken.current),
-      ])
-
-      setDbResults((dbRes.data || []) as DbLocation[])
-      // nu repetăm în lista Google locurile pe care le avem deja
-      const known = new Set((dbRes.data || []).map((l: DbLocation) => l.name.toLowerCase()))
-      setPlaceResults(places.filter(p => !known.has(p.mainText.toLowerCase())).slice(0, 5))
-      setSearchingLocation(false)
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [locationQuery])
-
-  const pickExisting = (loc: DbLocation) => {
-    setLocationId(loc.id)
-    setLocationName(loc.name)
-    setLocationCity(loc.city || '')
-    setLocationCountry(loc.country || 'România')
-    setCoords(null)
-    setPickedFromGoogle(false)
-    setPickedPlaceId(null)
-    setLocationQuery('')
-  }
-
-  const pickPlace = async (place: PlaceSuggestion) => {
-    setSearchingLocation(true)
-    const details = await getPlaceDetails(place.placeId, sessionToken.current)
-    sessionToken.current = newSessionToken()
-
-    setLocationId(null)
-    setLocationName(details?.name || place.mainText)
-    setLocationCity(details?.city || place.secondaryText.split(',')[0] || '')
-    setLocationCountry(details?.country || 'România')
-    setCoords(details ? { lat: details.latitude, lng: details.longitude } : null)
-    setPickedFromGoogle(true)
-    setPickedPlaceId(place.placeId)
-    setLocationQuery('')
-    setSearchingLocation(false)
-  }
-
-  /** Textul scris devine o activitate: fără pin, doar titlu (și eventual zona). */
-  const useAsActivity = () => {
-    setKind('activity')
-    setActivityTitle(locationQuery.trim())
-    setLocationId(null)
-    setLocationName('')
-    setLocationCity('')
-    setCoords(null)
-    setPickedFromGoogle(false)
-    setPickedPlaceId(null)
-    setLocationQuery('')
-  }
-
-  const clearActivity = () => {
-    setKind('place_visit')
-    setActivityTitle('')
-    setActivityCategory(null)
-    setActivityArea('')
-  }
-
-  const useAsNewLocation = () => {
-    setLocationId(null)
-    setLocationName(locationQuery.trim())
-    setCoords(null)
-    setPickedFromGoogle(false)
-    setPickedPlaceId(null)
-    setLocationQuery('')
-  }
-
-  const clearLocation = () => {
-    setLocationId(null)
-    setLocationName('')
-    setLocationCity('')
-    setCoords(null)
-    setPickedFromGoogle(false)
-    setPickedPlaceId(null)
-  }
-
-  const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (photos.length + files.length > 5) { setError('Maxim 5 fotografii'); return }
-    setPhotos(prev => [...prev, ...files])
-    files.forEach(file => setPhotoUrls(prev => [...prev, URL.createObjectURL(file)]))
-  }
-
-  const removePhoto = (i: number) => {
-    setPhotos(prev => prev.filter((_, idx) => idx !== i))
-    setPhotoUrls(prev => prev.filter((_, idx) => idx !== i))
-  }
-
-  const toggleTip = (tip: string) => {
-    setTips(prev => prev.includes(tip) ? prev.filter(t => t !== tip) : [...prev, tip])
-  }
-
-  const canProceed = () => {
-    if (step === 0) {
-      return kind === 'activity'
-        ? activityTitle.trim().length > 0
-        : locationName.trim().length > 0
-    }
-    if (step === 2) return ratingExp > 0
-    if (step === 3) return content.trim().length >= 20
-    return true
-  }
-
-  const handleSubmit = async () => {
-    setLoading(true)
-    setError('')
-    // reper pentru punctele câștigate cu publicarea asta
-    const since = justNowWindow()
-    try {
+    const start = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
+      setUserId(user.id)
 
-      const imageUrls: string[] = []
-      for (const photo of photos) {
-        const ext = photo.name.split('.').pop()
-        const path = `experiences/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const { error: uploadError } = await supabase.storage.from('images').upload(path, photo)
-        if (!uploadError) {
-          const { data } = supabase.storage.from('images').getPublicUrl(path)
-          imageUrls.push(data.publicUrl)
-        }
+      const preLocationId = searchParams.get('location')
+      const preName = searchParams.get('name')
+
+      const saved = await loadDraft(supabase, user.id)
+      // venit de pe pagina unui loc: pornim direct cu locul ăla
+      if (saved && !preLocationId) {
+        setPendingDraft(saved)
+        setLoading(false)
+        return
       }
 
-      let finalLocationId = locationId
-      // activitatea n-are pin: sărim peste tot ce ține de locație
-      if (!finalLocationId && kind === 'place_visit') {
-        const { data: existingLoc } = await supabase
-          .from('locations')
-          .select('id')
-          .ilike('name', locationName.trim())
-          .limit(1)
-          .maybeSingle()
-
-        if (existingLoc) {
-          finalLocationId = existingLoc.id
-        } else {
-          const { data: newLoc, error: locError } = await supabase
-            .from('locations')
-            .insert({
-              name: locationName.trim(),
-              city: locationCity.trim(),
-              country: locationCountry.trim() || 'România',
-              // coordonatele vin de la Google, când locul a fost ales de acolo
-              latitude: coords?.lat ?? null,
-              longitude: coords?.lng ?? null,
-              google_place_id: pickedPlaceId,
-              status: 'pending',
-              added_by: user.id,
-            })
-            .select('id')
-            .single()
-          if (locError) throw new Error(`Eroare locație: ${locError.message}`)
-          finalLocationId = newLoc?.id || null
-
-          // coperta din Google: pornită în fundal, nu ține publicarea în loc
-          if (finalLocationId && pickedPlaceId) {
-            void attachGoogleCover(supabase, finalLocationId, pickedPlaceId)
-          }
-        }
-      }
-
-      if (kind === 'place_visit' && !finalLocationId) {
-        throw new Error('Nu am putut identifica locația')
-      }
-
-      const { data: created, error: expError } = await supabase
-        .from('experiences')
-        .insert({
-          kind,
-          location_id: kind === 'activity' ? null : finalLocationId,
-          title: kind === 'activity' ? activityTitle.trim() : null,
-          activity_category: kind === 'activity' ? activityCategory : null,
-          activity_area: kind === 'activity' ? (activityArea.trim() || null) : null,
-          author_id: user.id,
-          content: content.trim(),
-          rating_experience: ratingExp,
-          rating_access: ratingAccess || null,
-          rating_crowd: ratingCrowd || null,
-          images: imageUrls,
-          tips,
-          status: isPublic ? 'active' : 'draft',
-        })
-        .select('id')
-        .single()
-
-      if (expError) throw expError
-
-      const gained = await fetchPointsSince(supabase, user.id, since)
-      toast(gained > 0 ? `Experiență publicată! +${gained} puncte 🎉` : 'Experiență publicată! 🎉')
-
-      // ecranul „o adaugi într-o călătorie?" ține locul redirectului
-      setPublished({
-        id: created!.id,
-        locationId: kind === 'activity' ? null : finalLocationId,
-        title: kind === 'activity' ? activityTitle.trim() : locationName.trim(),
-      })
-      setLoading(false)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'A apărut o eroare.')
+      const first = newStop(preLocationId && preName
+        ? { locationId: preLocationId, locationName: preName }
+        : {})
+      setStops([first])
+      setExpandedKey(first.key)
       setLoading(false)
     }
+    start()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ---- salvare automată, la 1,5s după ultima atingere
+  useEffect(() => {
+    if (!userId || loading || pendingDraft || !dirty.current) return
+
+    const timer = setTimeout(() => {
+      void saveDraft(createClient(), userId, { stops, trip })
+    }, SAVE_DEBOUNCE_MS)
+
+    return () => clearTimeout(timer)
+  }, [stops, trip, userId, loading, pendingDraft])
+
+  const patchStop = useCallback((key: string, patch: Partial<StopDraft>) => {
+    dirty.current = true
+    setStops(prev => prev.map(stop => (stop.key === key ? { ...stop, ...patch } : stop)))
+  }, [])
+
+  const addStop = () => {
+    dirty.current = true
+    const stop = newStop()
+    setStops(prev => [...prev, stop])
+    setExpandedKey(stop.key)
   }
+
+  const removeStop = (key: string) => {
+    dirty.current = true
+    setStops(prev => {
+      const next = prev.filter(s => s.key !== key)
+      if (next.length === 0) {
+        const fresh = newStop()
+        setExpandedKey(fresh.key)
+        return [fresh]
+      }
+      if (expandedKey === key) setExpandedKey(next[next.length - 1].key)
+      return next
+    })
+  }
+
+  const moveStop = (index: number, direction: -1 | 1) => {
+    dirty.current = true
+    setStops(prev => {
+      const target = index + direction
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      const [moved] = next.splice(index, 1)
+      next.splice(target, 0, moved)
+      return next
+    })
+  }
+
+  const toggleSection = (key: string, section: 'photos' | 'ratings' | 'story') => {
+    setSections(prev => {
+      const current = prev[key] || { photos: false, ratings: false, story: false }
+      return { ...prev, [key]: { ...current, [section]: !current[section] } }
+    })
+  }
+
+  const resume = () => {
+    if (!pendingDraft) return
+    setStops(pendingDraft.stops)
+    setTrip(pendingDraft.trip)
+    setExpandedKey(pendingDraft.stops[pendingDraft.stops.length - 1]?.key || null)
+    setPendingDraft(null)
+  }
+
+  const discard = async () => {
+    if (!window.confirm('Ștergi ce ai început? Nu se mai poate recupera.')) return
+    if (userId) await deleteDraft(createClient(), userId)
+    const first = newStop()
+    setStops([first])
+    setTrip(emptyTrip())
+    setExpandedKey(first.key)
+    setPendingDraft(null)
+  }
+
+  const saveForLater = async () => {
+    if (!userId) return
+    await saveDraft(createClient(), userId, { stops, trip })
+    toast('Salvat. O găsești în profil când vrei să continui.')
+    router.push('/profile')
+  }
+
+  const usableStops = stops.filter(stopHasSubject)
+  const canPublish = usableStops.length > 0
+    && (usableStops.length === 1 || trip.title.trim().length > 0)
+
+  const handlePublish = async () => {
+    if (!userId || !canPublish) return
+    setPublishing(true)
+    setError(null)
+    const since = justNowWindow()
+
+    try {
+      const supabase = createClient()
+      const result = await publishStory(supabase, userId, { stops, trip })
+      await deleteDraft(supabase, userId)
+
+      const gained = await fetchPointsSince(supabase, userId, since)
+      toast(gained > 0 ? `Publicat! +${gained} puncte 🎉` : 'Publicat! 🎉')
+
+      if (result.tripId) {
+        toast('Poți aranja zilele și ordinea oricând din editare.')
+        router.push(result.href)
+        return
+      }
+
+      // o singură oprire: poate face parte dintr-o ieșire de demult
+      const first = usableStops[0]
+      setPublished({
+        id: result.experienceId as string,
+        locationId: first.kind === 'activity' ? null : first.locationId,
+        title: stopLabel(first),
+      })
+      setPublishing(false)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Nu am putut publica.')
+      setPublishing(false)
+    }
+  }
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 size={28} className="animate-spin text-[#E8440A]" />
+    </div>
+  )
 
   if (published) return (
     <AddToTripDialog
       experienceId={published.id}
       locationId={published.locationId}
       title={published.title}
-      onDone={() => {
-        // activitățile n-au pagină de locație: le arătăm pe ele
-        router.push(published.locationId ? `/location/${published.locationId}` : `/experience/${published.id}`)
-      }}
+      onDone={() => router.push(`/experience/${published.id}`)}
     />
   )
 
   return (
     <div className="min-h-screen bg-[#F8F7F5]">
-      <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 flex items-center justify-between sticky top-0 z-30 max-w-[680px] mx-auto">
-        <div className="flex items-center gap-3">
-          {step > 0 ? (
-            <button onClick={() => setStep(s => s - 1)} className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center">
-              <ArrowLeft size={16} className="text-[#6B6B6B]" />
-            </button>
-          ) : (
-            <Link href="/" className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center">
-              <ArrowLeft size={16} className="text-[#6B6B6B]" />
-            </Link>
-          )}
-          <div>
-            <div className="font-outfit text-[15px] font-semibold text-[#0F0F0F]">{STEPS[step]}</div>
-            <div className="text-[11px] text-[#9B9B9B]">Pasul {step + 1} din {STEPS.length}</div>
+      <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 sticky top-0 z-30">
+        <div className="max-w-[680px] mx-auto flex items-center gap-3">
+          <Link
+            href="/"
+            aria-label="Înapoi"
+            className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0"
+          >
+            <ArrowLeft size={16} className="text-[#6B6B6B]" />
+          </Link>
+          <div className="min-w-0">
+            <div className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">Povestește</div>
+            <div className="text-[11px] text-[#9B9B9B]">Începe cu un loc. Restul e opțional.</div>
           </div>
         </div>
-        {step < 4 && (
-          <button
-            onClick={() => canProceed() && setStep(s => s + 1)}
-            className={`font-outfit text-[13px] font-semibold px-4 py-2 rounded-full transition-all ${canProceed() ? 'bg-[#E8440A] text-white' : 'bg-[#F8F7F5] text-[#9B9B9B]'}`}
-          >
-            Continuă
-          </button>
-        )}
       </div>
 
-      <div className="max-w-[680px] mx-auto">
-        <div className="flex gap-1 px-5 py-2 bg-white">
-          {STEPS.map((_, i) => (
-            <div key={i} className={`flex-1 h-1 rounded-full transition-all ${i <= step ? 'bg-[#E8440A]' : 'bg-[rgba(0,0,0,0.08)]'}`} />
-          ))}
-        </div>
+      <div className="max-w-[680px] mx-auto px-5 pt-4 pb-32">
+        {pendingDraft && (
+          <div className="bg-white border border-[rgba(232,68,10,0.25)] rounded-2xl p-4 mb-4">
+            <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-0.5">
+              Ai o poveste neterminată
+            </p>
+            <p className="text-[13px] text-[#6B6B6B] mb-3">
+              „{stopLabel(pendingDraft.stops[0])}&rdquo;
+              {pendingDraft.stops.length > 1 && ` + încă ${pendingDraft.stops.length - 1}`}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={resume}
+                className="bg-[#E8440A] text-white font-outfit text-[13px] font-semibold px-4 py-2 rounded-full"
+              >
+                Continuă
+              </button>
+              <button onClick={discard} className="text-[13px] text-[#6B6B6B] font-medium px-3">
+                Începe altceva
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
-          <div className="mx-5 mt-3 bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3">
+          <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3 mb-4">
             <p className="text-[13px] text-[#DC2626]">{error}</p>
           </div>
         )}
 
-        <div className="px-5 pt-6 pb-24">
-
-          {step === 0 && (
-            <div>
-              <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Despre ce e povestea ta?</h2>
-              <p className="text-[14px] text-[#6B6B6B] mb-6">
-                Un loc pe care l-ai vizitat sau ceva ce ai făcut — o tură, o scufundare, un curs.
-              </p>
-
-              {kind === 'activity' ? (
-                /* Activitate — titlu, plus două câmpuri opționale */
-                <div className="flex flex-col gap-4">
-                  <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#EEEDFB] flex items-center justify-center flex-shrink-0 text-lg">
-                        🪂
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <input
-                          type="text"
-                          value={activityTitle}
-                          onChange={e => setActivityTitle(e.target.value.slice(0, 120))}
-                          placeholder="Ex: Tură cu buggy în deșert"
-                          className="w-full font-outfit text-[15px] font-semibold text-[#0F0F0F] bg-transparent outline-none placeholder:text-[#9B9B9B] placeholder:font-normal"
-                        />
-                        <span className="inline-block mt-1.5 text-[10px] font-outfit font-bold px-2 py-0.5 rounded-full bg-[#EEEDFB] text-[#5B4FCF]">
-                          ACTIVITATE
-                        </span>
-                      </div>
-                      <button onClick={clearActivity} className="text-[12px] text-[#5B4FCF] font-medium flex-shrink-0">
-                        Schimbă
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[12px] font-medium text-[#6B6B6B] block mb-2">
-                      Ce fel de activitate? <span className="text-[#9B9B9B] font-normal">— opțional</span>
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {ACTIVITY_CATEGORIES.map(category => (
-                        <button
-                          key={category.id}
-                          onClick={() => setActivityCategory(activityCategory === category.id ? null : category.id)}
-                          className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${
-                            activityCategory === category.id
-                              ? 'bg-[#EEEDFB] text-[#5B4FCF] border-[rgba(91,79,207,0.25)]'
-                              : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'
-                          }`}
-                        >
-                          {category.emoji} {category.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">
-                      Unde? <span className="text-[#9B9B9B] font-normal">— opțional</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={activityArea}
-                      onChange={e => setActivityArea(e.target.value.slice(0, 160))}
-                      placeholder="Ex: lângă Sharm el-Sheikh"
-                      className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
-                    />
-                    <p className="text-[11px] text-[#9B9B9B] mt-1.5 leading-relaxed">
-                      Zona, nu adresa exactă. Activitățile n-au pin pe hartă, dar e util să știe
-                      lumea din ce colț de lume vine povestea.
-                    </p>
-                  </div>
-                </div>
-              ) : locationName ? (
-                /* Loc ales — arătăm ce am reținut, cu opțiunea de a schimba */
-                <div className="flex flex-col gap-4">
-                  <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#FFF0EB] flex items-center justify-center flex-shrink-0">
-                        <MapPin size={18} className="text-[#E8440A]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-outfit text-[15px] font-semibold text-[#0F0F0F] truncate">{locationName}</p>
-                        <p className="text-[12px] text-[#9B9B9B] truncate">
-                          {locationCity || 'Fără oraș'}{locationCountry ? `, ${locationCountry}` : ''}
-                        </p>
-                        <span className={`inline-block mt-1.5 text-[10px] font-outfit font-bold px-2 py-0.5 rounded-full ${locationId ? 'bg-[#ECFDF5] text-[#059669]' : 'bg-[#FFFBEB] text-[#D97706]'}`}>
-                          {locationId ? 'DEJA PE POCOLOCO' : 'LOC NOU'}
-                        </span>
-                      </div>
-                      <button onClick={clearLocation} className="text-[12px] text-[#5B4FCF] font-medium flex-shrink-0">
-                        Schimbă
-                      </button>
-                    </div>
-                  </div>
-
-                  {!locationId && (
-                    <>
-                      <div>
-                        <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Oraș / Regiune</label>
-                        <input
-                          type="text"
-                          value={locationCity}
-                          onChange={e => setLocationCity(e.target.value)}
-                          placeholder="Ex: Brașov"
-                          className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
-                        />
-                      </div>
-                      <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.2)] rounded-xl px-4 py-3 flex items-start gap-2.5">
-                        <span className="text-base leading-none mt-0.5">⏳</span>
-                        <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
-                          Locul ăsta nu există încă pe Pocoloco. Îl adăugăm noi, dar apare în căutare
-                          și în feed doar după ce un administrator îl aprobă. Experiența ta rămâne salvată.
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                /* Căutare */
-                <div>
-                  <div className="relative">
-                    <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9B9B9B]" />
-                    <input
-                      type="text"
-                      value={locationQuery}
-                      onChange={e => setLocationQuery(e.target.value)}
-                      placeholder="Ex: Castelul Bran, Lacul Roșu..."
-                      autoFocus
-                      className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl pl-10 pr-10 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
-                    />
-                    {searchingLocation && (
-                      <Loader2 size={15} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-[#9B9B9B]" />
-                    )}
-                  </div>
-
-                  {locationQuery.trim().length >= 2 && (
-                    <div className="mt-3 bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden">
-                      {dbResults.map(loc => (
-                        <button
-                          key={loc.id}
-                          onClick={() => pickExisting(loc)}
-                          className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
-                        >
-                          <MapPin size={15} className="text-[#E8440A] flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{loc.name}</div>
-                            <div className="text-[11px] text-[#9B9B9B] truncate">{loc.city || 'Fără oraș'}</div>
-                          </div>
-                          <span className="text-[9px] font-outfit font-bold px-1.5 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] flex-shrink-0">
-                            POCOLOCO
-                          </span>
-                        </button>
-                      ))}
-
-                      {placeResults.map(place => (
-                        <button
-                          key={place.placeId}
-                          onClick={() => pickPlace(place)}
-                          className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
-                        >
-                          <MapPin size={15} className="text-[#5B4FCF] flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{place.mainText}</div>
-                            <div className="text-[11px] text-[#9B9B9B] truncate">{place.secondaryText}</div>
-                          </div>
-                          <span className="text-[9px] font-outfit font-bold px-1.5 py-0.5 rounded-full bg-[#EEEDFB] text-[#5B4FCF] flex-shrink-0">
-                            GOOGLE
-                          </span>
-                        </button>
-                      ))}
-
-                      {/* nu tot ce povestești e un loc */}
-                      {locationQuery.trim().length >= 3 && (
-                        <button
-                          onClick={useAsActivity}
-                          className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
-                        >
-                          <span className="text-[15px] flex-shrink-0">🪂</span>
-                          <span className="text-[13px] text-[#6B6B6B] truncate">
-                            „<strong className="text-[#0F0F0F]">{locationQuery.trim()}</strong>&rdquo; e o activitate
-                            <span className="text-[#9B9B9B]"> (buggy, scufundări, tur...)</span>
-                          </span>
-                        </button>
-                      )}
-
-                      {/* mereu disponibil: locul scris de mână */}
-                      <button
-                        onClick={useAsNewLocation}
-                        className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left"
-                      >
-                        <Plus size={15} className="text-[#6B6B6B] flex-shrink-0" />
-                        <span className="text-[13px] text-[#6B6B6B] truncate">
-                          Adaugă „<strong className="text-[#0F0F0F]">{locationQuery.trim()}</strong>&rdquo; ca loc nou
-                        </span>
-                      </button>
-                    </div>
-                  )}
-
-                  {!PLACES_ENABLED && (
-                    <p className="text-[11px] text-[#9B9B9B] mt-3 leading-relaxed">
-                      Căutarea acoperă locurile deja aprobate pe Pocoloco. Sugestiile Google
-                      se activează după configurarea cheii — vezi docs/google-places-setup.md.
-                    </p>
-                  )}
-                </div>
-              )}
+        {!pendingDraft && (
+          <>
+            <div className="flex flex-col gap-2.5">
+              {stops.map((stop, index) => (
+                <StopCard
+                  key={stop.key}
+                  stop={stop}
+                  index={index}
+                  total={stops.length}
+                  expanded={expandedKey === stop.key}
+                  onExpand={() => setExpandedKey(stop.key)}
+                  onChange={patch => patchStop(stop.key, patch)}
+                  onRemove={() => removeStop(stop.key)}
+                  onMove={direction => moveStop(index, direction)}
+                  open={sections[stop.key] || { photos: false, ratings: false, story: false }}
+                  onToggleSection={section => toggleSection(stop.key, section)}
+                />
+              ))}
             </div>
-          )}
 
-          {step === 1 && (
-            <div>
-              <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Adaugă fotografii</h2>
-              <p className="text-[14px] text-[#6B6B6B] mb-6">Până la 5 poze din vizita ta.</p>
-              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoAdd} />
-              <div className="flex flex-wrap gap-3 mb-4">
-                {photoUrls.map((url, i) => (
-                  <div key={i} className="relative w-[calc(33%-8px)] aspect-square rounded-xl overflow-hidden">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => removePhoto(i)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center"
-                    >
-                      <X size={12} className="text-white" />
-                    </button>
-                  </div>
-                ))}
-                {photos.length < 5 && (
-                  <button
-                    onClick={() => fileRef.current?.click()}
-                    className="w-[calc(33%-8px)] aspect-square rounded-xl border-2 border-dashed border-[rgba(232,68,10,0.3)] bg-[#FFF0EB] flex flex-col items-center justify-center gap-2"
-                  >
-                    <Camera size={24} className="text-[#E8440A]" />
-                    <span className="text-[11px] text-[#E8440A] font-medium">Adaugă</span>
-                  </button>
-                )}
+            {/* mereu sub ultima oprire, vizibil de la început */}
+            <button
+              onClick={addStop}
+              className="w-full mt-2.5 bg-white border border-dashed border-[rgba(232,68,10,0.35)] rounded-2xl px-4 py-3.5 flex items-center gap-3 text-left"
+            >
+              <div className="w-9 h-9 rounded-xl bg-[#FFF0EB] flex items-center justify-center flex-shrink-0">
+                <Plus size={17} className="text-[#E8440A]" />
               </div>
-              <p className="text-[12px] text-[#9B9B9B] text-center">Poți continua și fără poze</p>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div>
-              <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Cum a fost?</h2>
-              <p className="text-[14px] text-[#6B6B6B] mb-6">Evaluează experiența ta.</p>
-              <div className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] px-4 py-2">
-                <StarRating value={ratingExp} onChange={setRatingExp} label={ratingLabels(kind).experience} required />
-                <StarRating value={ratingAccess} onChange={setRatingAccess} label={ratingLabels(kind).access} />
-                <StarRating value={ratingCrowd} onChange={setRatingCrowd} label={ratingLabels(kind).crowd} />
+              <div className="min-w-0">
+                <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F]">
+                  Ai mai fost undeva în aceeași ieșire?
+                </p>
+                <p className="text-[12px] text-[#9B9B9B]">
+                  Adaugă oprirea {stops.length + 1} — poate fi doar locul și o notă.
+                </p>
               </div>
-            </div>
-          )}
+            </button>
 
-          {step === 3 && (
-            <div>
-              <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Povestește-ne!</h2>
-              <p className="text-[14px] text-[#6B6B6B] mb-4">Ce ai trăit? Sfaturi practice, momente speciale.</p>
-              <textarea
-                value={content}
-                onChange={e => setContent(e.target.value.slice(0, 20000))}
-                rows={6}
-                placeholder="Ex: Am ajuns dimineața devreme și practic n-am avut coadă..."
-                className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed"
+            <div className="mt-4">
+              <OutingCard
+                trip={trip}
+                stops={usableStops}
+                active={usableStops.length > 1}
+                onChange={patch => { dirty.current = true; setTrip(prev => ({ ...prev, ...patch })) }}
               />
-              <div className="mb-5">
-                <CharCounter value={content} max={20000} min={20} />
-              </div>
-              <div className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">
-                Tips rapide <span className="text-[12px] text-[#9B9B9B] font-normal">— opțional</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {TIPS_OPTIONS.map(tip => (
-                  <button
-                    key={tip}
-                    onClick={() => toggleTip(tip)}
-                    className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${tips.includes(tip) ? 'bg-[#FFF0EB] text-[#E8440A] border-[rgba(232,68,10,0.25)]' : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'}`}
-                  >
-                    {tips.includes(tip) && '✓ '}{tip}
-                  </button>
-                ))}
-              </div>
             </div>
-          )}
-
-          {step === 4 && (
-            <div>
-              <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Gata de publicat! 🎉</h2>
-              <p className="text-[14px] text-[#6B6B6B] mb-5">Verifică detaliile și publică experiența ta.</p>
-              <div className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] p-4 mb-4">
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <MapPin size={15} className="text-[#E8440A]" />
-                  <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F]">
-                    {kind === 'activity' ? activityTitle : locationName}
-                  </span>
-                  {kind === 'activity'
-                    ? activityArea && <span className="text-[13px] text-[#9B9B9B]">· {activityArea}</span>
-                    : locationCity && <span className="text-[13px] text-[#9B9B9B]">· {locationCity}</span>}
-                </div>
-                <div className="flex gap-1 mb-3">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} size={16} className={i <= ratingExp ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-                  ))}
-                </div>
-                <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-3 whitespace-pre-line">{content}</p>
-                {photos.length > 0 && (
-                  <p className="text-[12px] text-[#9B9B9B] mt-2">{photos.length} fotografie atașată</p>
-                )}
-                {tips.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {tips.map(t => (
-                      <span key={t} className="text-[11px] bg-[#FFF0EB] text-[#E8440A] px-2 py-0.5 rounded-full">✓ {t}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] p-4 mb-6 flex items-center justify-between">
-                <div>
-                  <div className="font-outfit text-[14px] font-semibold text-[#0F0F0F]">Vizibilitate</div>
-                  <div className="text-[12px] text-[#9B9B9B]">{isPublic ? 'Oricine poate vedea' : 'Doar tu poți vedea'}</div>
-                </div>
-                <button
-                  onClick={() => setIsPublic(!isPublic)}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${isPublic ? 'bg-[#E8440A]' : 'bg-[#D1D5DB]'}`}
-                >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isPublic ? 'right-0.5' : 'left-0.5'}`} />
-                </button>
-              </div>
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="w-full bg-[#E8440A] text-white font-outfit text-[15px] font-bold py-4 rounded-full flex items-center justify-center gap-2 disabled:opacity-70"
-              >
-                {loading ? (
-                  <><Loader2 size={18} className="animate-spin" /> Se publică...</>
-                ) : (
-                  '🚀 Publică experiența'
-                )}
-              </button>
-            </div>
-          )}
-
-        </div>
+          </>
+        )}
       </div>
+
+      {!pendingDraft && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[rgba(0,0,0,0.08)] px-5 py-3 z-40">
+          <div className="max-w-[680px] mx-auto flex items-center gap-3">
+            <button
+              onClick={handlePublish}
+              disabled={!canPublish || publishing}
+              className={`flex-1 font-outfit text-[15px] font-semibold py-3 rounded-full flex items-center justify-center gap-2 transition-colors ${
+                canPublish && !publishing ? 'bg-[#E8440A] text-white' : 'bg-[#F1F1F1] text-[#9B9B9B]'
+              }`}
+            >
+              {publishing && <Loader2 size={16} className="animate-spin" />}
+              Publică
+            </button>
+            <button
+              onClick={saveForLater}
+              disabled={publishing}
+              className="text-[13px] text-[#6B6B6B] font-medium px-2 disabled:opacity-50"
+            >
+              Continuă mai târziu
+            </button>
+          </div>
+
+          {usableStops.length > 1 && !trip.title.trim() && (
+            <p className="max-w-[680px] mx-auto text-[11px] text-[#9B9B9B] mt-1.5">
+              Mai lipsește numele ieșirii.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-export default function AddExperiencePage() {
+export default function CreatePage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 rounded-full border-2 border-[#E8440A] border-t-transparent animate-spin" />
+        <Loader2 size={28} className="animate-spin text-[#E8440A]" />
       </div>
     }>
-      <AddExperienceContent />
+      <CreateScreen />
     </Suspense>
   )
 }
