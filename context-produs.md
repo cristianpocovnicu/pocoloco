@@ -95,6 +95,25 @@ interzise peste tot în flux.
 publicare tranzacțională (`publish_story()`, migrarea 30) — mai multe
 experiențe, o ieșire și opririle ei intră împreună sau deloc.
 
+### Iterația 6 — detaliile mutate într-un pas de finalizare *(implementată, 8 august 2026)*
+
+Cardul „Detaliile călătoriei" a stat o vreme pe ecranul de povestit, sub
+locuri. Două probleme: aglomera ecranul exact când erau mai multe locuri
+de citit, și nu exista unde să ceri ziua fiecărui loc — ca s-o alegi ai
+nevoie să vezi durata și lista locurilor în același loc.
+
+Acum ecranul 1 rămâne doar cardurile locurilor plus invitația de a mai
+adăuga unul. Cu un singur loc, butonul publică direct, ca până acum. Cu
+două sau mai multe, devine „Continuă" și duce la pasul 2: nume, durată,
+transport, copertă și lista locurilor, fiecare cu un selector de zi
+opțional. Același route și același state — doar altă stare a ecranului —
+ca draftul să rămână unul singur și „Continuă mai târziu" să funcționeze
+identic din ambele.
+
+Zilele se scriu în `trip_locations.day_number` la publicare (migrarea 35),
+doar unde au fost alese. Dacă durata scade sub o zi deja aleasă, ziua se
+golește cu un mesaj discret în loc să rămână o valoare imposibilă.
+
 ---
 
 ## 4. Ce nu se schimbă

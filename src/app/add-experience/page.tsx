@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { useToast } from '@/components/ui/Toast'
 import StopCard from '@/components/create/StopCard'
-import OutingCard from '@/components/create/OutingCard'
+import DetailsScreen from '@/components/create/DetailsScreen'
 import AddToTripDialog from '@/components/trip/AddToTripDialog'
 import {
   deleteDraft,
@@ -19,6 +19,7 @@ import {
   stopLabel,
   type StopDraft,
   type StoryDraft,
+  type StoryStep,
   type TripDraft,
 } from '@/lib/story'
 import { fetchPointsSince, justNowWindow } from '@/lib/points'
@@ -43,6 +44,10 @@ function CreateScreen() {
   const [userId, setUserId] = useState<string | null>(null)
   const [stops, setStops] = useState<StopDraft[]>([])
   const [trip, setTrip] = useState<TripDraft>(emptyTrip())
+  /** ecranul curent: povestea sau detaliile călătoriei */
+  const [step, setStep] = useState<StoryStep>('story')
+  /** câte locuri au rămas fără zi după ce a scăzut durata */
+  const [clearedDays, setClearedDays] = useState(0)
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [sections, setSections] = useState<SectionState>({})
   const [loading, setLoading] = useState(true)
@@ -90,11 +95,11 @@ function CreateScreen() {
     if (!userId || loading || pendingDraft || !dirty.current) return
 
     const timer = setTimeout(() => {
-      void saveDraft(createClient(), userId, { stops, trip })
+      void saveDraft(createClient(), userId, { stops, trip, step })
     }, SAVE_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
-  }, [stops, trip, userId, loading, pendingDraft])
+  }, [stops, trip, step, userId, loading, pendingDraft])
 
   const patchStop = useCallback((key: string, patch: Partial<StopDraft>) => {
     dirty.current = true
@@ -150,6 +155,8 @@ function CreateScreen() {
     if (!pendingDraft) return
     setStops(pendingDraft.stops)
     setTrip(pendingDraft.trip)
+    // te întorci unde erai, nu la începutul poveștii
+    setStep(pendingDraft.step === 'details' ? 'details' : 'story')
     setExpandedKey(pendingDraft.stops[pendingDraft.stops.length - 1]?.key || null)
     setPendingDraft(null)
   }
@@ -160,23 +167,55 @@ function CreateScreen() {
     const first = newStop()
     setStops([first])
     setTrip(emptyTrip())
+    setStep('story')
     setExpandedKey(first.key)
     setPendingDraft(null)
   }
 
   const saveForLater = async () => {
     if (!userId) return
-    await saveDraft(createClient(), userId, { stops, trip })
+    await saveDraft(createClient(), userId, { stops, trip, step })
     toast('Salvat. O găsești în profil când vrei să continui.')
     router.push('/profile')
   }
 
+  /** Durata a scăzut sub o zi deja aleasă: golim ziua, cu un mesaj. */
+  const changeTrip = (patch: Partial<TripDraft>) => {
+    dirty.current = true
+    setTrip(prev => ({ ...prev, ...patch }))
+
+    if (patch.durationDays !== undefined) {
+      const limit = patch.durationDays
+      const afectate = stops.filter(stop => stop.day !== null && stop.day > limit)
+      if (afectate.length > 0) {
+        setStops(prev => prev.map(stop =>
+          stop.day !== null && stop.day > limit ? { ...stop, day: null } : stop
+        ))
+        setClearedDays(afectate.length)
+      }
+    }
+  }
+
   const usableStops = stops.filter(stopHasSubject)
-  const canPublish = usableStops.length > 0
-    && (usableStops.length === 1 || trip.title.trim().length > 0)
+  // pe ecranul poveștii: un singur loc se publică direct, mai multe merg
+  // mai departe la detalii
+  const canContinue = usableStops.length > 0
+  const isMulti = usableStops.length > 1
+
+  /**
+   * Trecerea la detalii curăță cardurile goale: acolo lista locurilor se
+   * reordonează după poziție, iar un card fără nimic în el ar fi o poziție
+   * invizibilă în mijlocul listei.
+   */
+  const goToDetails = () => {
+    dirty.current = true
+    setStops(usableStops)
+    setExpandedKey(usableStops[usableStops.length - 1]?.key || null)
+    setStep('details')
+  }
 
   const handlePublish = async () => {
-    if (!userId || !canPublish) return
+    if (!userId || !canContinue) return
     setPublishing(true)
     setError(null)
     const since = justNowWindow()
@@ -221,6 +260,20 @@ function CreateScreen() {
       locationId={published.locationId}
       title={published.title}
       onDone={() => router.push(`/experience/${published.id}`)}
+    />
+  )
+
+  if (step === 'details' && isMulti) return (
+    <DetailsScreen
+      trip={trip}
+      stops={stops}
+      onTripChange={changeTrip}
+      onStopChange={patchStop}
+      onMove={moveStop}
+      onBack={() => { setStep('story'); setClearedDays(0) }}
+      onPublish={handlePublish}
+      publishing={publishing}
+      clearedDays={clearedDays}
     />
   )
 
@@ -313,14 +366,6 @@ function CreateScreen() {
               </span>
             </button>
 
-            <div className="mt-4">
-              <OutingCard
-                trip={trip}
-                stops={usableStops}
-                active={usableStops.length > 1}
-                onChange={patch => { dirty.current = true; setTrip(prev => ({ ...prev, ...patch })) }}
-              />
-            </div>
           </>
         )}
       </div>
@@ -332,14 +377,14 @@ function CreateScreen() {
         >
           <div className="max-w-[680px] mx-auto flex items-center gap-3">
             <button
-              onClick={handlePublish}
-              disabled={!canPublish || publishing}
+              onClick={() => (isMulti ? goToDetails() : handlePublish())}
+              disabled={!canContinue || publishing}
               className={`flex-1 font-outfit text-[15px] font-semibold py-3 rounded-full flex items-center justify-center gap-2 transition-colors ${
-                canPublish && !publishing ? 'bg-[#E8440A] text-white' : 'bg-[#F1F1F1] text-[#9B9B9B]'
+                canContinue && !publishing ? 'bg-[#E8440A] text-white' : 'bg-[#F1F1F1] text-[#9B9B9B]'
               }`}
             >
               {publishing && <Loader2 size={16} className="animate-spin" />}
-              Publică
+              {isMulti ? 'Continuă' : 'Publică'}
             </button>
             <button
               onClick={saveForLater}
@@ -350,11 +395,6 @@ function CreateScreen() {
             </button>
           </div>
 
-          {usableStops.length > 1 && !trip.title.trim() && (
-            <p className="max-w-[680px] mx-auto text-[11px] text-[#9B9B9B] mt-1.5">
-              Mai lipsește numele călătoriei.
-            </p>
-          )}
         </div>
       )}
     </div>

@@ -35,6 +35,8 @@ export type StopDraft = {
   tips: string[]
   /** nota scurtă de itinerar, doar pentru opririle care nu devin experiențe */
   note: string
+  /** ziua din călătorie, aleasă la pasul de finalizare; null = neîmpărțit */
+  day: number | null
 }
 
 export type TripDraft = {
@@ -44,9 +46,13 @@ export type TripDraft = {
   coverImage: string | null
 }
 
+/** La ce ecran era userul. Draftul vechi n-are câmpul — pornește de la 'story'. */
+export type StoryStep = 'story' | 'details'
+
 export type StoryDraft = {
   stops: StopDraft[]
   trip: TripDraft
+  step?: StoryStep
 }
 
 let counter = 0
@@ -79,6 +85,7 @@ export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
     content: '',
     tips: [],
     note: '',
+    day: null,
     ...partial,
   }
 
@@ -165,6 +172,7 @@ export async function loadDraft(
     return {
       stops: payload.stops.map(stop => newStop(stop)),
       trip: { ...emptyTrip(), ...(payload.trip || {}) },
+      step: payload.step === 'details' ? 'details' : 'story',
     }
   } catch {
     return null
@@ -286,6 +294,7 @@ export async function publishStory(
     visited_year: stop.visitedYear,
     visited_month: stop.visitedYear ? stop.visitedMonth : null,
     note: stop.note.trim() || null,
+    day: stop.day,
     create_experience: stopHasContent(stop),
   }))
 

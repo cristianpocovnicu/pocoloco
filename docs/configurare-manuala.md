@@ -70,6 +70,7 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 32 | `supabase/migrations/20260808_publish_story_array_guard.sql` | `images` / `tips`: array gol în loc de NULL, în `publish_story()` și în rândurile vechi |
 | 33 | `supabase/migrations/20260808_trip_cover_auto.sql` | `trips.cover_source` + copertă completată automat din opriri, cu backfill |
 | 34 | `supabase/migrations/20260808_visited_period.sql` | `visited_year` / `visited_month` — când a fost cineva acolo; actualizează și `publish_story()` |
+| 35 | `supabase/migrations/20260808_publish_story_days.sql` | `publish_story()` scrie ziua aleasă pentru fiecare loc, nu toate pe ziua 1 |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).

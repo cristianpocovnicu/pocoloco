@@ -7,37 +7,20 @@ type Props = {
   trip: TripDraft
   stops: StopDraft[]
   onChange: (patch: Partial<TripDraft>) => void
-  /** sub două opriri, cardul e doar o promisiune */
-  active: boolean
 }
 
 /**
- * Detaliile călătoriei — nume, durată, transport, copertă.
+ * Nume, durată, transport, copertă — câmpurile pasului de finalizare.
  *
- * Cardul e vizibil de la început, dar blocat: arată ce se deschide dacă
- * mai adaugi un loc, fără să ceară nimic acum.
- *
- * Singurul loc din flux unde cuvântul „călătorie" are voie să apară: aici
- * se ajunge doar cu două locuri deja adăugate, când userul a înțeles din
- * ce face ce construiește. Cuvântul numește rezultatul, nu îl anunță.
+ * Aici se ajunge doar cu două locuri deja povestite, deci cuvântul
+ * „călătorie" are voie să apară: numește rezultatul, nu îl anunță.
  */
-export default function OutingCard({ trip, stops, onChange, active }: Props) {
+export default function OutingCard({ trip, stops, onChange }: Props) {
   const photos = stops.flatMap(stop => stop.images)
   const suggestion = suggestTripTitle(stops)
 
-  if (!active) return (
-    <div className="border border-dashed border-[rgba(0,0,0,0.15)] rounded-2xl px-4 py-4 bg-[rgba(255,255,255,0.5)]">
-      <p className="font-outfit text-[14px] font-semibold text-[#9B9B9B] mb-0.5">Detaliile călătoriei</p>
-      <p className="text-[12px] text-[#9B9B9B] leading-relaxed">
-        Nume, durată, transport, copertă — se deschid când adaugi al doilea loc.
-      </p>
-    </div>
-  )
-
   return (
     <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-4">
-      <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-3">Detaliile călătoriei</p>
-
       <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Cum o numim?</label>
       <input
         value={trip.title}
