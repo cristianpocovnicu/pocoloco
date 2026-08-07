@@ -11,6 +11,7 @@ import FollowButton from '@/components/profile/FollowButton'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
+import { activityLabel } from '@/lib/activities'
 import CoverImage from '@/components/ui/CoverImage'
 import TripKindBadge from '@/components/trip/TripKindBadge'
 import Image from 'next/image'
@@ -297,19 +298,30 @@ export default function TripPage() {
                           <div className="relative w-11 h-11 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
                             {item.location?.cover_image
                               ? <CoverImage src={item.location.cover_image} sizes="44px" />
-                              : <MapPin size={17} className="text-[#9B9B9B]" />}
+                              : item.experience?.images?.[0]
+                                ? <CoverImage src={item.experience.images[0]} sizes="44px" />
+                                : item.experience
+                                  ? <span className="text-lg">🪂</span>
+                                  : <MapPin size={17} className="text-[#9B9B9B]" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             {item.location ? (
                               <Link href={`/location/${item.location.id}`} className="font-outfit text-[14px] font-semibold text-[#0F0F0F] hover:text-[#E8440A] transition-colors">
                                 {item.location.name}
                               </Link>
+                            ) : item.experience ? (
+                              /* oprire de tip activitate: titlul ei ține loc de nume */
+                              <Link href={`/experience/${item.experience.id}`} className="font-outfit text-[14px] font-semibold text-[#0F0F0F] hover:text-[#E8440A] transition-colors">
+                                {item.experience.title || 'Activitate'}
+                              </Link>
                             ) : (
-                              <span className="font-outfit text-[14px] font-semibold text-[#9B9B9B]">Locație ștearsă</span>
+                              <span className="font-outfit text-[14px] font-semibold text-[#9B9B9B]">Oprire ștearsă</span>
                             )}
                             <p className="text-[11px] text-[#9B9B9B]">
-                              {item.location?.city || 'Fără oraș'}
-                              {item.location?.country ? `, ${item.location.country}` : ''}
+                              {item.experience
+                                ? [activityLabel(item.experience.activity_category), item.experience.activity_area]
+                                    .filter(Boolean).join(' · ') || 'Activitate'
+                                : `${item.location?.city || 'Fără oraș'}${item.location?.country ? `, ${item.location.country}` : ''}`}
                             </p>
                             {item.note && (
                               <p className="text-[12px] text-[#6B6B6B] leading-relaxed mt-1.5 bg-[#F8F7F5] rounded-lg px-2.5 py-1.5 whitespace-pre-line">

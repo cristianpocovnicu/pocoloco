@@ -17,7 +17,9 @@ type Row = {
   /** id-ul rândului din trip_locations; lipsește la opririle nou adăugate */
   rowId?: string
   key: string
-  locationId: string
+  /** una dintre ele e completată: oprirea e ori un loc, ori o activitate */
+  locationId: string | null
+  experienceId: string | null
   name: string
   city: string | null
   day: number
@@ -81,9 +83,10 @@ export default function EditTripPage() {
         setRows(itinerary.map(item => ({
           rowId: item.id,
           key: item.id,
-          locationId: item.location?.id || '',
-          name: item.location?.name || 'Locație ștearsă',
-          city: item.location?.city || null,
+          locationId: item.location?.id || null,
+          experienceId: item.experience?.id || null,
+          name: item.location?.name || item.experience?.title || 'Oprire ștearsă',
+          city: item.location?.city || item.experience?.activity_area || null,
           day: item.day,
           note: item.note || '',
         })))
@@ -98,7 +101,8 @@ export default function EditTripPage() {
   const addLocation = (loc: PickedLocation) => {
     setRows(prev => [...prev, {
       key: `new-${loc.id}-${prev.length}`,
-      locationId: loc.id,
+      locationId: loc.source === 'activity' ? null : loc.id,
+      experienceId: loc.source === 'activity' ? loc.id : null,
       name: loc.name,
       city: loc.city,
       day: Math.min(prev.length > 0 ? Math.max(...prev.map(r => r.day)) : 1, durationDays),
@@ -198,6 +202,7 @@ export default function EditTripPage() {
           added.map(row => ({
             trip_id: id,
             location_id: row.locationId,
+            experience_id: row.experienceId,
             day_number: row.day,
             note: row.note.trim() || null,
             position: row.position,
@@ -376,7 +381,7 @@ export default function EditTripPage() {
           <div className="mb-4">
             <ItineraryLocationPicker
               onPick={addLocation}
-              excludeIds={rows.map(r => r.locationId)}
+              excludeIds={rows.map(r => r.locationId || r.experienceId).filter(Boolean) as string[]}
             />
           </div>
 

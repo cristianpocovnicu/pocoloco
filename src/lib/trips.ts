@@ -27,12 +27,22 @@ export type ItineraryLocation = {
   cover_image: string | null
 }
 
+/** O oprire poate fi o activitate povestită de autor, fără pin pe hartă. */
+export type ItineraryActivity = {
+  id: string
+  title: string | null
+  activity_category: string | null
+  activity_area: string | null
+  images: string[] | null
+}
+
 export type ItineraryItem = {
   id: string
   day: number
   note: string | null
   position: number
   location: ItineraryLocation | null
+  experience: ItineraryActivity | null
 }
 
 /**
@@ -45,30 +55,56 @@ export async function fetchItinerary(
   tripId: string
 ): Promise<ItineraryItem[]> {
   // coloana din bază e day_number; o aliasăm ca `day` pentru restul codului
-  const { data, error } = await supabase
+  // experience_id vine din 20260808_trip_activity_stops; dacă migrarea nu
+  // e rulată, selectul cade și rămânem pe forma veche, doar cu locații
+const stops = (columns: string) => supabase
     .from('trip_locations')
-    .select('id, location_id, day:day_number, note, position')
+    .select(columns)
     .eq('trip_id', tripId)
     .order('day_number', { ascending: true })
     .order('position', { ascending: true })
 
+  let { data, error } = await stops('id, location_id, experience_id, day:day_number, note, position')
+  if (error) {
+    ({ data, error } = await stops('id, location_id, day:day_number, note, position'))
+  }
+
   if (error || !data || data.length === 0) return []
 
-  const rows = data as { id: string; location_id: string; day: number | null; note: string | null; position: number | null }[]
-  const { data: locations } = await supabase
-    .from('locations')
-    .select('id, name, city, country, category, cover_image')
-    .in('id', rows.map(r => r.location_id))
+  const rows = data as unknown as {
+    id: string
+    location_id: string | null
+    experience_id?: string | null
+    day: number | null
+    note: string | null
+    position: number | null
+  }[]
+
+  const locationIds = rows.map(r => r.location_id).filter(Boolean) as string[]
+  const experienceIds = rows.map(r => r.experience_id).filter(Boolean) as string[]
+
+  const [locationRes, experienceRes] = await Promise.all([
+    locationIds.length > 0
+      ? supabase.from('locations').select('id, name, city, country, category, cover_image').in('id', locationIds)
+      : Promise.resolve({ data: [] }),
+    experienceIds.length > 0
+      ? supabase.from('experiences').select('id, title, activity_category, activity_area, images').in('id', experienceIds)
+      : Promise.resolve({ data: [] }),
+  ])
 
   const byId: Record<string, ItineraryLocation> = {}
-  for (const loc of (locations || []) as ItineraryLocation[]) byId[loc.id] = loc
+  for (const loc of ((locationRes.data || []) as unknown as ItineraryLocation[])) byId[loc.id] = loc
+
+  const activityById: Record<string, ItineraryActivity> = {}
+  for (const exp of ((experienceRes.data || []) as unknown as ItineraryActivity[])) activityById[exp.id] = exp
 
   return rows.map(r => ({
     id: r.id,
     day: r.day ?? 1,
     note: r.note,
     position: r.position ?? 0,
-    location: byId[r.location_id] || null,
+    location: r.location_id ? byId[r.location_id] || null : null,
+    experience: r.experience_id ? activityById[r.experience_id] || null : null,
   }))
 }
 

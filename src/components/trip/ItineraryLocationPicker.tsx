@@ -3,16 +3,18 @@ import { useCallback, useEffect, useState } from 'react'
 import { Loader2, MapPin, PenLine, Plus, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { attachGoogleCover } from '@/lib/location-cover'
+import { activityLabel } from '@/lib/activities'
 import {
   PLACES_ENABLED, getPlaceDetails, newSessionToken, searchPlaces, type PlaceSuggestion,
 } from '@/lib/places'
 
 export type PickedLocation = {
+  /** id de locație, sau de experiență când oprirea e o activitate */
   id: string
   name: string
   city: string | null
   /** de unde a venit, ca să putem eticheta oprirea în listă */
-  source: 'own' | 'pocoloco' | 'google'
+  source: 'own' | 'pocoloco' | 'google' | 'activity'
 }
 
 type Props = {
@@ -22,6 +24,7 @@ type Props = {
 }
 
 type Row = { id: string; name: string; city: string | null }
+type ActivityRow = { id: string; title: string | null; activity_category: string | null; activity_area: string | null }
 
 /**
  * Trei surse, în ordinea în care contează pentru cineva care își
@@ -33,6 +36,7 @@ type Row = { id: string; name: string; city: string | null }
 export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
   const [query, setQuery] = useState('')
   const [ownLocations, setOwnLocations] = useState<Row[]>([])
+  const [ownActivities, setOwnActivities] = useState<ActivityRow[]>([])
   const [dbResults, setDbResults] = useState<Row[]>([])
   const [placeResults, setPlaceResults] = useState<PlaceSuggestion[]>([])
   const [searching, setSearching] = useState(false)
@@ -47,14 +51,42 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: exps } = await supabase
+      // kind / title vin din 20260808_experience_kinds; fără migrare,
+      // selectul cade și rămân doar locurile
+      const mine = (columns: string) => supabase
         .from('experiences')
-        .select('location_id')
+        .select(columns)
         .eq('author_id', user.id)
         .eq('status', 'active')
         .limit(200)
 
-      const ids = Array.from(new Set((exps || []).map((e: { location_id: string }) => e.location_id).filter(Boolean)))
+      let { data: exps, error } = await mine('id, location_id, kind, title, activity_category, activity_area')
+      if (error) {
+        ({ data: exps } = await mine('id, location_id'))
+      }
+
+      type ExpRow = {
+        id: string
+        location_id: string | null
+        kind?: string
+        title?: string | null
+        activity_category?: string | null
+        activity_area?: string | null
+      }
+      const rows = (exps || []) as unknown as ExpRow[]
+
+      setOwnActivities(
+        rows
+          .filter(e => e.kind === 'activity')
+          .map(e => ({
+            id: e.id,
+            title: e.title ?? null,
+            activity_category: e.activity_category ?? null,
+            activity_area: e.activity_area ?? null,
+          }))
+      )
+
+      const ids = Array.from(new Set(rows.map(e => e.location_id).filter(Boolean))) as string[]
       if (ids.length === 0) return
 
       const { data: locs } = await supabase
@@ -171,6 +203,10 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
     .filter(l => (query.trim() ? l.name.toLowerCase().includes(query.trim().toLowerCase()) : true))
     .slice(0, 6)
   const dbVisible = dbResults.filter(l => !taken.has(l.id) && !ownVisible.some(o => o.id === l.id))
+  const activitiesVisible = ownActivities
+    .filter(a => !taken.has(a.id))
+    .filter(a => (query.trim() ? (a.title || '').toLowerCase().includes(query.trim().toLowerCase()) : true))
+    .slice(0, 6)
 
   return (
     <div>
@@ -179,7 +215,7 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Caută un loc..."
+          placeholder="Caută un loc sau o activitate..."
           className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-[#9B9B9B]"
         />
         {searching && <Loader2 size={14} className="animate-spin text-[#9B9B9B] flex-shrink-0" />}
@@ -213,7 +249,36 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
           </>
         )}
 
-        {/* 2. Pocoloco */}
+        {/* 2. Activitățile tale — n-au pin, dar fac parte din călătorie */}
+        {activitiesVisible.length > 0 && (
+          <>
+            <div className="px-4 pt-3 pb-1.5 text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide">
+              Activitățile tale
+            </div>
+            {activitiesVisible.map(activity => (
+              <button
+                key={`activity-${activity.id}`}
+                onClick={() => pick(
+                  { id: activity.id, name: activity.title || 'Activitate', city: activity.activity_area },
+                  'activity'
+                )}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
+              >
+                <span className="text-[15px] flex-shrink-0">🪂</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{activity.title}</div>
+                  <div className="text-[11px] text-[#9B9B9B] truncate">
+                    {activityLabel(activity.activity_category) || 'Activitate'}
+                    {activity.activity_area ? ` · ${activity.activity_area}` : ''}
+                  </div>
+                </div>
+                <Plus size={15} className="text-[#5B4FCF] flex-shrink-0" />
+              </button>
+            ))}
+          </>
+        )}
+
+        {/* 3. Pocoloco */}
         {dbVisible.length > 0 && (
           <>
             <div className="px-4 pt-3 pb-1.5 text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide">
@@ -236,7 +301,7 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
           </>
         )}
 
-        {/* 3. Google */}
+        {/* 4. Google */}
         {placeResults.length > 0 && (
           <>
             <div className="px-4 pt-3 pb-1.5 text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide">
@@ -262,7 +327,7 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
           </>
         )}
 
-        {ownVisible.length === 0 && dbVisible.length === 0 && placeResults.length === 0 && (
+        {ownVisible.length === 0 && activitiesVisible.length === 0 && dbVisible.length === 0 && placeResults.length === 0 && (
           <p className="px-4 py-6 text-[13px] text-[#9B9B9B] text-center">
             {query.trim().length >= 2
               ? searching ? 'Caut...' : 'Niciun rezultat. Încearcă alt nume.'
