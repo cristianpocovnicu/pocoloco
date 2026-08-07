@@ -4,7 +4,8 @@ import { Loader2, MapPin, Plus, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { ACTIVITY_CATEGORIES } from '@/lib/activities'
 import {
-  PLACES_ENABLED, getPlaceDetails, newSessionToken, searchPlaces, type PlaceSuggestion,
+  PLACES_ENABLED, getPlaceDetails, isBroadRegion, newSessionToken, searchPlaces,
+  type PlaceSuggestion,
 } from '@/lib/places'
 import type { StopDraft } from '@/lib/story'
 
@@ -13,8 +14,14 @@ type DbLocation = { id: string; name: string; city: string | null; country: stri
 type Props = {
   stop: StopDraft
   onChange: (patch: Partial<StopDraft>) => void
-  /** oprirea 1 primește autofocus, restul nu */
+  /** primul card primește autofocus, restul nu */
   autoFocus?: boolean
+  /**
+   * Doar la primul card: numele unei zone alese din greșeală poate deveni
+   * numele ieșirii. La celelalte lipsește, deci întrebarea doar golește
+   * selecția.
+   */
+  onUseAsOutingName?: (name: string) => void
 }
 
 /**
@@ -24,8 +31,13 @@ type Props = {
  * se potrivește oferă două ieșiri: locul e nou, sau nu e un loc, e ceva ce
  * ai făcut. Aceeași căutare pentru oprirea 1 și pentru restul.
  */
-export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
+export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOutingName }: Props) {
   const [query, setQuery] = useState('')
+  /** numele zonei alese, cât timp întrebăm dacă chiar despre ea e vorba */
+  const [broadRegion, setBroadRegion] = useState<string | null>(null)
+  /** după ce zona a ieșit din selecție, câmpul cere primul loc concret */
+  const [justClearedRegion, setJustClearedRegion] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
   const [dbResults, setDbResults] = useState<DbLocation[]>([])
   const [placeResults, setPlaceResults] = useState<PlaceSuggestion[]>([])
   const [searching, setSearching] = useState(false)
@@ -50,6 +62,7 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
         searchPlaces(term, sessionToken.current),
       ])
 
+      setJustClearedRegion(false)
       setDbResults((dbRes.data || []) as DbLocation[])
       const known = new Set((dbRes.data || []).map((l: DbLocation) => l.name.toLowerCase()))
       setPlaceResults(places.filter(p => !known.has(p.mainText.toLowerCase())).slice(0, 5))
@@ -59,7 +72,9 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
     return () => clearTimeout(timer)
   }, [query])
 
+  // locurile din baza noastră au trecut deja prin moderare: nu întrebăm
   const pickExisting = (loc: DbLocation) => {
+    setBroadRegion(null)
     onChange({
       kind: 'place_visit',
       locationId: loc.id,
@@ -77,6 +92,10 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
     setSearching(true)
     const details = await getPlaceDetails(place.placeId, sessionToken.current)
     sessionToken.current = newSessionToken()
+
+    // „Madeira" ales ca loc ar deveni un pin pe hartă, de moderat și de
+    // recenzat de alții — când de fapt omul își numea povestea
+    setBroadRegion(isBroadRegion(details?.types) ? (details?.name || place.mainText) : null)
 
     onChange({
       kind: 'place_visit',
@@ -124,6 +143,16 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
       placeId: null,
     })
     setQuery('')
+  }
+
+  /** „E toată povestea mea de acolo": zona iese din selecție. */
+  const useRegionAsName = () => {
+    if (broadRegion && onUseAsOutingName) onUseAsOutingName(broadRegion)
+    setBroadRegion(null)
+    setJustClearedRegion(true)
+    clear()
+    // câmpul de căutare revine; îi dăm focus la următorul tur de randare
+    setTimeout(() => searchRef.current?.focus(), 0)
   }
 
   const clear = () => onChange({
@@ -203,6 +232,32 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
         </button>
       </div>
 
+      {broadRegion && (
+        <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.25)] rounded-xl px-3.5 py-3">
+          <p className="text-[13px] font-medium text-[#0F0F0F] mb-0.5">
+            Ai ales {broadRegion} — pare o zonă întreagă, nu un loc anume.
+          </p>
+          <p className="text-[12px] text-[#6B6B6B] leading-relaxed mb-2.5">
+            Dacă ai fost în mai multe locuri pe acolo, spune-le pe rând: fiecare primește
+            pozele și povestea lui.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={useRegionAsName}
+              className="bg-[#E8440A] text-white font-outfit text-[12px] font-semibold px-3.5 py-2 rounded-full"
+            >
+              E toată povestea mea de acolo
+            </button>
+            <button
+              onClick={() => setBroadRegion(null)}
+              className="text-[12px] text-[#6B6B6B] font-medium px-2"
+            >
+              Vreau să povestesc chiar despre {broadRegion}
+            </button>
+          </div>
+        </div>
+      )}
+
       {!stop.locationId && (
         <>
           <input
@@ -226,9 +281,12 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
       <div className="relative">
         <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9B9B9B]" />
         <input
+          ref={searchRef}
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Castelul Bran, snorkeling, o cafenea..."
+          placeholder={justClearedRegion
+            ? 'Începe cu primul loc: un vârf, un sat, o plajă...'
+            : 'Castelul Bran, snorkeling, o cafenea...'}
           autoFocus={autoFocus}
           className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl pl-10 pr-10 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
         />

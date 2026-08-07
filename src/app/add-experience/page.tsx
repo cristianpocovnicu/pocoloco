@@ -108,6 +108,16 @@ function CreateScreen() {
     setStops(prev => prev.map(stop => (stop.key === key ? { ...stop, ...patch } : stop)))
   }, [])
 
+  /**
+   * Zona aleasă din greșeală devine numele ieșirii, dacă n-are deja unul.
+   * Nu deschide pasul 2 și nu schimbă butonul: alea depind doar de câte
+   * locuri există.
+   */
+  const useRegionAsOutingName = (name: string) => {
+    dirty.current = true
+    setTrip(prev => (prev.title.trim() ? prev : { ...prev, title: name }))
+  }
+
   const addStop = () => {
     dirty.current = true
     // perioada se moștenește: de obicei toate locurile sunt din aceeași
@@ -409,6 +419,7 @@ ${text}` : text,
                   onMove={direction => moveStop(index, direction)}
                   open={sections[stop.key] || { photos: false, ratings: false, story: false }}
                   onToggleSection={section => toggleSection(stop.key, section)}
+                  onUseAsOutingName={useRegionAsOutingName}
                 />
               ))}
             </div>

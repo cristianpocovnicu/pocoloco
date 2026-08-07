@@ -16,6 +16,8 @@ type Props = {
   /** ce secțiuni sunt deschise acum, ținut în afara draftului */
   open: { photos: boolean; ratings: boolean; story: boolean }
   onToggleSection: (section: 'photos' | 'ratings' | 'story') => void
+  /** doar primul card poate numi ieșirea cu o zonă aleasă din greșeală */
+  onUseAsOutingName?: (name: string) => void
 }
 
 /**
@@ -33,6 +35,7 @@ export default function StopCard({
   onMove,
   open,
   onToggleSection,
+  onUseAsOutingName,
 }: Props) {
   // la primul loc totul e deschis de la început; la următoarele, doar
   // căutarea și nota, restul la cerere
@@ -119,7 +122,12 @@ export default function StopCard({
         </div>
       )}
 
-      <SubjectPicker stop={stop} onChange={onChange} autoFocus={index === 0 && !stopHasSubject(stop)} />
+      <SubjectPicker
+        stop={stop}
+        onChange={onChange}
+        autoFocus={index === 0 && !stopHasSubject(stop)}
+        onUseAsOutingName={index === 0 ? onUseAsOutingName : undefined}
+      />
 
       {stopHasSubject(stop) && (
         <div className="mt-3">

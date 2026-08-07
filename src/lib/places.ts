@@ -36,6 +36,30 @@ export type PlaceDetails = PlaceGeography & {
   latitude: number | null
   longitude: number | null
   placeId: string
+  /** tipurile Google ale locului — vezi isBroadRegion */
+  types: string[]
+}
+
+/**
+ * Tipurile care descriu o zonă întreagă, nu un loc anume.
+ *
+ * Orașele lipsesc intenționat: o recenzie la un oraș e legitimă și
+ * folositoare. `natural_feature` e cel mai lat dintre ele — Google îl
+ * pune și pe insule, și pe vârfuri de munte — dar dialogul e o întrebare,
+ * nu un blocaj: cine chiar vrea să scrie despre vârf răspunde că da.
+ */
+const BROAD_TYPES = [
+  'country',
+  'administrative_area_level_1',
+  'administrative_area_level_2',
+  'natural_feature',
+]
+
+export function isBroadRegion(types: string[] | null | undefined): boolean {
+  if (!types || types.length === 0) return false
+  // orașul câștigă: „Funchal" e locality, chiar dacă vine și cu alte tipuri
+  if (types.includes('locality') || types.includes('sublocality')) return false
+  return types.some(type => BROAD_TYPES.includes(type))
 }
 
 type AddressComponent = { longText?: string; shortText?: string; types?: string[] }
@@ -265,7 +289,9 @@ export async function getPlaceDetails(
       {
         headers: {
           'X-Goog-Api-Key': API_KEY,
-          'X-Goog-FieldMask': 'displayName,location,addressComponents',
+          // types vine în aceeași cerere: tariful e dat oricum de
+          // addressComponents, deci nu costă nimic în plus
+          'X-Goog-FieldMask': 'displayName,location,addressComponents,types',
         },
       }
     )
@@ -282,6 +308,7 @@ export async function getPlaceDetails(
       latitude: data.location?.latitude ?? null,
       longitude: data.location?.longitude ?? null,
       placeId,
+      types: (data.types || []) as string[],
     }
   } catch {
     return null
