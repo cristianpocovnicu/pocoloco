@@ -64,10 +64,6 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
   }, [onClose])
 
   const handleSave = async () => {
-    if (content.trim().length < 20) {
-      setError('Textul trebuie să aibă minim 20 de caractere.')
-      return
-    }
     setSaving(true)
     setError(null)
 
@@ -127,11 +123,11 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
             className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] focus:bg-white transition-colors resize-none leading-relaxed"
           />
           <div className="mb-4">
-            <CharCounter value={content} max={20000} min={20} />
+            <CharCounter value={content} max={20000} />
           </div>
 
           <div className="bg-[#F8F7F5] rounded-2xl border border-[rgba(0,0,0,0.08)] px-4 py-1 mb-5">
-            <StarRow label="Experiență generală" value={ratingExp} onChange={setRatingExp} required />
+            <StarRow label="Experiență generală" value={ratingExp} onChange={setRatingExp} />
             <StarRow label="Acces și organizare" value={ratingAccess} onChange={setRatingAccess} />
             <StarRow label="Aglomerație și așteptare" value={ratingCrowd} onChange={setRatingCrowd} />
           </div>

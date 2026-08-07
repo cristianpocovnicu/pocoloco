@@ -49,7 +49,12 @@ export type StoryDraft = {
 let counter = 0
 export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
   counter += 1
-  return {
+  // images și tips sunt nullable în DB, fără default: nimic din bază nu
+  // oprește un null să ajungă acolo. Un draft vechi sau stricat n-are voie
+  // să strecoare unul prin spread, deci le normalizăm aici.
+  const safeArray = (value: unknown): string[] => (Array.isArray(value) ? value as string[] : [])
+
+  const stop: StopDraft = {
     key: `stop-${Date.now()}-${counter}`,
     kind: 'place_visit',
     locationId: null,
@@ -71,6 +76,8 @@ export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
     note: '',
     ...partial,
   }
+
+  return { ...stop, images: safeArray(stop.images), tips: safeArray(stop.tips) }
 }
 
 export function emptyTrip(): TripDraft {

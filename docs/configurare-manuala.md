@@ -67,6 +67,7 @@ idempotentă — se poate rula din nou fără efecte secundare.
 | 29 | `supabase/migrations/20260808_creation_drafts.sql` | `creation_drafts` — povestea neterminată din ecranul de creare |
 | 30 | `supabase/migrations/20260808_publish_story.sql` | `publish_story()` — publicarea, într-o singură tranzacție |
 | 31 | `supabase/migrations/20260808_ratings_nullable.sql` | `rating_experience` devine opțional — notarea nu mai e obligatorie |
+| 32 | `supabase/migrations/20260808_publish_story_array_guard.sql` | `images` / `tips`: array gol în loc de NULL, în `publish_story()` și în rândurile vechi |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).
