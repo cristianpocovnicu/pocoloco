@@ -25,7 +25,7 @@ type Experience = {
   content: string
   images: string[] | null
   tips: string[] | null
-  rating_experience: number
+  rating_experience: number | null
   rating_access: number | null
   rating_crowd: number | null
   upvotes: number

@@ -38,7 +38,7 @@ type Experience = {
   activity_area?: string | null
   content: string
   images: string[] | null
-  rating_experience: number
+  rating_experience: number | null
   upvotes: number
   comment_count: number
   created_at: string
@@ -270,11 +270,15 @@ export default function PublicProfilePage() {
                         )}
                       </p>
                     </div>
-                    <div className="flex gap-0.5 flex-shrink-0">
-                      {[1, 2, 3, 4, 5].map(i => (
-                        <Star key={i} size={12} className={i <= exp.rating_experience ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-                      ))}
-                    </div>
+                    {exp.rating_experience ? (
+                      <div className="flex gap-0.5 flex-shrink-0">
+                        {[1, 2, 3, 4, 5].map(i => (
+                          <Star key={i} size={12} className={i <= (exp.rating_experience || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-[#9B9B9B] flex-shrink-0">Fără notă</span>
+                    )}
                   </div>
                   <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-2 line-clamp-3 whitespace-pre-line">{exp.content}</p>
                   {exp.images && exp.images.length > 0 && (

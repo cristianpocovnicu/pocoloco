@@ -47,7 +47,7 @@ type Experience = {
   content: string
   images: string[]
   tips: string[]
-  rating_experience: number
+  rating_experience: number | null
   rating_access: number | null
   rating_crowd: number | null
   upvotes: number
@@ -258,6 +258,11 @@ export default function LocationPage() {
     return (valid.reduce((s, e) => s + (e[key] || 0), 0) / valid.length).toFixed(1)
   }
 
+  // de când notarea e opțională, se poate ca nimeni să nu fi dat stele
+  const ratedCount = experiences.filter(e => e.rating_experience != null).length
+  const hasAnyRating = ['rating_experience', 'rating_access', 'rating_crowd']
+    .some(key => avgRating(key as 'rating_experience') !== null)
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
       <Loader2 size={28} className="animate-spin text-[#E8440A]" />
@@ -430,12 +435,12 @@ export default function LocationPage() {
         </div>
 
         {/* Ratings summary */}
-        {experiences.length > 0 && (
+        {experiences.length > 0 && hasAnyRating && (
           <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
             <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-3">
               Evaluare medie{' '}
               <span className="text-[12px] font-normal text-[#9B9B9B]">
-                din {experiences.length} {experiences.length === 1 ? 'experiență' : 'experiențe'}
+                din {ratedCount} {ratedCount === 1 ? 'notare' : 'notări'}
               </span>
             </h2>
             {[

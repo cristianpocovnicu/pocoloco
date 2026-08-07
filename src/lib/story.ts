@@ -266,7 +266,9 @@ export async function publishStory(
     content: stop.content.trim(),
     images: stop.images,
     tips: stop.tips,
-    rating_experience: stop.ratingExperience,
+    // 0 e sentinela de „nenotat" din ecran; în bază merge NULL, pentru
+    // că experiences_rating_*_check acceptă doar 1–5
+    rating_experience: stop.ratingExperience || null,
     rating_access: stop.ratingAccess || null,
     rating_crowd: stop.ratingCrowd || null,
     note: stop.note.trim() || null,

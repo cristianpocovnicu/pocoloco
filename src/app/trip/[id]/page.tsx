@@ -26,7 +26,7 @@ type StopExperience = {
   location_id: string
   content: string
   images: string[] | null
-  rating_experience: number
+  rating_experience: number | null
   upvotes: number
   comment_count: number
 }
@@ -340,17 +340,19 @@ export default function TripPage() {
                                   <span className="text-[11px] font-outfit font-semibold text-[#E8440A]">
                                     Ce a scris {author?.full_name?.split(' ')[0] || 'autorul'}
                                   </span>
-                                  <div className="flex gap-0.5 ml-auto">
-                                    {[1, 2, 3, 4, 5].map(n => (
-                                      <Star
-                                        key={n}
-                                        size={9}
-                                        className={n <= stopExperiences[item.location!.id].rating_experience
-                                          ? 'text-amber-400 fill-amber-400'
-                                          : 'text-gray-200 fill-gray-200'}
-                                      />
-                                    ))}
-                                  </div>
+                                  {!!stopExperiences[item.location!.id].rating_experience && (
+                                    <div className="flex gap-0.5 ml-auto">
+                                      {[1, 2, 3, 4, 5].map(n => (
+                                        <Star
+                                          key={n}
+                                          size={9}
+                                          className={n <= (stopExperiences[item.location!.id].rating_experience || 0)
+                                            ? 'text-amber-400 fill-amber-400'
+                                            : 'text-gray-200 fill-gray-200'}
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-[12px] text-[#6B6B6B] leading-relaxed line-clamp-3 whitespace-pre-line">
                                   {stopExperiences[item.location.id].content}

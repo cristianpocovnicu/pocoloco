@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 export type EditableExperience = {
   id: string
   content: string
-  rating_experience: number
+  rating_experience: number | null
   rating_access: number | null
   rating_crowd: number | null
 }
@@ -68,17 +68,13 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
       setError('Textul trebuie să aibă minim 20 de caractere.')
       return
     }
-    if (ratingExp < 1) {
-      setError('Pune măcar o stea la experiența generală.')
-      return
-    }
-
     setSaving(true)
     setError(null)
 
     const patch = {
       content: content.trim(),
-      rating_experience: ratingExp,
+      // notarea e opțională peste tot; 0 în ecran înseamnă NULL în bază
+      rating_experience: ratingExp || null,
       rating_access: ratingAccess || null,
       rating_crowd: ratingCrowd || null,
     }

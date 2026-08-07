@@ -84,7 +84,8 @@ begin
       select
         r.kind, r.location_id, r.title, r.activity_category, r.activity_area,
         v_user, coalesce(r.content, ''), r.images, r.tips,
-        coalesce(r.rating_experience, 0), r.rating_access, r.rating_crowd, 'active'
+        -- nenotat = NULL: checkurile de pe ratinguri acceptă doar 1–5
+        r.rating_experience, r.rating_access, r.rating_crowd, 'active'
       from jsonb_populate_record(null::public.experiences, v_stop) r
       returning id into v_exp_id;
 
@@ -167,9 +168,9 @@ grant execute on function public.publish_story(jsonb, jsonb) to authenticated;
 -- ---------------------------------------------------------------------
 -- Verificare: ce constrângeri are `experiences` pe ratinguri?
 --
--- În fluxul nou ratingurile sunt opționale, deci o experiență poate intra
--- cu rating_experience = 0. Dacă vezi mai jos o constrângere care cere
--- 1..5, spune-mi — atunci fie o relaxăm, fie trimitem null.
+-- Verificarea și-a făcut treaba: checkurile cer 1–5. De asta „nenotat"
+-- se trimite ca NULL (vezi insertul de mai sus), iar migrarea 31 scoate
+-- NOT NULL de pe rating_experience. Listarea rămâne, ca să se vadă starea.
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -187,7 +188,7 @@ begin
   end loop;
 
   if gasite = '' then
-    raise notice 'Niciun check pe ratinguri — 0 („nenotat") intră fără probleme.';
+    raise notice 'Niciun check pe ratinguri.';
   else
     raise notice 'ATENȚIE, checkuri pe ratinguri: %', gasite;
   end if;
