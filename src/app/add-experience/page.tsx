@@ -8,6 +8,8 @@ import { useToast } from '@/components/ui/Toast'
 import { fetchPointsSince, justNowWindow } from '@/lib/points'
 import CharCounter from '@/components/ui/CharCounter'
 import { attachGoogleCover } from '@/lib/location-cover'
+import { ACTIVITY_CATEGORIES, ratingLabels, type ExperienceKind } from '@/lib/activities'
+import AddToTripDialog from '@/components/trip/AddToTripDialog'
 import {
   PLACES_ENABLED, getPlaceDetails, newSessionToken, searchPlaces, type PlaceSuggestion,
 } from '@/lib/places'
@@ -20,7 +22,7 @@ const TIPS_OPTIONS = [
   'Accesibil cu copii', 'Gratuit', 'Peisaj spectaculos'
 ]
 
-const STEPS = ['Locație', 'Poze', 'Rating', 'Povestea ta', 'Publică']
+const STEPS = ['Subiect', 'Poze', 'Rating', 'Povestea ta', 'Publică']
 
 function StarRating({ value, onChange, label, required }: {
   value: number
@@ -54,6 +56,14 @@ function AddExperienceContent() {
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // 'place_visit' = povestea unui loc, 'activity' = ceva ce ai făcut
+  const [kind, setKind] = useState<ExperienceKind>('place_visit')
+  const [activityTitle, setActivityTitle] = useState('')
+  const [activityCategory, setActivityCategory] = useState<string | null>(null)
+  const [activityArea, setActivityArea] = useState('')
+  // experiența publicată, cât ține ecranul „adaugi într-o călătorie?"
+  const [published, setPublished] = useState<{ id: string; locationId: string | null; title: string } | null>(null)
 
   const [locationId, setLocationId] = useState<string | null>(searchParams.get('location'))
   const [locationName, setLocationName] = useState(searchParams.get('name') || '')
@@ -141,6 +151,26 @@ function AddExperienceContent() {
     setSearchingLocation(false)
   }
 
+  /** Textul scris devine o activitate: fără pin, doar titlu (și eventual zona). */
+  const useAsActivity = () => {
+    setKind('activity')
+    setActivityTitle(locationQuery.trim())
+    setLocationId(null)
+    setLocationName('')
+    setLocationCity('')
+    setCoords(null)
+    setPickedFromGoogle(false)
+    setPickedPlaceId(null)
+    setLocationQuery('')
+  }
+
+  const clearActivity = () => {
+    setKind('place_visit')
+    setActivityTitle('')
+    setActivityCategory(null)
+    setActivityArea('')
+  }
+
   const useAsNewLocation = () => {
     setLocationId(null)
     setLocationName(locationQuery.trim())
@@ -176,7 +206,11 @@ function AddExperienceContent() {
   }
 
   const canProceed = () => {
-    if (step === 0) return locationName.trim().length > 0
+    if (step === 0) {
+      return kind === 'activity'
+        ? activityTitle.trim().length > 0
+        : locationName.trim().length > 0
+    }
     if (step === 2) return ratingExp > 0
     if (step === 3) return content.trim().length >= 20
     return true
@@ -204,7 +238,8 @@ function AddExperienceContent() {
       }
 
       let finalLocationId = locationId
-      if (!finalLocationId) {
+      // activitatea n-are pin: sărim peste tot ce ține de locație
+      if (!finalLocationId && kind === 'place_visit') {
         const { data: existingLoc } = await supabase
           .from('locations')
           .select('id')
@@ -240,30 +275,59 @@ function AddExperienceContent() {
         }
       }
 
-      if (!finalLocationId) throw new Error('Nu am putut identifica locația')
+      if (kind === 'place_visit' && !finalLocationId) {
+        throw new Error('Nu am putut identifica locația')
+      }
 
-      const { error: expError } = await supabase.from('experiences').insert({
-        location_id: finalLocationId,
-        author_id: user.id,
-        content: content.trim(),
-        rating_experience: ratingExp,
-        rating_access: ratingAccess || null,
-        rating_crowd: ratingCrowd || null,
-        images: imageUrls,
-        tips,
-        status: isPublic ? 'active' : 'draft',
-      })
+      const { data: created, error: expError } = await supabase
+        .from('experiences')
+        .insert({
+          kind,
+          location_id: kind === 'activity' ? null : finalLocationId,
+          title: kind === 'activity' ? activityTitle.trim() : null,
+          activity_category: kind === 'activity' ? activityCategory : null,
+          activity_area: kind === 'activity' ? (activityArea.trim() || null) : null,
+          author_id: user.id,
+          content: content.trim(),
+          rating_experience: ratingExp,
+          rating_access: ratingAccess || null,
+          rating_crowd: ratingCrowd || null,
+          images: imageUrls,
+          tips,
+          status: isPublic ? 'active' : 'draft',
+        })
+        .select('id')
+        .single()
 
       if (expError) throw expError
 
       const gained = await fetchPointsSince(supabase, user.id, since)
       toast(gained > 0 ? `Experiență publicată! +${gained} puncte 🎉` : 'Experiență publicată! 🎉')
-      router.push(finalLocationId ? `/location/${finalLocationId}` : '/')
+
+      // ecranul „o adaugi într-o călătorie?" ține locul redirectului
+      setPublished({
+        id: created!.id,
+        locationId: kind === 'activity' ? null : finalLocationId,
+        title: kind === 'activity' ? activityTitle.trim() : locationName.trim(),
+      })
+      setLoading(false)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'A apărut o eroare.')
       setLoading(false)
     }
   }
+
+  if (published) return (
+    <AddToTripDialog
+      experienceId={published.id}
+      locationId={published.locationId}
+      title={published.title}
+      onDone={() => {
+        // activitățile n-au pagină de locație: le arătăm pe ele
+        router.push(published.locationId ? `/location/${published.locationId}` : `/experience/${published.id}`)
+      }}
+    />
+  )
 
   return (
     <div className="min-h-screen bg-[#F8F7F5]">
@@ -310,10 +374,76 @@ function AddExperienceContent() {
 
           {step === 0 && (
             <div>
-              <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Despre ce loc scrii?</h2>
-              <p className="text-[14px] text-[#6B6B6B] mb-6">Caută locul pe care l-ai vizitat.</p>
+              <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Despre ce e povestea ta?</h2>
+              <p className="text-[14px] text-[#6B6B6B] mb-6">
+                Un loc pe care l-ai vizitat sau ceva ce ai făcut — o tură, o scufundare, un curs.
+              </p>
 
-              {locationName ? (
+              {kind === 'activity' ? (
+                /* Activitate — titlu, plus două câmpuri opționale */
+                <div className="flex flex-col gap-4">
+                  <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#EEEDFB] flex items-center justify-center flex-shrink-0 text-lg">
+                        🪂
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <input
+                          type="text"
+                          value={activityTitle}
+                          onChange={e => setActivityTitle(e.target.value.slice(0, 120))}
+                          placeholder="Ex: Tură cu buggy în deșert"
+                          className="w-full font-outfit text-[15px] font-semibold text-[#0F0F0F] bg-transparent outline-none placeholder:text-[#9B9B9B] placeholder:font-normal"
+                        />
+                        <span className="inline-block mt-1.5 text-[10px] font-outfit font-bold px-2 py-0.5 rounded-full bg-[#EEEDFB] text-[#5B4FCF]">
+                          ACTIVITATE
+                        </span>
+                      </div>
+                      <button onClick={clearActivity} className="text-[12px] text-[#5B4FCF] font-medium flex-shrink-0">
+                        Schimbă
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[12px] font-medium text-[#6B6B6B] block mb-2">
+                      Ce fel de activitate? <span className="text-[#9B9B9B] font-normal">— opțional</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {ACTIVITY_CATEGORIES.map(category => (
+                        <button
+                          key={category.id}
+                          onClick={() => setActivityCategory(activityCategory === category.id ? null : category.id)}
+                          className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${
+                            activityCategory === category.id
+                              ? 'bg-[#EEEDFB] text-[#5B4FCF] border-[rgba(91,79,207,0.25)]'
+                              : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'
+                          }`}
+                        >
+                          {category.emoji} {category.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">
+                      Unde? <span className="text-[#9B9B9B] font-normal">— opțional</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={activityArea}
+                      onChange={e => setActivityArea(e.target.value.slice(0, 160))}
+                      placeholder="Ex: lângă Sharm el-Sheikh"
+                      className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
+                    />
+                    <p className="text-[11px] text-[#9B9B9B] mt-1.5 leading-relaxed">
+                      Zona, nu adresa exactă. Activitățile n-au pin pe hartă, dar e util să știe
+                      lumea din ce colț de lume vine povestea.
+                    </p>
+                  </div>
+                </div>
+              ) : locationName ? (
                 /* Loc ales — arătăm ce am reținut, cu opțiunea de a schimba */
                 <div className="flex flex-col gap-4">
                   <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-4">
@@ -412,6 +542,20 @@ function AddExperienceContent() {
                         </button>
                       ))}
 
+                      {/* nu tot ce povestești e un loc */}
+                      {locationQuery.trim().length >= 3 && (
+                        <button
+                          onClick={useAsActivity}
+                          className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
+                        >
+                          <span className="text-[15px] flex-shrink-0">🪂</span>
+                          <span className="text-[13px] text-[#6B6B6B] truncate">
+                            „<strong className="text-[#0F0F0F]">{locationQuery.trim()}</strong>&rdquo; e o activitate
+                            <span className="text-[#9B9B9B]"> (buggy, scufundări, tur...)</span>
+                          </span>
+                        </button>
+                      )}
+
                       {/* mereu disponibil: locul scris de mână */}
                       <button
                         onClick={useAsNewLocation}
@@ -472,9 +616,9 @@ function AddExperienceContent() {
               <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Cum a fost?</h2>
               <p className="text-[14px] text-[#6B6B6B] mb-6">Evaluează experiența ta.</p>
               <div className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] px-4 py-2">
-                <StarRating value={ratingExp} onChange={setRatingExp} label="Experiență generală" required />
-                <StarRating value={ratingAccess} onChange={setRatingAccess} label="Acces și organizare" />
-                <StarRating value={ratingCrowd} onChange={setRatingCrowd} label="Aglomerație și așteptare" />
+                <StarRating value={ratingExp} onChange={setRatingExp} label={ratingLabels(kind).experience} required />
+                <StarRating value={ratingAccess} onChange={setRatingAccess} label={ratingLabels(kind).access} />
+                <StarRating value={ratingCrowd} onChange={setRatingCrowd} label={ratingLabels(kind).crowd} />
               </div>
             </div>
           )}
@@ -515,10 +659,14 @@ function AddExperienceContent() {
               <h2 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Gata de publicat! 🎉</h2>
               <p className="text-[14px] text-[#6B6B6B] mb-5">Verifică detaliile și publică experiența ta.</p>
               <div className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] p-4 mb-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
                   <MapPin size={15} className="text-[#E8440A]" />
-                  <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F]">{locationName}</span>
-                  {locationCity && <span className="text-[13px] text-[#9B9B9B]">· {locationCity}</span>}
+                  <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F]">
+                    {kind === 'activity' ? activityTitle : locationName}
+                  </span>
+                  {kind === 'activity'
+                    ? activityArea && <span className="text-[13px] text-[#9B9B9B]">· {activityArea}</span>
+                    : locationCity && <span className="text-[13px] text-[#9B9B9B]">· {locationCity}</span>}
                 </div>
                 <div className="flex gap-1 mb-3">
                   {[1,2,3,4,5].map(i => (

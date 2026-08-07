@@ -8,8 +8,8 @@ import { useCurrentProfile } from '@/lib/useCurrentProfile'
 const NAV_ITEMS = [
   { href: '/', label: 'Acasă', Icon: Home },
   { href: '/search', label: 'Caută', Icon: Search },
-  { href: '/create', label: 'Creează', Icon: Plus },
-  { href: '/trips', label: 'Ghiduri', Icon: BookOpen },
+  { href: '/add-experience', label: 'Povestește', Icon: Plus },
+  { href: '/trips', label: 'Călătorii', Icon: BookOpen },
 ]
 
 /**

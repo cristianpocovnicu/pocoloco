@@ -12,9 +12,9 @@ import UserMenu from './UserMenu'
 const NAV_LINKS = [
   { href: '/', label: 'Acasă', Icon: Home },
   { href: '/search', label: 'Caută', Icon: Search },
-  { href: '/trips', label: 'Ghiduri', Icon: BookOpen },
+  { href: '/trips', label: 'Călătorii', Icon: BookOpen },
   { href: '/following', label: 'Urmaresc', Icon: Users },
-  { href: '/create', label: 'Creează', Icon: Plus },
+  { href: '/add-experience', label: 'Povestește', Icon: Plus },
 ]
 
 const NAV_BOTTOM = [
