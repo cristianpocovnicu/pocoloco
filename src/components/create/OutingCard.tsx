@@ -1,6 +1,7 @@
 'use client'
 import { Minus, Plus } from 'lucide-react'
 import { TRANSPORT_TYPES } from '@/lib/utils'
+import CharCounter from '@/components/ui/CharCounter'
 import { suggestTripTitle, type StopDraft, type TripDraft } from '@/lib/story'
 
 type Props = {
@@ -37,7 +38,21 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
         </button>
       )}
 
-      <div className="flex items-center justify-between py-3 border-t border-[rgba(0,0,0,0.06)] mt-3">
+      <div className="py-3 border-t border-[rgba(0,0,0,0.06)] mt-3">
+        <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">
+          Povestea călătoriei <span className="text-[#9B9B9B] font-normal">— opțional</span>
+        </label>
+        <textarea
+          value={trip.description}
+          onChange={e => onChange({ description: e.target.value.slice(0, 20000) })}
+          rows={5}
+          placeholder="Cum a fost, per total? Sfaturi despre buget, vreme, transport — tot ce ține de întreaga ieșire, nu de un singur loc."
+          className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed"
+        />
+        <CharCounter value={trip.description} max={20000} />
+      </div>
+
+      <div className="flex items-center justify-between py-3 border-t border-[rgba(0,0,0,0.06)]">
         <span className="text-[13px] text-[#6B6B6B]">Câte zile a ținut</span>
         <div className="flex items-center gap-3">
           <button

@@ -262,7 +262,7 @@ export function StoryEditor({
         value={stop.content}
         onChange={e => onChange({ content: e.target.value.slice(0, 20000) })}
         rows={5}
-        placeholder="Cum a fost? Ce ai face altfel a doua oară?"
+        placeholder="Ce ai văzut, ce ai mâncat, ce ai fi vrut să știi dinainte — despre locul ăsta."
         className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed"
       />
       <div className="mb-3">

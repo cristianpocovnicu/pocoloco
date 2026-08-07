@@ -156,8 +156,8 @@ export default function StopCard({
           </Section>
 
           <Section
-            label="Cum a fost"
-            hint="Câte stele dai"
+            label="Ce note dai"
+            hint="Câte stele merită"
             summary={ratingSummary}
             open={open.ratings}
             onToggle={() => onToggleSection('ratings')}
@@ -167,7 +167,7 @@ export default function StopCard({
           </Section>
 
           <Section
-            label="Povestea și ponturile"
+            label={stopHasSubject(stop) ? `Cum a fost la ${stopLabel(stop)}?` : 'Povestea și ponturile'}
             hint="Ce ar fi bine să știe altcineva"
             summary={storySummary}
             open={open.story}

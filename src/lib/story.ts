@@ -41,6 +41,8 @@ export type StopDraft = {
 
 export type TripDraft = {
   title: string
+  /** povestea întregii ieșiri, nu a unui loc anume — trips.description */
+  description: string
   durationDays: number
   transportType: string
   coverImage: string | null
@@ -93,7 +95,7 @@ export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
 }
 
 export function emptyTrip(): TripDraft {
-  return { title: '', durationDays: 1, transportType: 'car', coverImage: null }
+  return { title: '', description: '', durationDays: 1, transportType: 'car', coverImage: null }
 }
 
 /** Are oprirea un subiect — un loc ales sau o activitate cu nume? */
@@ -334,6 +336,8 @@ export async function publishStory(
 
   const trip = {
     title: draft.trip.title.trim() || suggestTripTitle(stops) || 'Ieșirea mea',
+    // publish_story o ia din payload; până acum nu i-o trimitea nimeni
+    description: draft.trip.description.trim() || null,
     duration_days: Math.max(draft.trip.durationDays, 1),
     transport_type: draft.trip.transportType,
     // Doar coperta atinsă de user pleacă spre DB. Cea „implicit prima

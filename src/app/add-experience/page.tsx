@@ -48,6 +48,8 @@ function CreateScreen() {
   const [step, setStep] = useState<StoryStep>('story')
   /** câte locuri au rămas fără zi după ce a scăzut durata */
   const [clearedDays, setClearedDays] = useState(0)
+  /** propunerea de a muta povestea ieșirii din textul primului loc */
+  const [offerMove, setOfferMove] = useState(false)
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [sections, setSections] = useState<SectionState>({})
   const [loading, setLoading] = useState(true)
@@ -203,15 +205,55 @@ function CreateScreen() {
   const isMulti = usableStops.length > 1
 
   /**
+   * Semnul că povestea întregii ieșiri a ajuns în textul primului loc:
+   * text lung acolo și nicăieri altundeva. Pragul e generos — sub 2.500
+   * de caractere e plauzibil să fie chiar despre locul ăla.
+   */
+  const LONG_TEXT = 2500
+  const spilledStory = usableStops.length > 1
+    && usableStops[0].content.trim().length > LONG_TEXT
+    && usableStops.slice(1).every(stop => stop.content.trim().length === 0)
+
+  /**
+   * Mută textul primului loc în povestea călătoriei.
+   *
+   * Golirea și trecerea la pasul 2 se fac într-un singur setStops: un
+   * patchStop urmat de continueToDetails ar fi scris lista veche peste
+   * el și textul s-ar fi întors.
+   */
+  const moveStoryToTrip = () => {
+    dirty.current = true
+    const first = usableStops[0]
+    const text = first.content.trim()
+
+    setTrip(prev => ({
+      ...prev,
+      description: prev.description.trim() ? `${prev.description.trim()}
+
+${text}` : text,
+    }))
+    setStops(usableStops.map(stop => (stop.key === first.key ? { ...stop, content: '' } : stop)))
+    setExpandedKey(usableStops[usableStops.length - 1]?.key || null)
+    setOfferMove(false)
+    setStep('details')
+  }
+
+  /**
    * Trecerea la detalii curăță cardurile goale: acolo lista locurilor se
    * reordonează după poziție, iar un card fără nimic în el ar fi o poziție
    * invizibilă în mijlocul listei.
    */
-  const goToDetails = () => {
+  const continueToDetails = () => {
     dirty.current = true
     setStops(usableStops)
     setExpandedKey(usableStops[usableStops.length - 1]?.key || null)
     setStep('details')
+  }
+
+  const goToDetails = () => {
+    // întrebăm o singură dată, chiar înainte de pasul 2
+    if (spilledStory) { setOfferMove(true); return }
+    continueToDetails()
   }
 
   const handlePublish = async () => {
@@ -314,6 +356,32 @@ function CreateScreen() {
               </button>
               <button onClick={discard} className="text-[13px] text-[#6B6B6B] font-medium px-3">
                 Începe altceva
+              </button>
+            </div>
+          </div>
+        )}
+
+        {offerMove && (
+          <div className="bg-white border border-[rgba(232,68,10,0.25)] rounded-2xl p-4 mb-4">
+            <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-1">
+              Pare că ai povestit toată ieșirea în textul primului loc
+            </p>
+            <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3">
+              O mutăm la povestea călătoriei? Acolo stă ce ține de întreaga ieșire, iar
+              la fiecare loc rămâne ce e despre el.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={moveStoryToTrip}
+                className="bg-[#E8440A] text-white font-outfit text-[13px] font-semibold px-4 py-2 rounded-full"
+              >
+                Mută
+              </button>
+              <button
+                onClick={() => { setOfferMove(false); continueToDetails() }}
+                className="text-[13px] text-[#6B6B6B] font-medium px-3"
+              >
+                Lasă cum e
               </button>
             </div>
           </div>
