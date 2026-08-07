@@ -18,13 +18,53 @@ export type PlaceSuggestion = {
   secondaryText: string
 }
 
-export type PlaceDetails = {
-  name: string
+/** Nivelurile administrative, fiecare în câmpul lui. */
+export type PlaceGeography = {
+  /** localitatea propriu-zisă, fără fallback */
+  locality: string | null
+  /** regiunea: Madeira, Brașov, Andaluzia */
+  adminArea1: string | null
+  adminArea2: string | null
+  country: string | null
+  countryCode: string | null
+  /** text de afișare, cu același lanț de fallback ca înainte */
   city: string
-  country: string
+}
+
+export type PlaceDetails = PlaceGeography & {
+  name: string
   latitude: number | null
   longitude: number | null
   placeId: string
+}
+
+type AddressComponent = { longText?: string; shortText?: string; types?: string[] }
+
+/**
+ * Componentele de adresă, desfăcute pe niveluri.
+ *
+ * Fără lanțul de fallback de dinainte: acolo `city` ajungea să însemne ba
+ * oraș, ba județ, ba regiune, în funcție de ce avea Google pentru locul
+ * respectiv. Îl păstrăm doar ca text de afișare; de aici înainte fiecare
+ * nivel are coloana lui.
+ */
+export function extractGeography(components: AddressComponent[] | undefined): PlaceGeography {
+  const list = components || []
+  const long = (type: string) => list.find(c => c.types?.includes(type))?.longText || null
+  const short = (type: string) => list.find(c => c.types?.includes(type))?.shortText || null
+
+  const locality = long('locality')
+  const adminArea1 = long('administrative_area_level_1')
+  const adminArea2 = long('administrative_area_level_2')
+
+  return {
+    locality,
+    adminArea1,
+    adminArea2,
+    country: long('country'),
+    countryCode: short('country'),
+    city: locality || adminArea2 || adminArea1 || '',
+  }
 }
 
 /** Token de sesiune: leagă tastările de alegerea finală, ca Google să le factureze împreună. */
@@ -83,13 +123,43 @@ export async function searchPlaces(
   }
 }
 
-export type GeocodeResult = {
+export type GeocodeResult = PlaceGeography & {
   latitude: number
   longitude: number
   /** ce a găsit Google — util ca adminul să verifice că e locul potrivit */
   matchedName: string
   formattedAddress: string
   placeId: string | null
+}
+
+/**
+ * Doar geografia unui loc, pentru completarea retroactivă din admin.
+ * Field mask minim: plătim exact ce folosim.
+ */
+export async function fetchPlaceGeography(placeId: string): Promise<PlaceGeography | null> {
+  if (!API_KEY || !placeId) return null
+
+  try {
+    const res = await fetch(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?languageCode=ro`,
+      {
+        headers: {
+          'X-Goog-Api-Key': API_KEY,
+          'X-Goog-FieldMask': 'addressComponents',
+        },
+      }
+    )
+
+    if (!res.ok) return null
+    const data = await res.json()
+    const geo = extractGeography(data.addressComponents as AddressComponent[] | undefined)
+
+    // fără niciun nivel completat n-avem ce salva
+    if (!geo.locality && !geo.adminArea1 && !geo.adminArea2 && !geo.country) return null
+    return geo
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -152,7 +222,10 @@ export async function geocodePlace(query: string): Promise<GeocodeResult | null>
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.location,places.formattedAddress',
+        // addressComponents ridică cererea la SKU-ul Places Advanced.
+        // Decizie asumată: la volumul nostru costul e neglijabil, iar fără
+        // el geocodarea din admin n-ar completa geografia deloc.
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.location,places.formattedAddress,places.addressComponents',
       },
       body: JSON.stringify({
         textQuery: query.trim(),
@@ -168,6 +241,7 @@ export async function geocodePlace(query: string): Promise<GeocodeResult | null>
     if (!place?.location?.latitude || !place?.location?.longitude) return null
 
     return {
+      ...extractGeography(place.addressComponents as AddressComponent[] | undefined),
       latitude: place.location.latitude,
       longitude: place.location.longitude,
       matchedName: place.displayName?.text || '',
@@ -199,15 +273,12 @@ export async function getPlaceDetails(
     if (!res.ok) return null
     const data = await res.json()
 
-    type Component = { longText?: string; shortText?: string; types?: string[] }
-    const components = (data.addressComponents || []) as Component[]
-    const pick = (type: string) => components.find(c => c.types?.includes(type))?.longText || ''
+    const geo = extractGeography(data.addressComponents as AddressComponent[] | undefined)
 
     return {
+      ...geo,
+      country: geo.country || 'România',
       name: data.displayName?.text || '',
-      // orașul: localitate, altfel județ/regiune
-      city: pick('locality') || pick('administrative_area_level_2') || pick('administrative_area_level_1'),
-      country: pick('country') || 'România',
       latitude: data.location?.latitude ?? null,
       longitude: data.location?.longitude ?? null,
       placeId,

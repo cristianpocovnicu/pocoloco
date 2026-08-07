@@ -168,6 +168,7 @@ Lucruri decise, dar nefăcute — niciunul nu blochează altceva.
 | Județe pe locații | pentru „X județe din 40" pe harta din profil; nu există coloana, vezi `supabase/checks/inspect_locations.sql` |
 | Curățenie în Storage | pozele poveștilor abandonate rămân orfane; e nevoie de un job periodic peste `storage.objects` |
 | Trip privat | toate călătoriile sunt publice, deci bonusul de +8 se acordă necondiționat până apare opțiunea |
+| Full-text pe conținutul experiențelor | amânat până volumul o cere; azi recenziile se găsesc prin locul lor |
 
 ---
 

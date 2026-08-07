@@ -178,6 +178,10 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
         latitude: details?.latitude ?? null,
         longitude: details?.longitude ?? null,
         google_place_id: place.placeId,
+        locality: details?.locality ?? null,
+        admin_area_1: details?.adminArea1 ?? null,
+        admin_area_2: details?.adminArea2 ?? null,
+        country_code: details?.countryCode ?? null,
         status: 'pending',
         added_by: user.id,
       })

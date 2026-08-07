@@ -19,6 +19,11 @@ export type StopDraft = {
   lat: number | null
   lng: number | null
   placeId: string | null
+  /** nivelurile administrative, așa cum le dă Google */
+  locality: string | null
+  adminArea1: string | null
+  adminArea2: string | null
+  countryCode: string | null
   /** activitate */
   activityTitle: string
   activityCategory: string | null
@@ -75,6 +80,10 @@ export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
     lat: null,
     lng: null,
     placeId: null,
+    locality: null,
+    adminArea1: null,
+    adminArea2: null,
+    countryCode: null,
     activityTitle: '',
     activityCategory: null,
     activityArea: '',
@@ -244,6 +253,10 @@ async function resolveLocation(
       latitude: stop.lat,
       longitude: stop.lng,
       google_place_id: stop.placeId,
+      locality: stop.locality,
+      admin_area_1: stop.adminArea1,
+      admin_area_2: stop.adminArea2,
+      country_code: stop.countryCode,
       status: 'pending',
       added_by: userId,
     })

@@ -85,21 +85,21 @@ export default function SearchPage() {
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
+  /**
+   * Căutarea trece prin search_locations (migrarea 37): normalizează
+   * diacriticele și caută și în geografie, nu doar în nume — „madeira"
+   * întoarce și insula, și locurile de pe ea.
+   */
   const doSearch = useCallback(async (q: string, cat: string, score: number) => {
     setLoading(true)
     const supabase = createClient()
-    let req = supabase
-      .from('locations')
-      .select('id, name, city, country, category, score, experience_count, cover_image, latitude, longitude')
-      .eq('status', 'approved')
-      .order('experience_count', { ascending: false })
-      .limit(30)
 
-    if (q.trim()) req = req.ilike('name', `%${q.trim()}%`)
-    if (cat !== 'Toate') req = req.eq('category', cat)
-    if (score > 0) req = req.gte('score', score)
-
-    const { data, error: searchError } = await req
+    const { data, error: searchError } = await supabase.rpc('search_locations', {
+      p_term: q.trim(),
+      p_category: cat === 'Toate' ? null : cat,
+      p_min_score: score,
+      p_limit: 30,
+    })
     // fără asta, o căutare picată arată identic cu „niciun rezultat"
     setError(searchError ? 'Nu am putut încărca locurile. Verifică conexiunea și încearcă din nou.' : null)
     const rows = (data || []) as Location[]
@@ -161,20 +161,13 @@ export default function SearchPage() {
     setLoading(true)
     const supabase = createClient()
 
-    let request = supabase
-      .from('experiences')
-      .select('id, title, activity_category, activity_area, images, upvotes, created_at')
-      .eq('kind', 'activity')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(30)
+    const { data, error: searchError } = await supabase.rpc('search_activities', {
+      p_term: q.trim(),
+      p_limit: 30,
+    })
 
-    if (q.trim()) request = request.ilike('title', `%${q.trim()}%`)
-
-    const { data, error: searchError } = await request
-
-    // coloana kind vine din 027_20260808_experience_kinds; până e rulată,
-    // tabul rămâne gol în loc să arunce o eroare în față
+    // funcția vine din migrarea 37; până e rulată, tabul rămâne gol în
+    // loc să arunce o eroare în față
     setError(null)
     setActivities(searchError ? [] : ((data || []) as ActivityResult[]))
     setLoading(false)
@@ -206,13 +199,13 @@ export default function SearchPage() {
 
     const timer = setTimeout(async () => {
       const supabase = createClient()
-      const { data } = await supabase
-        .from('locations')
-        .select('id, name, city, country, category, score, experience_count, cover_image, latitude, longitude')
-        .eq('status', 'approved')
-        .ilike('name', `%${query.trim()}%`)
-        .order('experience_count', { ascending: false })
-        .limit(6)
+      // aceeași funcție ca la rezultate, doar cu o limită mai mică
+      const { data } = await supabase.rpc('search_locations', {
+        p_term: query.trim(),
+        p_category: null,
+        p_min_score: 0,
+        p_limit: 6,
+      })
       setSuggestions((data || []) as Location[])
     }, 150)
 

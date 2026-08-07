@@ -79,6 +79,7 @@ nu schimbă nimic, doar citesc schema.
 | 34 | `supabase/migrations/034_20260808_visited_period.sql` | `visited_year` / `visited_month` — când a fost cineva acolo; actualizează și `publish_story()` |
 | 35 | `supabase/migrations/035_20260808_publish_story_days.sql` | `publish_story()` scrie ziua aleasă pentru fiecare loc, nu toate pe ziua 1 |
 | 36 | `supabase/migrations/036_20260808_location_delete_rules.sql` | reguli de ștergere pentru locații + `admin_delete_location()` |
+| 37 | `supabase/migrations/037_20260809_location_geography.sql` | regiuni structurate pe locații, `unaccent` + `pg_trgm`, funcțiile de căutare |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).

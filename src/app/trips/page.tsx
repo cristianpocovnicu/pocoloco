@@ -34,19 +34,13 @@ export default function TripsPage() {
     setLoading(true)
     const supabase = createClient()
 
-    let request = supabase
-      .from('trips')
-      .select('*')
-      .eq('status', 'active')
-      .limit(PAGE_SIZE)
-
-    request = sortKey === 'popular'
-      ? request.order('is_guide', { ascending: false }).order('save_count', { ascending: false }).order('created_at', { ascending: false })
-      : request.order('created_at', { ascending: false })
-
-    if (q.trim()) request = request.ilike('title', `%${q.trim()}%`)
-
-    const { data, error: loadError } = await request
+    // search_trips (migrarea 37) ignoră diacriticele: „bacau" găsește
+    // „Bacău". Titlul rămâne singura coloană căutată.
+    const { data, error: loadError } = await supabase.rpc('search_trips', {
+      p_term: q.trim(),
+      p_sort: sortKey,
+      p_limit: PAGE_SIZE,
+    })
     setError(loadError ? 'Nu am putut încărca călătoriile. Încearcă din nou.' : null)
     const rows = (data || []) as Trip[]
     setTrips(rows)

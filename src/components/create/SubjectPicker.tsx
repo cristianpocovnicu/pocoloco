@@ -87,6 +87,10 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
       lat: details?.latitude ?? null,
       lng: details?.longitude ?? null,
       placeId: place.placeId,
+      locality: details?.locality ?? null,
+      adminArea1: details?.adminArea1 ?? null,
+      adminArea2: details?.adminArea2 ?? null,
+      countryCode: details?.countryCode ?? null,
     })
     setQuery('')
     setSearching(false)
@@ -100,6 +104,10 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
       lat: null,
       lng: null,
       placeId: null,
+      locality: null,
+      adminArea1: null,
+      adminArea2: null,
+      countryCode: null,
     })
     setQuery('')
   }

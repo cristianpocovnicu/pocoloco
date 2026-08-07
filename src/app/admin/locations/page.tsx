@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair, ImagePlus } from 'lucide-react'
+import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair, ImagePlus, Globe } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, statusStyle, type MiniProfile } from '@/lib/admin'
 import { cn, timeAgo } from '@/lib/utils'
@@ -8,7 +8,7 @@ import AdminHeader from '@/components/admin/AdminHeader'
 import CoordinatesRow from '@/components/admin/CoordinatesRow'
 import CoverImage from '@/components/ui/CoverImage'
 import { attachGoogleCover } from '@/lib/location-cover'
-import { PLACES_ENABLED, geocodePlace } from '@/lib/places'
+import { PLACES_ENABLED, fetchPlaceGeography, geocodePlace, type PlaceGeography } from '@/lib/places'
 
 type LocationRow = {
   id: string
@@ -24,6 +24,10 @@ type LocationRow = {
   longitude: number | null
   created_at: string
   google_place_id?: string | null
+  locality?: string | null
+  admin_area_1?: string | null
+  admin_area_2?: string | null
+  country_code?: string | null
 }
 
 const BASE_COLUMNS = 'id, name, city, country, category, status, added_by, experience_count, cover_image, latitude, longitude, created_at'
@@ -50,6 +54,9 @@ export default function AdminLocationsPage() {
   const [photoId, setPhotoId] = useState<string | null>(null)
   const [photoBulk, setPhotoBulk] = useState<{ done: number; total: number; found: number } | null>(null)
   const [photosSupported, setPhotosSupported] = useState(true)
+  const [geoSupported, setGeoSupported] = useState(true)
+  const [geoId, setGeoId] = useState<string | null>(null)
+  const [geoBulk, setGeoBulk] = useState<{ done: number; total: number; found: number } | null>(null)
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -61,7 +68,15 @@ export default function AdminLocationsPage() {
 
     // google_place_id vine din migrarea 020_20260807_location_photos; până e
     // rulată, pagina merge mai departe fără butoanele de poză
-    let { data, error: fetchError } = await query(`${BASE_COLUMNS}, google_place_id`)
+    // geografia vine din migrarea 37; până e rulată, pagina cade înapoi
+    // pe forma de dinainte, apoi pe cea fără google_place_id
+    let { data, error: fetchError } = await query(
+      `${BASE_COLUMNS}, google_place_id, locality, admin_area_1, admin_area_2, country_code`
+    )
+    if (fetchError) {
+      setGeoSupported(false)
+      ;({ data, error: fetchError } = await query(`${BASE_COLUMNS}, google_place_id`))
+    }
     if (fetchError) {
       setPhotosSupported(false)
       ;({ data, error: fetchError } = await query(BASE_COLUMNS))
@@ -177,6 +192,8 @@ ${detalii}`)) {
     if (saveError) return false
 
     if (result.placeId) await savePlaceId(loc.id, result.placeId)
+    // aceeași cerere ne-a adus și nivelurile administrative
+    await saveGeography(loc.id, result)
     return true
   }
 
@@ -194,6 +211,87 @@ ${detalii}`)) {
       return
     }
     setLocations(prev => prev.map(l => (l.id === id ? { ...l, google_place_id: placeId } : l)))
+  }
+
+  /** Scrie nivelurile administrative, dacă migrarea 37 e rulată. */
+  const saveGeography = async (id: string, geo: PlaceGeography): Promise<boolean> => {
+    if (!geoSupported) return false
+
+    const supabase = createClient()
+    const { error: updateError } = await supabase
+      .from('locations')
+      .update({
+        locality: geo.locality,
+        admin_area_1: geo.adminArea1,
+        admin_area_2: geo.adminArea2,
+        country_code: geo.countryCode,
+      })
+      .eq('id', id)
+
+    if (updateError) {
+      // coloanele lipsesc => migrarea nu e rulată; ascundem restul funcției
+      setGeoSupported(false)
+      return false
+    }
+
+    setLocations(prev => prev.map(l => (l.id === id ? {
+      ...l,
+      locality: geo.locality,
+      admin_area_1: geo.adminArea1,
+      admin_area_2: geo.adminArea2,
+      country_code: geo.countryCode,
+    } : l)))
+    return true
+  }
+
+  /**
+   * Geografia unei locații existente. Cu place_id o cerem direct; fără
+   * el, îl căutăm întâi după nume, ca la butonul de poze.
+   */
+  const geographyOne = async (loc: LocationRow): Promise<boolean> => {
+    let placeId = loc.google_place_id || null
+
+    if (!placeId) {
+      const query = [loc.name, loc.city, loc.country].filter(Boolean).join(', ')
+      const result = await geocodePlace(query)
+      if (!result) return false
+      placeId = result.placeId
+      if (placeId) await savePlaceId(loc.id, placeId)
+      // geocodePlace aduce deja componentele: nu mai plătim o cerere
+      return await saveGeography(loc.id, result)
+    }
+
+    const geo = await fetchPlaceGeography(placeId)
+    if (!geo) return false
+    return await saveGeography(loc.id, geo)
+  }
+
+  const handleGeographyOne = async (loc: LocationRow) => {
+    setGeoId(loc.id)
+    setError(null)
+    const ok = await geographyOne(loc)
+    if (!ok) setError(`Nu am găsit regiunea pentru „${loc.name}".`)
+    setGeoId(null)
+  }
+
+  /** Ca la geocodare și la poze: secvențial, cu pauză între cereri. */
+  const handleGeographyAll = async () => {
+    const missing = locations.filter(l => !l.admin_area_1)
+    if (missing.length === 0) return
+    if (!window.confirm(`Caut regiunea pentru ${missing.length} locații. Poate dura câteva minute. Continui?`)) return
+
+    setError(null)
+    setGeoBulk({ done: 0, total: missing.length, found: 0 })
+
+    let found = 0
+    for (let i = 0; i < missing.length; i++) {
+      const ok = await geographyOne(missing[i])
+      if (ok) found++
+      setGeoBulk({ done: i + 1, total: missing.length, found })
+      if (i < missing.length - 1) await new Promise(r => setTimeout(r, 250))
+    }
+
+    setTimeout(() => setGeoBulk(null), 4000)
   }
 
   /**
@@ -289,6 +387,8 @@ ${detalii}`)) {
   const missingCoords = locations.filter(l => l.latitude == null || l.longitude == null).length
   const withoutCover = locations.filter(l => !l.cover_image)
   const missingCovers = withoutCover.length
+  const withoutGeo = locations.filter(l => !l.admin_area_1)
+  const missingGeo = withoutGeo.length
 
   const counts = {
     pending: locations.filter(l => l.status === 'pending').length,
@@ -371,6 +471,58 @@ ${detalii}`)) {
                 className="bg-[#5B4FCF] text-white font-outfit text-[12px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 flex-shrink-0"
               >
                 <Crosshair size={13} /> Geocodează toate
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Regiuni din Google */}
+        {PLACES_ENABLED && geoSupported && missingGeo > 0 && (
+          <div className="bg-white border border-[rgba(0,0,0,0.25)] rounded-2xl px-4 py-3 mb-4 flex flex-col md:flex-row md:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-[#0F0F0F]">
+                {missingGeo} {missingGeo === 1 ? 'locație nu are regiune' : 'locații nu au regiune'}
+              </p>
+              <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
+                Fără ea, o căutare după „Madeira&rdquo; nu găsește locurile de pe insulă — doar
+                pe cele care au cuvântul în nume.
+              </p>
+              <p className="text-[12px] text-[#6B6B6B] leading-relaxed mt-1.5">
+                {withoutGeo.slice(0, 10).map((loc, i) => (
+                  <span key={loc.id}>
+                    {i > 0 && ', '}
+                    <a
+                      href={`/location/${loc.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#5B4FCF] hover:underline"
+                    >
+                      {loc.name}
+                    </a>
+                  </span>
+                ))}
+                {missingGeo > 10 && ` și încă ${missingGeo - 10}`}
+              </p>
+            </div>
+
+            {geoBulk ? (
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <div className="w-32 h-1.5 bg-[#F1F1F1] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#0F0F0F] rounded-full transition-all"
+                    style={{ width: `${(geoBulk.done / geoBulk.total) * 100}%` }}
+                  />
+                </div>
+                <span className="text-[12px] text-[#6B6B6B] whitespace-nowrap">
+                  {geoBulk.done}/{geoBulk.total} · {geoBulk.found} găsite
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={handleGeographyAll}
+                className="bg-[#0F0F0F] text-white font-outfit text-[12px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 flex-shrink-0"
+              >
+                <Globe size={13} /> Regiuni pentru toate
               </button>
             )}
           </div>
@@ -461,6 +613,7 @@ ${detalii}`)) {
                     </div>
                     <p className="text-[12px] text-[#6B6B6B] truncate">
                       📍 {loc.city || 'Fără oraș'}{loc.country ? `, ${loc.country}` : ''}
+                      {loc.admin_area_1 ? ` · regiune: ${loc.admin_area_1}` : ''}
                       {loc.category ? ` · ${loc.category}` : ''}
                     </p>
                     <p className="text-[11px] text-[#9B9B9B] mt-0.5 mb-2">
@@ -477,6 +630,20 @@ ${detalii}`)) {
                         onGeocode={() => handleGeocodeOne(loc)}
                         onSave={(lat, lng) => saveCoords(loc.id, lat, lng)}
                       />
+
+                      {PLACES_ENABLED && geoSupported && !loc.admin_area_1 && (
+                        <button
+                          onClick={() => handleGeographyOne(loc)}
+                          disabled={geoId === loc.id || !!geoBulk}
+                          title="Completează regiunea din Google"
+                          className="text-[11px] bg-[#F1F1F1] text-[#0F0F0F] px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {geoId === loc.id
+                            ? <Loader2 size={11} className="animate-spin" />
+                            : <Globe size={11} />}
+                          Regiune
+                        </button>
+                      )}
 
                       {PLACES_ENABLED && photosSupported && !loc.cover_image && (
                         <button
