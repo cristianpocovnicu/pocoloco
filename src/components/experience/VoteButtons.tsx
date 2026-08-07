@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowUp, ArrowDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import { useAuthGate } from '@/components/auth/AuthGate'
 import { applyVote, type VoteTarget, type VoteType } from '@/lib/votes'
 import { cn, formatCount } from '@/lib/utils'
 
@@ -26,6 +27,7 @@ export default function VoteButtons({
   onVoted,
 }: Props) {
   const router = useRouter()
+  const gate = useAuthGate()
   const [vote, setVote] = useState<VoteType | null>(myVote)
   const [counts, setCounts] = useState({ up: upvotes, down: downvotes })
   const [pending, setPending] = useState(false)
@@ -45,7 +47,7 @@ export default function VoteButtons({
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    if (!user) { gate('Votează ce ți-a fost util și ajută pe altcineva să aleagă.'); return }
 
     touched.current = true
     setPending(true)

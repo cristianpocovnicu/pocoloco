@@ -157,7 +157,7 @@ export default function TripsPage() {
             <Route size={18} className="text-[#E8440A]" />
             <span className="font-outfit text-[17px] font-semibold text-[#0F0F0F]">Călătorii</span>
             <Link
-              href="/trip/new"
+              href="/add-experience"
               className="ml-auto bg-[#E8440A] text-white font-outfit text-[12px] font-semibold px-3 py-1.5 rounded-full flex items-center gap-1"
             >
               <Plus size={13} /> Adaugă
@@ -214,7 +214,7 @@ export default function TripsPage() {
             description={query.trim()
               ? 'Încearcă alt termen sau schimbă sortarea.'
               : 'Un itinerar bun le economisește altora zile de căutat. Pune-l pe al tău: locurile, pe zile, cu notițe.'}
-            action={query.trim() ? undefined : { href: '/trip/new', label: '+ Creează prima călătorie' }}
+            action={query.trim() ? undefined : { href: '/add-experience', label: '+ Povestește prima călătorie' }}
           />
         ) : (
           <>

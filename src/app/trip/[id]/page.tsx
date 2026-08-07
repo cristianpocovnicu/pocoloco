@@ -9,6 +9,7 @@ import BottomNav from '@/components/layout/BottomNav'
 import ShareButton from '@/components/ui/ShareButton'
 import FollowButton from '@/components/profile/FollowButton'
 import { createClient } from '@/lib/supabase-client'
+import { useAuthGate } from '@/components/auth/AuthGate'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, TRANSPORT_TYPES } from '@/lib/utils'
 import { activityLabel } from '@/lib/activities'
@@ -42,6 +43,7 @@ type Author = {
 export default function TripPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const gate = useAuthGate()
   const toast = useToast()
 
   const [trip, setTrip] = useState<Trip | null>(null)
@@ -108,7 +110,7 @@ export default function TripPage() {
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    if (!user) { gate('Salvează călătoriile pe care vrei să le ai la îndemână.'); return }
 
     const next = !saved
     setSavePending(true)

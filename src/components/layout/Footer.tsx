@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 // pe fluxurile de autentificare, wizard-uri și în admin, footerul doar încurcă
-const HIDDEN_ON = ['/login', '/register', '/onboarding', '/add-experience', '/trip/new', '/admin']
+const HIDDEN_ON = ['/login', '/register', '/onboarding', '/add-experience', '/admin']
 
 export default function Footer() {
   const pathname = usePathname()

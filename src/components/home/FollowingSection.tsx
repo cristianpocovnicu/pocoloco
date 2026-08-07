@@ -24,13 +24,17 @@ export default function FollowingSection() {
   const [items, setItems] = useState<FeedItem[]>([])
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([])
   const [loading, setLoading] = useState(true)
+  /** secțiunea e despre cine urmărești — pentru un vizitator n-are subiect */
+  const [loggedIn, setLoggedIn] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
+      setLoggedIn(!!user)
+      if (!user) { setLoading(false); return }
 
-      const followingIds = user ? await fetchFollowingIds(supabase, user.id) : []
+      const followingIds = await fetchFollowingIds(supabase, user.id)
       const feed = followingIds.length > 0
         ? await fetchFollowingFeed(supabase, followingIds, { limit: 8 })
         : []
@@ -58,6 +62,8 @@ export default function FollowingSection() {
     setCanScrollLeft(el.scrollLeft > 10)
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10)
   }
+
+  if (!loggedIn && !loading) return null
 
   if (loading) return (
     <section className="mb-7">

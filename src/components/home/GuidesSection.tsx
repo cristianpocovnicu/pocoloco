@@ -21,6 +21,8 @@ export default function GuidesSection() {
   const [guides, setGuides] = useState<Guide[]>([])
   const [followingIds, setFollowingIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  /** sugestii de urmărire: fără cont, n-ai ce face cu ele */
+  const [loggedIn, setLoggedIn] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -48,6 +50,8 @@ export default function GuidesSection() {
       }
 
       const { data: { user } } = await supabase.auth.getUser()
+      setLoggedIn(!!user)
+      if (!user) { setLoading(false); return }
       if (user) setFollowingIds(await fetchFollowingIds(supabase, user.id))
 
       setGuides(
@@ -71,7 +75,7 @@ export default function GuidesSection() {
   )
 
   // fără ghizi în comunitate, secțiunea n-are ce arăta
-  if (guides.length === 0) return null
+  if (!loggedIn || guides.length === 0) return null
 
   return (
     <section className="mb-7">

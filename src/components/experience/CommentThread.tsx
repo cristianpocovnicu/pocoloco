@@ -18,6 +18,7 @@ import VoteButtons from './VoteButtons'
 import HiddenByVotes from './HiddenByVotes'
 import { fetchMyCommentVotes, netScore, HIDE_THRESHOLD_COMMENT, type VoteType } from '@/lib/votes'
 import { useToast } from '@/components/ui/Toast'
+import { useAuthGate } from '@/components/auth/AuthGate'
 
 export type CommentViewer = { id: string; isAdmin: boolean } | null
 
@@ -38,6 +39,7 @@ export default function CommentThread({
 }: Props) {
   const router = useRouter()
   const toast = useToast()
+  const gate = useAuthGate()
   const [comments, setComments] = useState<CommentWithAuthor[]>(initialComments || [])
   const [viewer, setViewer] = useState<CommentViewer>(viewerProp ?? null)
   const [loading, setLoading] = useState(initialComments === undefined)
@@ -106,7 +108,7 @@ export default function CommentThread({
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    if (!user) { gate('Comentariile sunt locul unde se lămuresc detaliile.'); return }
 
     setSending(true)
     setError(null)

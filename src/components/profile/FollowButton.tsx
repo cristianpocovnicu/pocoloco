@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserPlus, UserCheck, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import { useAuthGate } from '@/components/auth/AuthGate'
 import { isFollowing as checkFollowing, setFollow } from '@/lib/follows'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
@@ -27,6 +28,7 @@ export default function FollowButton({
   onChange,
 }: Props) {
   const router = useRouter()
+  const gate = useAuthGate()
   const [following, setFollowing] = useState(!!initialFollowing)
   const [meId, setMeId] = useState<string | null>(null)
   const [ready, setReady] = useState(initialFollowing !== undefined)
@@ -59,7 +61,7 @@ export default function FollowButton({
     if (pending) return
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    if (!user) { gate('Urmărește călătorii ale căror povești vrei să le vezi.'); return }
 
     const next = !following
     setPending(true)

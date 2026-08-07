@@ -114,6 +114,32 @@ Zilele se scriu în `trip_locations.day_number` la publicare (migrarea 35),
 doar unde au fost alese. Dacă durata scade sub o zi deja aleasă, ziua se
 golește cu un mesaj discret în loc să rămână o valoare imposibilă.
 
+### Iterația 7 — wizardul vechi dispare *(implementată, 8 august 2026)*
+
+`/trip/new` a devenit redirect. O călătorie nu se mai construiește de la
+zero dintr-o listă de pin-uri; se naște din locurile povestite, iar
+detaliile ei se cer la pasul 2. Componenta `TellUsMorePrompt` (promptul
+„povestește despre opriri", folosit doar de wizard) a plecat odată cu el;
+`CountryPicker` și `ItineraryLocationPicker` rămân — le folosește
+editorul de călătorie.
+
+**Notă legată:** `experiences.status = 'draft'` nu se mai produce.
+Comutatorul de vizibilitate a dispărut odată cu ecranul unic — o poveste
+neterminată stă în `creation_drafts`, nu ca experiență ascunsă. Verificat
+în bază: zero rânduri cu status draft. Politicile RLS și filtrele care
+tratează draft-ul rămân pe loc, inofensive, pentru rândurile vechi care ar
+putea apărea.
+
+### Iterația 8 — vizitatorul vede tot *(implementată, 8 august 2026)*
+
+Principiul: conținutul public e public întreg — fără trunchiere, fără
+blur, fără ziduri. Contul se cere exact în momentul unei acțiuni care are
+nevoie de el, printr-un dialog scurt care duce la login sau înregistrare
+**cu întoarcere la pagina de unde a plecat** (`?next=`), nu pe acasă.
+
+De pe homepage dispar pentru vizitator doar cele două secțiuni care
+n-au subiect fără cont: „Urmăresc" și „Ghizi de urmărit". Restul rămâne.
+
 ---
 
 ## 4. Ce nu se schimbă

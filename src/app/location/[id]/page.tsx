@@ -21,6 +21,7 @@ import DynamicMap from '@/components/map/DynamicMap'
 import { getLocationSaveStatus, setLocationSaveStatus, type SaveStatus } from '@/lib/saves'
 import { fetchLocationCovers } from '@/lib/covers'
 import { useToast } from '@/components/ui/Toast'
+import { useAuthGate } from '@/components/auth/AuthGate'
 import Image from 'next/image'
 import CoverImage from '@/components/ui/CoverImage'
 
@@ -82,6 +83,7 @@ export default function LocationPage() {
   const { id } = useParams()
   const router = useRouter()
   const toast = useToast()
+  const gate = useAuthGate()
   const [location, setLocation] = useState<Location | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [loading, setLoading] = useState(true)
@@ -214,7 +216,7 @@ export default function LocationPage() {
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    if (!user) { gate('Ține minte locurile unde vrei să ajungi și pe cele unde ai fost.'); return }
 
     const target = saveStatus === next ? null : next
     const previous = saveStatus

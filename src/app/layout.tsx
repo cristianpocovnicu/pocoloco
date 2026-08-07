@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import '@/styles/globals.css'
 import AppShell from '@/components/layout/AppShell'
+import { Suspense } from 'react'
 import { ToastProvider } from '@/components/ui/Toast'
+import { AuthGateProvider } from '@/components/auth/AuthGate'
 
 export const metadata: Metadata = {
   // fără metadataBase, imaginile OG relative nu se rezolvă în absolut
@@ -47,7 +49,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ro">
       <body>
         <ToastProvider>
-          <AppShell>{children}</AppShell>
+          <Suspense fallback={null}>
+            <AuthGateProvider>
+              <AppShell>{children}</AppShell>
+            </AuthGateProvider>
+          </Suspense>
         </ToastProvider>
       </body>
     </html>
