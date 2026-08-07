@@ -237,7 +237,7 @@ function CreateScreen() {
         </div>
       </div>
 
-      <div className="max-w-[680px] mx-auto px-5 pt-4 pb-32">
+      <div className="max-w-[680px] mx-auto px-5 pt-4 pb-40">
         {pendingDraft && (
           <div className="bg-white border border-[rgba(232,68,10,0.25)] rounded-2xl p-4 mb-4">
             <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-0.5">
@@ -318,7 +318,10 @@ function CreateScreen() {
       </div>
 
       {!pendingDraft && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[rgba(0,0,0,0.08)] px-5 py-3 z-40">
+        <div
+          className="fixed bottom-0 left-0 right-0 bg-white border-t border-[rgba(0,0,0,0.08)] px-5 pt-3 z-40"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
           <div className="max-w-[680px] mx-auto flex items-center gap-3">
             <button
               onClick={handlePublish}

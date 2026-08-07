@@ -34,6 +34,10 @@ export default function StopCard({
   open,
   onToggleSection,
 }: Props) {
+  // la primul loc totul e deschis de la început; la următoarele, doar
+  // căutarea și nota, restul la cerere
+  const alwaysOpen = index === 0
+
   const photoSummary = stop.images.length > 0
     ? `${stop.images.length} ${stop.images.length === 1 ? 'poză' : 'poze'}`
     : null
@@ -122,6 +126,7 @@ export default function StopCard({
             summary={photoSummary}
             open={open.photos}
             onToggle={() => onToggleSection('photos')}
+            alwaysOpen={alwaysOpen}
           >
             <PhotoEditor images={stop.images} onChange={images => onChange({ images })} />
           </Section>
@@ -132,6 +137,7 @@ export default function StopCard({
             summary={ratingSummary}
             open={open.ratings}
             onToggle={() => onToggleSection('ratings')}
+            alwaysOpen={alwaysOpen}
           >
             <RatingEditor stop={stop} onChange={onChange} />
           </Section>
@@ -142,6 +148,7 @@ export default function StopCard({
             summary={storySummary}
             open={open.story}
             onToggle={() => onToggleSection('story')}
+            alwaysOpen={alwaysOpen}
           >
             <StoryEditor stop={stop} onChange={onChange} />
           </Section>

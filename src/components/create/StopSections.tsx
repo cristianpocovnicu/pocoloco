@@ -13,8 +13,13 @@ const TIPS_OPTIONS = [
 ]
 
 /**
- * Un rând care se deschide. Închis, arată ce ai pus deja; deschis, arată
- * editorul. Nimic nu e obligatoriu, deci nimic nu e deschis din start.
+ * Două feluri de secțiune:
+ *
+ *   - deschisă mereu (`alwaysOpen`), la primul loc: editorul e acolo de
+ *     la încărcare, cu „(opțional)" lângă titlu ca să se vadă că nu e
+ *     nimic de bifat înainte de publicare;
+ *   - un rând care se deschide la click, pentru locurile următoare, unde
+ *     de obicei n-ai de scris decât o notă.
  */
 export function Section({
   label,
@@ -23,6 +28,7 @@ export function Section({
   open,
   onToggle,
   children,
+  alwaysOpen,
 }: {
   label: string
   hint?: string
@@ -31,8 +37,20 @@ export function Section({
   open: boolean
   onToggle: () => void
   children: React.ReactNode
+  /** fără strângere: editorul stă deschis */
+  alwaysOpen?: boolean
 }) {
   const filled = !!summary
+
+  if (alwaysOpen) return (
+    <div className="border-t border-[rgba(0,0,0,0.06)] pt-3.5 mt-3.5">
+      <div className="flex items-baseline gap-1.5 mb-2.5">
+        <span className="text-[13px] font-medium text-[#0F0F0F]">{label}</span>
+        <span className="text-[11px] text-[#9B9B9B]">(opțional)</span>
+      </div>
+      {children}
+    </div>
+  )
 
   return (
     <div className="border-t border-[rgba(0,0,0,0.06)]">
