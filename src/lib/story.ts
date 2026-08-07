@@ -346,17 +346,6 @@ export async function publishStory(
   // loc e o călătorie, nu o experiență răzleață.
   const isJourney = draft.mode === 'journey' && draft.trip.title.trim().length > 0
 
-  /*
-   * publish_story() (migrarea 35) întoarce fără să creeze călătoria dacă
-   * primește sub două opriri — dar creează experiențele înainte de asta.
-   * Cu o singură oprire am publica experiența și am pierde titlul în
-   * tăcere, așa că ne oprim înainte, cu un mesaj.
-   *
-   * Se scoate în momentul în care pragul din funcție coboară la 1.
-   */
-  if (isJourney && stops.length === 1) {
-    throw new Error('Deocamdată o poveste cu nume are nevoie de cel puțin două locuri. Mai adaugă unul.')
-  }
 
   // O singură oprire: un insert, fără călătorie inventată în jurul ei
   if (stops.length === 1 && !isJourney) {
@@ -412,16 +401,15 @@ export async function publishStory(
     p_trip: trip,
   })
 
-  if (error) {
-    throw new Error(
-      error.message?.includes('publish_story')
-        ? 'Publicarea mai multor opriri are nevoie de migrarea 30 (publish_story).'
-        : error.message || 'Nu am putut publica.'
-    )
-  }
+  // funcția verifică totul înaintea scrierilor (migrarea 38), deci un
+  // refuz vine ca mesaj propriu, fără date rămase în urmă — îl arătăm ca
+  // atare, nu îl înlocuim cu unul generic
+  if (error) throw new Error(error.message || 'Nu am putut publica.')
 
   const result = (data || {}) as { trip_id?: string | null; experience_id?: string | null }
-  if (!result.trip_id) throw new Error('Nu am putut publica.')
+  if (!result.trip_id) {
+    throw new Error('Povestea s-a salvat, dar nu am putut lega locurile între ele. Verifică-le din profil.')
+  }
 
   return {
     tripId: result.trip_id,

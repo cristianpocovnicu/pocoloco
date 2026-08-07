@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-client'
 import { useToast } from '@/components/ui/Toast'
 import StopCard from '@/components/create/StopCard'
 import SubjectPicker from '@/components/create/SubjectPicker'
+import StoryField from '@/components/create/StoryField'
 import DetailsScreen from '@/components/create/DetailsScreen'
 import AddToTripDialog from '@/components/trip/AddToTripDialog'
 import {
@@ -492,10 +493,26 @@ ${text}` : text,
               placeholder="Cum o numim?"
               className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 font-outfit text-[18px] font-semibold text-[#0F0F0F] outline-none focus:border-[#E8440A] transition-colors placeholder:font-normal placeholder:text-[#9B9B9B]"
             />
-            {usableStops.length === 0 && (
-              <p className="text-[12px] text-[#9B9B9B] mt-1.5">Adaugă primul loc de acolo.</p>
-            )}
           </div>
+        )}
+
+        {/* Aceeași sursă ca la pasul 2 — TripDraft.description. Scrii aici,
+            apare acolo, și invers: nu există al doilea câmp. */}
+        {!pendingDraft && mode === 'journey' && (
+          <div className="mb-4">
+            <StoryField
+              value={trip.description}
+              onChange={value => { dirty.current = true; setTrip(prev => ({ ...prev, description: value })) }}
+              label="Povestea ta (opțional)"
+              placeholder="Cum a fost, per total? Buget, vreme, transport, ce ai face diferit — tot ce ține de întreaga ieșire."
+            />
+          </div>
+        )}
+
+        {!pendingDraft && mode === 'journey' && (
+          <p className="text-[12px] font-medium text-[#6B6B6B] mb-2">
+            Adaugă locurile prin care ai trecut
+          </p>
         )}
 
         {!pendingDraft && (

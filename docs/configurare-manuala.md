@@ -80,6 +80,7 @@ nu schimbă nimic, doar citesc schema.
 | 35 | `supabase/migrations/035_20260808_publish_story_days.sql` | `publish_story()` scrie ziua aleasă pentru fiecare loc, nu toate pe ziua 1 |
 | 36 | `supabase/migrations/036_20260808_location_delete_rules.sql` | reguli de ștergere pentru locații + `admin_delete_location()` |
 | 37 | `supabase/migrations/037_20260809_location_geography.sql` | regiuni structurate pe locații, `unaccent` + `pg_trgm`, funcțiile de căutare |
+| 38 | `supabase/migrations/038_20260809_publish_story_single_stop.sql` | `publish_story()`: verifică înainte de a scrie, iar călătoria se face de la prima oprire |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).
