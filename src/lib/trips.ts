@@ -10,6 +10,11 @@ export type Trip = {
   transport_type: string | null
   /** mijloacele călătoriei, de la migrarea 39 */
   transport_types?: string[] | null
+  /**
+   * Rămas din schema inițială. Niciun ecran nu-l scrie și, de la curățenia
+   * din 9 august 2026, niciunul nu-l citește — coloana stă pe loc, tipul o
+   * ține minte. Se șterge când decidem că nu mai vrem câmpul deloc.
+   */
   person_count: number | null
   countries: string[] | null
   cover_image: string | null

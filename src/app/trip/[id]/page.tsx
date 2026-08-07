@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Bookmark, Calendar, Globe, Loader2, MapPin, Pencil, PenLine, Star, Trash2, Users,
+  ArrowLeft, Bookmark, Calendar, Globe, Loader2, MapPin, Pencil, PenLine, Star, Trash2,
 } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import ShareButton from '@/components/ui/ShareButton'
@@ -209,11 +209,6 @@ export default function TripPage() {
             {itinerary.length > 0 && (
               <span className="text-[12px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-3 py-1 flex items-center gap-1.5">
                 <MapPin size={12} /> {itinerary.length} opriri
-              </span>
-            )}
-            {trip.person_count && (
-              <span className="text-[12px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-3 py-1 flex items-center gap-1.5">
-                <Users size={12} /> {trip.person_count} persoane
               </span>
             )}
             {trip.countries && trip.countries.length > 0 && (

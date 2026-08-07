@@ -62,6 +62,7 @@ export type Trip = {
   duration_days: number
   transport_type: string
   transport_types: string[]
+  /** nescris de niciun ecran, necitit de niciunul — vezi lib/trips.ts */
   person_count: number
   countries: string[]
   cover_image: string | null
