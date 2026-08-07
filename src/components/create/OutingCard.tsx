@@ -1,6 +1,6 @@
 'use client'
 import { useRef, useState } from 'react'
-import { Loader2, Minus, Plus, Upload, X } from 'lucide-react'
+import { Camera, Loader2, Minus, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { TRANSPORT_TYPES } from '@/lib/utils'
 import CharCounter from '@/components/ui/CharCounter'
@@ -149,14 +149,13 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
       </div>
 
       <div className="py-3 border-t border-[rgba(0,0,0,0.06)]">
-        <span className="text-[13px] text-[#6B6B6B] block mb-2">
-          Poza de deasupra
-          {photos.length > 0 && !uploaded && <span className="text-[#9B9B9B]"> — implicit prima</span>}
-        </span>
+        <span className="text-[13px] text-[#6B6B6B] block mb-2">Coperta</span>
 
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={uploadCover} />
 
         {thumbs.length > 0 ? (
+          <>
+          <p className="text-[12px] text-[#9B9B9B] mb-1.5">Alege coperta:</p>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {thumbs.map(url => {
               const chosen = (trip.coverImage || thumbs[0]) === url
@@ -188,35 +187,38 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
               )
             })}
 
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="w-16 h-16 rounded-xl border-2 border-dashed border-[rgba(0,0,0,0.15)] flex flex-col items-center justify-center gap-0.5 flex-shrink-0 disabled:opacity-60"
-            >
-              {uploading
-                ? <Loader2 size={15} className="animate-spin text-[#9B9B9B]" />
-                : <Upload size={15} className="text-[#9B9B9B]" />}
-              <span className="text-[9px] text-[#9B9B9B]">Încarcă</span>
-            </button>
           </div>
+
+          {/* aici prima opțiune e deja o acțiune, deci upload-ul vine al doilea */}
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="text-[12px] text-[#5B4FCF] font-medium flex items-center gap-1.5 mt-2 disabled:opacity-60"
+          >
+            {uploading
+              ? <><Loader2 size={13} className="animate-spin" /> Se încarcă</>
+              : '+ Sau încarcă alta'}
+          </button>
+          </>
         ) : (
           <>
-            <p className="text-[12px] text-[#9B9B9B] leading-relaxed mb-2">
-              Se alege automat, din locurile pe care le-ai adăugat. O poți schimba oricând
-              după publicare.
-            </p>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="text-[12px] text-[#5B4FCF] font-medium flex items-center gap-1.5 disabled:opacity-60"
+              className="w-full py-5 rounded-xl border-2 border-dashed border-[rgba(232,68,10,0.3)] bg-[#FFF0EB] flex flex-col items-center justify-center gap-1.5 disabled:opacity-60"
             >
               {uploading
-                ? <Loader2 size={13} className="animate-spin" />
-                : <Upload size={13} />}
-              {uploading ? 'Se încarcă' : 'Sau încarcă o poză'}
+                ? <Loader2 size={20} className="animate-spin text-[#E8440A]" />
+                : <Camera size={20} className="text-[#E8440A]" />}
+              <span className="text-[12px] text-[#E8440A] font-medium">
+                {uploading ? 'Se urcă' : 'Încarcă o poză de copertă'}
+              </span>
             </button>
+            <p className="text-[12px] text-[#9B9B9B] leading-relaxed mt-2">
+              Dacă nu încarci, alegem noi una din locurile tale — o poți schimba oricând.
+            </p>
           </>
         )}
 
