@@ -1,5 +1,5 @@
 -- =====================================================================
--- Verificare schemă înainte de migrarea 20260806_trips.sql
+-- Verificare schemă înainte de migrarea 008_20260806_trips.sql
 -- Rulează în Supabase → SQL Editor.
 -- =====================================================================
 

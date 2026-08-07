@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Pocoloco — Comentarii cu reply-uri (thread pe 2 nivele)
--- Rulează DUPĂ 20260806_admin_dashboard.sql (are nevoie de is_admin()).
+-- Rulează DUPĂ 001_20260806_admin_dashboard.sql (are nevoie de is_admin()).
 --
 -- Rulează întâi supabase/checks/inspect_comments.sql și verifică:
 --   - ce coloane are comments (așteptăm experience_id, author_id, content)

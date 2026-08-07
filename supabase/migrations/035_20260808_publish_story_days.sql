@@ -1,58 +1,19 @@
 -- =====================================================================
--- Pocoloco — images și tips nu mai pot rămâne NULL
+-- Pocoloco — Zilele alese pentru fiecare loc
 --
--- Ambele coloane sunt `text[]`, nullable și fără default. Aplicația
--- trimite mereu un array, dar nimic din schemă nu garantează asta: un
--- insert care le omite le lasă NULL, iar de acolo codul care face
--- `.length` sau `.map` primește null în loc de listă.
+-- Detaliile călătoriei s-au mutat într-un al doilea pas, unde durata și
+-- lista locurilor se văd împreună. Acolo se poate spune „locul ăsta a
+-- fost în ziua 2", iar publicarea trebuie să ducă alegerea mai departe.
 --
--- Aici facem două lucruri:
---   1. `publish_story()` scrie '{}' în loc de NULL, dacă payload-ul n-are
---      cheile (nu le are niciodată azi, dar funcția e apelabilă și de
---      altcineva mâine)
---   2. rândurile vechi rămase cu NULL devin array gol
+-- Până acum publish_story() punea toate opririle pe ziua 1. Acum scrie
+-- ziua primită în payload (`day`), cu 1 ca valoare de rezervă — coloana
+-- din bază e day_number, NOT NULL, reconciliată de migrarea 16.
 --
--- Ce NU facem: nu punem NOT NULL și nu adăugăm default. Ar fi o schimbare
--- de schemă peste ce e deja în producție, iar codul nu depinde de ea —
--- fiecare loc care le citește apără null oricum.
+-- Singura schimbare față de versiunea din migrarea 34.
 --
--- Rulează DUPĂ 20260808_publish_story.sql.
+-- Rulează DUPĂ 034_20260808_visited_period.sql.
 -- =====================================================================
 
--- ---------------------------------------------------------------------
--- 1. Verificare: chiar sunt text[]?
---
---    coalesce(..., '{}'::text[]) de mai jos presupune asta. Dacă vreuna
---    ar fi jsonb, '{}' ar însemna obiect gol, nu listă goală, iar
---    jsonb_array_length din triggerul de puncte ar crăpa.
--- ---------------------------------------------------------------------
-do $$
-declare
-  r record;
-begin
-  for r in
-    select column_name, data_type, udt_name, is_nullable, column_default
-    from information_schema.columns
-    where table_schema = 'public' and table_name = 'experiences'
-      and column_name in ('images', 'tips')
-    order by column_name
-  loop
-    raise notice '  % — tip: % (%), nullable: %, default: %',
-      rpad(r.column_name, 8), r.data_type, r.udt_name, r.is_nullable,
-      coalesce(r.column_default, 'fără');
-
-    if r.udt_name <> '_text' then
-      raise exception
-        'Coloana experiences.% nu e text[] ci %. Oprește-te: coalesce-ul din publish_story() ar fi greșit pentru tipul ăsta.',
-        r.column_name, r.udt_name;
-    end if;
-  end loop;
-end $$;
-
--- ---------------------------------------------------------------------
--- 2. publish_story(), cu array gol în loc de NULL
---    (restul funcției e neschimbat față de migrarea 30)
--- ---------------------------------------------------------------------
 create or replace function public.publish_story(
   p_stops jsonb,
   p_trip  jsonb default null
@@ -72,6 +33,8 @@ declare
   v_resolved  jsonb  := '[]'::jsonb;
   v_position  integer := 0;
   v_kind      text;
+  v_day       integer;
+  v_pozitii   jsonb  := '{}'::jsonb;
 begin
   if v_user is null then
     raise exception 'Trebuie să fii autentificat ca să publici.';
@@ -97,7 +60,8 @@ begin
       insert into public.experiences (
         kind, location_id, title, activity_category, activity_area,
         author_id, content, images, tips,
-        rating_experience, rating_access, rating_crowd, status
+        rating_experience, rating_access, rating_crowd,
+        visited_year, visited_month, status
       )
       select
         r.kind, r.location_id, r.title, r.activity_category, r.activity_area,
@@ -108,7 +72,8 @@ begin
         coalesce(r.images, '{}'::text[]),
         coalesce(r.tips,   '{}'::text[]),
         -- nenotat = NULL: checkurile de pe ratinguri acceptă doar 1–5
-        r.rating_experience, r.rating_access, r.rating_crowd, 'active'
+        r.rating_experience, r.rating_access, r.rating_crowd,
+        r.visited_year, r.visited_month, 'active'
       from jsonb_populate_record(null::public.experiences, v_stop) r
       returning id into v_exp_id;
 
@@ -121,7 +86,8 @@ begin
     v_resolved := v_resolved || jsonb_build_object(
       'location_id',   v_stop ->> 'location_id',
       'experience_id', v_exp_id,
-      'note',          nullif(btrim(coalesce(v_stop ->> 'note', '')), '')
+      'note',          nullif(btrim(coalesce(v_stop ->> 'note', '')), ''),
+      'day',           v_stop -> 'day'
     );
   end loop;
 
@@ -133,9 +99,11 @@ begin
     );
   end if;
 
+  -- coperta vine din payload doar dacă userul a ales una; altfel o
+  -- completăm după ce există opririle, cu apply_trip_auto_cover
   insert into public.trips (
     author_id, title, description, duration_days,
-    transport_type, countries, cover_image, status
+    transport_type, countries, cover_image, cover_source, status
   )
   select
     v_user,
@@ -145,6 +113,7 @@ begin
     coalesce(r.transport_type, 'car'),
     r.countries,
     r.cover_image,
+    case when coalesce(r.cover_image, '') <> '' then 'user' else 'auto' end,
     'active'
   from jsonb_populate_record(null::public.trips, p_trip) r
   returning id into v_trip_id;
@@ -153,7 +122,12 @@ begin
     raise exception 'Călătoria nu a putut fi creată.';
   end if;
 
+  -- Ziua aleasă la pasul de finalizare, altfel 1. Poziția se numără
+  -- separat pe fiecare zi, ca ordinea din ecran să se păstreze în ziua ei.
   for v_stop in select * from jsonb_array_elements(v_resolved) loop
+    v_day := greatest(coalesce((v_stop ->> 'day')::integer, 1), 1);
+    v_position := coalesce((v_pozitii ->> v_day::text)::integer, 0);
+
     insert into public.trip_locations (
       trip_id, location_id, experience_id, day_number, position, note
     )
@@ -161,12 +135,16 @@ begin
       v_trip_id,
       nullif(v_stop ->> 'location_id', '')::uuid,
       nullif(v_stop ->> 'experience_id', '')::uuid,
-      1,
+      v_day,
       v_position,
       v_stop ->> 'note'
     );
-    v_position := v_position + 1;
+
+    v_pozitii := jsonb_set(v_pozitii, array[v_day::text], to_jsonb(v_position + 1));
   end loop;
+
+  -- abia acum există opririle, deci lanțul de fallback are ce căuta
+  perform public.apply_trip_auto_cover(v_trip_id);
 
   return jsonb_build_object(
     'trip_id', v_trip_id,
@@ -177,23 +155,7 @@ end $$;
 
 grant execute on function public.publish_story(jsonb, jsonb) to authenticated;
 
--- ---------------------------------------------------------------------
--- 3. Rândurile vechi rămase cu NULL
--- ---------------------------------------------------------------------
 do $$
-declare
-  v_images integer;
-  v_tips   integer;
 begin
-  update public.experiences set images = '{}'::text[] where images is null;
-  get diagnostics v_images = row_count;
-
-  update public.experiences set tips = '{}'::text[] where tips is null;
-  get diagnostics v_tips = row_count;
-
-  if v_images = 0 and v_tips = 0 then
-    raise notice 'Nicio experiență cu images sau tips null — nimic de normalizat.';
-  else
-    raise notice 'Normalizate: % rânduri cu images null, % cu tips null.', v_images, v_tips;
-  end if;
+  raise notice 'publish_story() scrie acum ziua aleasă pentru fiecare loc (day_number).';
 end $$;

@@ -5,7 +5,7 @@
 -- nou locul după nume. `cover_source` spune de unde vine imaginea, ca
 -- pagina locației să poată da atribuirea corectă.
 --
--- Rulează DUPĂ 20260806_location_approval.sql.
+-- Rulează DUPĂ 002_20260806_location_approval.sql.
 -- =====================================================================
 
 alter table public.locations

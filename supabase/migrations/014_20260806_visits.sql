@@ -9,7 +9,7 @@
 --   - rândurile pentru călătorii (trip_id) rămân neatinse, iar triggerul
 --     de save_count nu se schimbă.
 --
--- Rulează DUPĂ 20260806_trips.sql.
+-- Rulează DUPĂ 008_20260806_trips.sql.
 -- =====================================================================
 
 alter table public.saves

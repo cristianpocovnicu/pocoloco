@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Pocoloco — Călătorii: itinerar, salvare, moderare
--- Rulează DUPĂ 20260806_admin_dashboard.sql (are nevoie de is_admin()).
+-- Rulează DUPĂ 001_20260806_admin_dashboard.sql (are nevoie de is_admin()).
 -- Rulează întâi supabase/checks/inspect_trips.sql.
 --
 -- Migrarea e idempotentă și aditivă: completează ce lipsește din

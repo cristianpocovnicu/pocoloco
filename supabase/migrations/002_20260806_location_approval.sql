@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Pocoloco — Sistem de aprobare locații
--- Rulează DUPĂ 20260806_admin_dashboard.sql (are nevoie de is_admin()).
+-- Rulează DUPĂ 001_20260806_admin_dashboard.sql (are nevoie de is_admin()).
 --
 -- Regula: orice locație adăugată de un user pleacă cu status 'pending'
 -- și devine publică doar după ce un admin o aprobă din /admin/locations.

@@ -8,8 +8,8 @@
 -- Nu stricăm nimic din itinerariile existente: toate au location_id
 -- completat, iar constrângerea le acceptă neschimbate.
 --
--- Rulează DUPĂ 20260806_trip_locations_fix.sql și
--- 20260808_experience_kinds.sql.
+-- Rulează DUPĂ 016_20260806_trip_locations_fix.sql și
+-- 027_20260808_experience_kinds.sql.
 -- =====================================================================
 
 alter table public.trip_locations

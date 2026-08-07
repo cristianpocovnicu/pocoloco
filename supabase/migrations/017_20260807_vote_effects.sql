@@ -6,7 +6,7 @@
 -- 2. votes acceptă și comentarii, cu exact o țintă per rând
 -- 3. contoarele de pe comments sunt ținute de același trigger
 --
--- Rulează DUPĂ 20260806_votes.sql și 20260806_comments.sql.
+-- Rulează DUPĂ 003_20260806_votes.sql și 005_20260806_comments.sql.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------

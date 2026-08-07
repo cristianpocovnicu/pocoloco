@@ -50,12 +50,12 @@ celui care a interacționat.
 
 | # | Fișier | Ce face |
 |---|---|---|
-| 21 | `20260807_points_1_core.sql` | `points_ledger`, `point_levels`, `profiles.points_total/points_level`, `award_points()`, `award_interaction()` |
-| 22 | `20260807_points_2_triggers.sql` | triggerele `points_*` pe locations, experiences, trips, votes, comments, saves, follows, profiles |
-| 23 | `20260807_points_3_badges.sql` | `badges.points_reward`, insigne noi, condiții noi, `check_and_award_badges()` plătește milestone-ul |
-| 24 | `20260807_points_4_shares.sql` | tabelul `shares` + `record_share()` |
-| 25 | `20260807_points_5_referrals.sql` | `referral_code`, `referred_by`, `apply_referral_code()`, `maybe_reward_referral()` |
-| 26 | `20260807_points_6_backfill.sql` | reconstruiește registrul din istoricul existent |
+| 21 | `021_20260807_points_1_core.sql` | `points_ledger`, `point_levels`, `profiles.points_total/points_level`, `award_points()`, `award_interaction()` |
+| 22 | `022_20260807_points_2_triggers.sql` | triggerele `points_*` pe locations, experiences, trips, votes, comments, saves, follows, profiles |
+| 23 | `023_20260807_points_3_badges.sql` | `badges.points_reward`, insigne noi, condiții noi, `check_and_award_badges()` plătește milestone-ul |
+| 24 | `024_20260807_points_4_shares.sql` | tabelul `shares` + `record_share()` |
+| 25 | `025_20260807_points_5_referrals.sql` | `referral_code`, `referred_by`, `apply_referral_code()`, `maybe_reward_referral()` |
+| 26 | `026_20260807_points_6_backfill.sql` | reconstruiește registrul din istoricul existent |
 
 Ordinea contează: 2–6 depind de funcțiile din 1. Migrarea 6 se poate
 rula de câte ori vrei — totul e `on conflict do nothing`.

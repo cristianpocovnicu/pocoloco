@@ -46,7 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return (
       <Blocked
         title="Baza de date nu e pregătită"
-        message="Rulează supabase/migrations/20260806_admin_dashboard.sql în Supabase → SQL Editor, apoi setează-ți rolul de admin."
+        message="Rulează supabase/migrations/001_20260806_admin_dashboard.sql în Supabase → SQL Editor, apoi setează-ți rolul de admin."
       />
     )
   }

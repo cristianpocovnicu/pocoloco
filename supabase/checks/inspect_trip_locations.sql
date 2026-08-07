@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Ce coloane are de fapt trip_locations
 --
--- Rulează asta ÎNAINTE de 20260806_trip_locations_fix.sql și trimite-mi
+-- Rulează asta ÎNAINTE de 016_20260806_trip_locations_fix.sql și trimite-mi
 -- rezultatul dacă vezi coloane pe care aplicația nu le folosește.
 --
 -- Aplicația scrie în: trip_id, location_id, day_number, note, position

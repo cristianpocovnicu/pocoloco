@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Pocoloco — Upvote / downvote cu persistență
--- Rulează DUPĂ 20260806_admin_dashboard.sql (are nevoie de is_admin()).
+-- Rulează DUPĂ 001_20260806_admin_dashboard.sql (are nevoie de is_admin()).
 --
 -- Un user poate avea un singur vot per experiență (up SAU down).
 -- Contoarele experiences.upvotes / downvotes sunt ținute la zi de un

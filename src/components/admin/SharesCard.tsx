@@ -48,7 +48,7 @@ export default function SharesCard() {
         .gte('created_at', since)
         .limit(2000)
 
-      // tabelul vine din migrarea 20260807_points_4_shares
+      // tabelul vine din migrarea 024_20260807_points_4_shares
       if (error) {
         setMissing(true)
         setLoading(false)

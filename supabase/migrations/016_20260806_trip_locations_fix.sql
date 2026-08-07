@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Pocoloco — Reconciliere trip_locations
 --
--- Migrarea 20260806_trips.sql a adăugat o coloană `day`, presupunând că
+-- Migrarea 008_20260806_trips.sql a adăugat o coloană `day`, presupunând că
 -- tabelul nu are una. În realitate exista deja `day_number`, NOT NULL și
 -- fără default — așa că publicarea unui itinerar crăpa:
 --   null value in column "day_number" violates not-null constraint

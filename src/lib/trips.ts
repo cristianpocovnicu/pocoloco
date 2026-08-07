@@ -12,7 +12,7 @@ export type Trip = {
   cover_image: string | null
   save_count: number | null
   featured?: boolean | null
-  /** ghid editorial, scris de echipă — vezi 20260807_trip_guides.sql */
+  /** ghid editorial, scris de echipă — vezi 019_20260807_trip_guides.sql */
   is_guide?: boolean | null
   status: string
   created_at: string
@@ -55,7 +55,7 @@ export async function fetchItinerary(
   tripId: string
 ): Promise<ItineraryItem[]> {
   // coloana din bază e day_number; o aliasăm ca `day` pentru restul codului
-  // experience_id vine din 20260808_trip_activity_stops; dacă migrarea nu
+  // experience_id vine din 028_20260808_trip_activity_stops; dacă migrarea nu
   // e rulată, selectul cade și rămânem pe forma veche, doar cu locații
 const stops = (columns: string) => supabase
     .from('trip_locations')

@@ -22,7 +22,7 @@ export type PointLevel = {
 
 /**
  * Curba de rezervă, pentru cazul în care `point_levels` nu poate fi citit.
- * Trebuie să rămână identică cu tabelul din 20260807_points_1_core.sql —
+ * Trebuie să rămână identică cu tabelul din 021_20260807_points_1_core.sql —
  * acolo e sursa adevărului, asta e doar plasa de siguranță.
  */
 const FALLBACK_LEVELS: PointLevel[] = [
@@ -122,7 +122,7 @@ export async function fetchPointsSummary(
     .eq('id', userId)
     .maybeSingle()
 
-  // coloanele vin din migrarea 20260807_points_1_core; până e rulată,
+  // coloanele vin din migrarea 021_20260807_points_1_core; până e rulată,
   // secțiunea de progres pur și simplu nu are ce arăta
   if (error || !data) return { points: 0, level: 1 }
   const row = data as { points_total: number | null; points_level: number | null }

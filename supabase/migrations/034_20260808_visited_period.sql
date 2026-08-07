@@ -1,19 +1,88 @@
 -- =====================================================================
--- Pocoloco — Zilele alese pentru fiecare loc
+-- Pocoloco — Când ai fost acolo
 --
--- Detaliile călătoriei s-au mutat într-un al doilea pas, unde durata și
--- lista locurilor se văd împreună. Acolo se poate spune „locul ăsta a
--- fost în ziua 2", iar publicarea trebuie să ducă alegerea mai departe.
+-- „Am fost în august" schimbă complet felul în care citești o recenzie:
+-- aglomerația, vremea, prețurile, ce era deschis. Data postării nu spune
+-- nimic despre asta — poți scrie iarna despre o vară.
 --
--- Până acum publish_story() punea toate opririle pe ziua 1. Acum scrie
--- ziua primită în payload (`day`), cu 1 ca valoare de rezervă — coloana
--- din bază e day_number, NOT NULL, reconciliată de migrarea 16.
+-- Ambele coloane sunt opționale. Anul poate exista fără lună („am fost
+-- în 2024, nu mai știu exact când"), luna fără an nu — ar fi o informație
+-- fără sens.
 --
--- Singura schimbare față de versiunea din migrarea 34.
+-- Migrarea actualizează și publish_story(), ca perioada să intre și când
+-- publici mai multe locuri deodată.
 --
--- Rulează DUPĂ 20260808_visited_period.sql.
+-- Rulează DUPĂ 032_20260808_publish_story_array_guard.sql.
 -- =====================================================================
 
+alter table public.experiences add column if not exists visited_year  smallint;
+alter table public.experiences add column if not exists visited_month smallint;
+
+-- ---------------------------------------------------------------------
+-- Constrângeri
+--
+-- Marginea de sus e 2100, nu „anul curent + 1": un CHECK nu poate folosi
+-- now(), pentru că funcțiile dintr-un check trebuie să fie IMMUTABLE. Un
+-- an fixat acum (2027) ar începe să respingă date valide peste câteva
+-- luni. Aici e doar plasa de siguranță împotriva unui 19999 din greșeală;
+-- limita reală, „anul curent + 1", o pune interfața, unde se poate muta
+-- singură. Dacă vrei limita strictă și în bază, locul ei e un trigger,
+-- care are voie să cheme now().
+-- ---------------------------------------------------------------------
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'experiences_visited_year_check') then
+    alter table public.experiences
+      add constraint experiences_visited_year_check
+      check (visited_year is null or (visited_year between 1990 and 2100))
+      not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'experiences_visited_month_check') then
+    alter table public.experiences
+      add constraint experiences_visited_month_check
+      check (visited_month is null or (visited_month between 1 and 12))
+      not valid;
+  end if;
+
+  -- luna fără an n-ar spune nimic
+  if not exists (select 1 from pg_constraint where conname = 'experiences_visited_pair_check') then
+    alter table public.experiences
+      add constraint experiences_visited_pair_check
+      check (visited_month is null or visited_year is not null)
+      not valid;
+  end if;
+end $$;
+
+do $$
+declare
+  c text;
+begin
+  foreach c in array array[
+    'experiences_visited_year_check',
+    'experiences_visited_month_check',
+    'experiences_visited_pair_check'
+  ] loop
+    begin
+      execute format('alter table public.experiences validate constraint %I', c);
+    exception when others then
+      raise notice 'ATENȚIE: % nu a putut fi validată: %', c, sqlerrm;
+    end;
+  end loop;
+end $$;
+
+-- căutările de tipul „ce a fost aici vara trecută" au de unde porni
+create index if not exists experiences_visited_idx
+  on public.experiences (visited_year desc, visited_month desc)
+  where visited_year is not null;
+
+-- ---------------------------------------------------------------------
+-- publish_story(), cu perioada și cu coperta automată
+--
+-- Migrarea 33 aduce cover_source și apply_trip_auto_cover(); versiunea de
+-- aici e cea definitivă a funcției, deci rulează 33 ÎNAINTE. Dacă ai
+-- rulat deja 34, rulează-o din nou după 33 — e idempotentă.
+-- ---------------------------------------------------------------------
 create or replace function public.publish_story(
   p_stops jsonb,
   p_trip  jsonb default null
@@ -33,8 +102,6 @@ declare
   v_resolved  jsonb  := '[]'::jsonb;
   v_position  integer := 0;
   v_kind      text;
-  v_day       integer;
-  v_pozitii   jsonb  := '{}'::jsonb;
 begin
   if v_user is null then
     raise exception 'Trebuie să fii autentificat ca să publici.';
@@ -86,8 +153,7 @@ begin
     v_resolved := v_resolved || jsonb_build_object(
       'location_id',   v_stop ->> 'location_id',
       'experience_id', v_exp_id,
-      'note',          nullif(btrim(coalesce(v_stop ->> 'note', '')), ''),
-      'day',           v_stop -> 'day'
+      'note',          nullif(btrim(coalesce(v_stop ->> 'note', '')), '')
     );
   end loop;
 
@@ -122,12 +188,7 @@ begin
     raise exception 'Călătoria nu a putut fi creată.';
   end if;
 
-  -- Ziua aleasă la pasul de finalizare, altfel 1. Poziția se numără
-  -- separat pe fiecare zi, ca ordinea din ecran să se păstreze în ziua ei.
   for v_stop in select * from jsonb_array_elements(v_resolved) loop
-    v_day := greatest(coalesce((v_stop ->> 'day')::integer, 1), 1);
-    v_position := coalesce((v_pozitii ->> v_day::text)::integer, 0);
-
     insert into public.trip_locations (
       trip_id, location_id, experience_id, day_number, position, note
     )
@@ -135,12 +196,11 @@ begin
       v_trip_id,
       nullif(v_stop ->> 'location_id', '')::uuid,
       nullif(v_stop ->> 'experience_id', '')::uuid,
-      v_day,
+      1,
       v_position,
       v_stop ->> 'note'
     );
-
-    v_pozitii := jsonb_set(v_pozitii, array[v_day::text], to_jsonb(v_position + 1));
+    v_position := v_position + 1;
   end loop;
 
   -- abia acum există opririle, deci lanțul de fallback are ce căuta
@@ -155,7 +215,28 @@ end $$;
 
 grant execute on function public.publish_story(jsonb, jsonb) to authenticated;
 
+-- ---------------------------------------------------------------------
+-- Verificare
+-- ---------------------------------------------------------------------
 do $$
+declare
+  r        record;
+  v_numar  integer;
 begin
-  raise notice 'publish_story() scrie acum ziua aleasă pentru fiecare loc (day_number).';
+  for r in
+    select column_name, data_type, is_nullable
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'experiences'
+      and column_name in ('visited_year', 'visited_month')
+    order by column_name
+  loop
+    raise notice '  % — %, nullable: %', rpad(r.column_name, 14), r.data_type, r.is_nullable;
+  end loop;
+
+  select count(*) into v_numar
+  from pg_constraint
+  where conrelid = 'public.experiences'::regclass
+    and conname like 'experiences_visited%';
+
+  raise notice 'Constrângeri pe perioadă: % din 3 așteptate.', v_numar;
 end $$;

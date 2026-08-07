@@ -16,7 +16,7 @@
 -- nimic. Unfollow + follow din nou, unsave + save din nou: zero puncte.
 --
 -- Rulează DUPĂ migrările pentru experiences / trips / follows / saves.
--- Următoarea: 20260807_points_2_triggers.sql
+-- Următoarea: 022_20260807_points_2_triggers.sql
 -- =====================================================================
 
 -- ---------------------------------------------------------------------

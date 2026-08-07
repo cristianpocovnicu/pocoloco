@@ -22,8 +22,8 @@
 -- Dacă ai unul care presupune că locația există (select ... into strict),
 -- trebuie ajustat manual.
 --
--- Rulează DUPĂ 20260806_location_approval.sql.
--- Următoarea: 20260808_trip_activity_stops.sql
+-- Rulează DUPĂ 002_20260806_location_approval.sql.
+-- Următoarea: 028_20260808_trip_activity_stops.sql
 -- =====================================================================
 
 -- ---------------------------------------------------------------------

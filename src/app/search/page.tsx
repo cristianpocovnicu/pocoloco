@@ -173,7 +173,7 @@ export default function SearchPage() {
 
     const { data, error: searchError } = await request
 
-    // coloana kind vine din 20260808_experience_kinds; până e rulată,
+    // coloana kind vine din 027_20260808_experience_kinds; până e rulată,
     // tabul rămâne gol în loc să arunce o eroare în față
     setError(null)
     setActivities(searchError ? [] : ((data || []) as ActivityResult[]))

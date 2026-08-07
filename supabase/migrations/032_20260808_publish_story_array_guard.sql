@@ -1,34 +1,58 @@
 -- =====================================================================
--- Pocoloco — Publicarea unei povești, dintr-o singură bucată
+-- Pocoloco — images și tips nu mai pot rămâne NULL
 --
--- Ecranul de creare poate produce, dintr-o apăsare: mai multe experiențe,
--- o călătorie și opririle ei. Din client astea ar fi 5-10 inserturi
--- separate, iar o eroare la jumătate ar lăsa în bază o călătorie fără
--- opriri sau experiențe orfane.
+-- Ambele coloane sunt `text[]`, nullable și fără default. Aplicația
+-- trimite mereu un array, dar nimic din schemă nu garantează asta: un
+-- insert care le omite le lasă NULL, iar de acolo codul care face
+-- `.length` sau `.map` primește null în loc de listă.
 --
--- Corpul unei funcții PL/pgSQL e o singură tranzacție: ori intră tot, ori
--- nimic. De asta publicarea trece pe aici.
+-- Aici facem două lucruri:
+--   1. `publish_story()` scrie '{}' în loc de NULL, dacă payload-ul n-are
+--      cheile (nu le are niciodată azi, dar funcția e apelabilă și de
+--      altcineva mâine)
+--   2. rândurile vechi rămase cu NULL devin array gol
 --
--- Ce NU face funcția: nu creează locații. Locul din Google devine locație
--- înainte, din client — o locație în moderare rămasă în urma unei
--- publicări eșuate e invizibilă și inofensivă.
+-- Ce NU facem: nu punem NOT NULL și nu adăugăm default. Ar fi o schimbare
+-- de schemă peste ce e deja în producție, iar codul nu depinde de ea —
+-- fiecare loc care le citește apără null oricum.
 --
--- Rulează DUPĂ 20260808_experience_kinds.sql și
--- 20260808_trip_activity_stops.sql.
+-- Rulează DUPĂ 030_20260808_publish_story.sql.
 -- =====================================================================
 
-/**
- * p_stops: [{
- *   kind, location_id, title, activity_category, activity_area,
- *   content, images, tips, rating_experience, rating_access, rating_crowd,
- *   note,               -- nota de itinerar, rămâne pe trip_locations
- *   create_experience   -- false => oprirea e doar un rând de itinerar
- * }]
- * p_trip: null pentru o singură oprire, altfel { title, duration_days,
- *         transport_type, countries, cover_image }
- *
- * Întoarce { trip_id, experience_id, experience_ids }.
- */
+-- ---------------------------------------------------------------------
+-- 1. Verificare: chiar sunt text[]?
+--
+--    coalesce(..., '{}'::text[]) de mai jos presupune asta. Dacă vreuna
+--    ar fi jsonb, '{}' ar însemna obiect gol, nu listă goală, iar
+--    jsonb_array_length din triggerul de puncte ar crăpa.
+-- ---------------------------------------------------------------------
+do $$
+declare
+  r record;
+begin
+  for r in
+    select column_name, data_type, udt_name, is_nullable, column_default
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'experiences'
+      and column_name in ('images', 'tips')
+    order by column_name
+  loop
+    raise notice '  % — tip: % (%), nullable: %, default: %',
+      rpad(r.column_name, 8), r.data_type, r.udt_name, r.is_nullable,
+      coalesce(r.column_default, 'fără');
+
+    if r.udt_name <> '_text' then
+      raise exception
+        'Coloana experiences.% nu e text[] ci %. Oprește-te: coalesce-ul din publish_story() ar fi greșit pentru tipul ăsta.',
+        r.column_name, r.udt_name;
+    end if;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 2. publish_story(), cu array gol în loc de NULL
+--    (restul funcției e neschimbat față de migrarea 30)
+-- ---------------------------------------------------------------------
 create or replace function public.publish_story(
   p_stops jsonb,
   p_trip  jsonb default null
@@ -56,10 +80,6 @@ begin
     raise exception 'Nu am primit nicio oprire.';
   end if;
 
-  -- -------------------------------------------------------------------
-  -- 1. Experiențele. Fiecare intră cu un singur insert, complet — așa
-  --    prind toate bonusurile de completitudine din points_after_experience.
-  -- -------------------------------------------------------------------
   for v_stop in select * from jsonb_array_elements(p_stops) loop
     v_kind := coalesce(v_stop ->> 'kind', 'place_visit');
     v_exp_id := null;
@@ -74,8 +94,6 @@ begin
     -- O activitate trebuie să existe ca experiență: titlul ei n-are unde
     -- altundeva să stea. Un loc poate rămâne doar oprire, cu o notă.
     if coalesce((v_stop ->> 'create_experience')::boolean, false) or v_kind = 'activity' then
-      -- jsonb_populate_record convertește fiecare câmp la tipul real al
-      -- coloanei, deci merge la fel dacă images/tips sunt text[] sau jsonb
       insert into public.experiences (
         kind, location_id, title, activity_category, activity_area,
         author_id, content, images, tips,
@@ -83,7 +101,12 @@ begin
       )
       select
         r.kind, r.location_id, r.title, r.activity_category, r.activity_area,
-        v_user, coalesce(r.content, ''), r.images, r.tips,
+        v_user,
+        -- content e NOT NULL; images/tips sunt nullable, dar codul care le
+        -- citește merită o listă goală, nu un null
+        coalesce(r.content, ''),
+        coalesce(r.images, '{}'::text[]),
+        coalesce(r.tips,   '{}'::text[]),
         -- nenotat = NULL: checkurile de pe ratinguri acceptă doar 1–5
         r.rating_experience, r.rating_access, r.rating_crowd, 'active'
       from jsonb_populate_record(null::public.experiences, v_stop) r
@@ -102,9 +125,6 @@ begin
     );
   end loop;
 
-  -- -------------------------------------------------------------------
-  -- 2. O singură oprire => nu inventăm o călătorie
-  -- -------------------------------------------------------------------
   if p_trip is null or jsonb_array_length(p_stops) < 2 then
     return jsonb_build_object(
       'trip_id', null,
@@ -113,10 +133,6 @@ begin
     );
   end if;
 
-  -- -------------------------------------------------------------------
-  -- 3. Călătoria, tot dintr-un singur insert (bonusurile +copertă,
-  --    +rezumat, +public din points_after_trip se uită la rândul întreg)
-  -- -------------------------------------------------------------------
   insert into public.trips (
     author_id, title, description, duration_days,
     transport_type, countries, cover_image, status
@@ -137,10 +153,6 @@ begin
     raise exception 'Călătoria nu a putut fi creată.';
   end if;
 
-  -- -------------------------------------------------------------------
-  -- 4. Opririle, în ordinea de pe ecran. Toate pe ziua 1: împărțirea pe
-  --    zile se face din editare, unde se vede tot itinerarul.
-  -- -------------------------------------------------------------------
   for v_stop in select * from jsonb_array_elements(v_resolved) loop
     insert into public.trip_locations (
       trip_id, location_id, experience_id, day_number, position, note
@@ -166,30 +178,22 @@ end $$;
 grant execute on function public.publish_story(jsonb, jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------
--- Verificare: ce constrângeri are `experiences` pe ratinguri?
---
--- Verificarea și-a făcut treaba: checkurile cer 1–5. De asta „nenotat"
--- se trimite ca NULL (vezi insertul de mai sus), iar migrarea 31 scoate
--- NOT NULL de pe rating_experience. Listarea rămâne, ca să se vadă starea.
+-- 3. Rândurile vechi rămase cu NULL
 -- ---------------------------------------------------------------------
 do $$
 declare
-  r        record;
-  gasite   text := '';
+  v_images integer;
+  v_tips   integer;
 begin
-  for r in
-    select conname, pg_get_constraintdef(oid) as def
-    from pg_constraint
-    where conrelid = 'public.experiences'::regclass
-      and contype = 'c'
-      and pg_get_constraintdef(oid) ilike '%rating%'
-  loop
-    gasite := gasite || r.conname || ': ' || r.def || '; ';
-  end loop;
+  update public.experiences set images = '{}'::text[] where images is null;
+  get diagnostics v_images = row_count;
 
-  if gasite = '' then
-    raise notice 'Niciun check pe ratinguri.';
+  update public.experiences set tips = '{}'::text[] where tips is null;
+  get diagnostics v_tips = row_count;
+
+  if v_images = 0 and v_tips = 0 then
+    raise notice 'Nicio experiență cu images sau tips null — nimic de normalizat.';
   else
-    raise notice 'ATENȚIE, checkuri pe ratinguri: %', gasite;
+    raise notice 'Normalizate: % rânduri cu images null, % cu tips null.', v_images, v_tips;
   end if;
 end $$;

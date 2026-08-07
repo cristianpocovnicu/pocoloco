@@ -13,7 +13,7 @@
 --
 -- Coloanele rating_access și rating_crowd erau deja nullable.
 --
--- Rulează DUPĂ 20260808_experience_kinds.sql.
+-- Rulează DUPĂ 027_20260808_experience_kinds.sql.
 -- =====================================================================
 
 do $$

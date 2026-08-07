@@ -9,7 +9,7 @@
 -- Invitatorul: 15 puncte, maximum 10 invitații plătite pe viață.
 -- Invitatul:    5 puncte bonus de bun venit.
 --
--- Rulează DUPĂ 20260807_points_1_core.sql și 20260806_onboarding.sql.
+-- Rulează DUPĂ 021_20260807_points_1_core.sql și 009_20260806_onboarding.sql.
 -- =====================================================================
 
 alter table public.profiles add column if not exists referral_code     text;

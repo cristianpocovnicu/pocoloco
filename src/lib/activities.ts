@@ -5,7 +5,7 @@
  * o scufundare, un curs de gătit. Astea sunt activități — au titlu, poate
  * o zonă, dar n-au pin.
  *
- * `id` e valoarea din DB (vezi constrângerea din 20260808_experience_kinds.sql).
+ * `id` e valoarea din DB (vezi constrângerea din 027_20260808_experience_kinds.sql).
  */
 export const ACTIVITY_CATEGORIES = [
   { id: 'adrenalina',  label: 'Adrenalină',  emoji: '🪂' },

@@ -10,7 +10,7 @@
 -- conținut, pe platformă, pe zi. Limita stă în cheia de deduplicare
 -- (`platform:data`), deci e impusă de index, nu de cod.
 --
--- Rulează DUPĂ 20260807_points_1_core.sql.
+-- Rulează DUPĂ 021_20260807_points_1_core.sql.
 -- =====================================================================
 
 create table if not exists public.shares (

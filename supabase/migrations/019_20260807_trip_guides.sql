@@ -9,7 +9,7 @@
 -- singur călătoria drept ghid fără să încalce vreo politică. Triggerul
 -- prinde cazul indiferent de starea RLS.
 --
--- Rulează DUPĂ 20260806_trips.sql.
+-- Rulează DUPĂ 008_20260806_trips.sql.
 -- =====================================================================
 
 alter table public.trips

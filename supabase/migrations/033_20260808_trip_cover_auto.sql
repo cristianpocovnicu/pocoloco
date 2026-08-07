@@ -18,7 +18,7 @@
 -- `cover_source` spune cine a pus-o, ca punctele să nu premieze o alegere
 -- pe care n-a făcut-o nimeni. Același model ca locations.cover_source.
 --
--- Rulează DUPĂ 20260808_trip_activity_stops.sql.
+-- Rulează DUPĂ 028_20260808_trip_activity_stops.sql.
 -- =====================================================================
 
 alter table public.trips add column if not exists cover_source text not null default 'user';

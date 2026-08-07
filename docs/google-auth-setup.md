@@ -65,7 +65,7 @@ schimbă codul primit pe o sesiune. Ce urmează sunt pașii de configurare care
 
 Userii care intră cu Google nu trec prin formularul de înregistrare, deci
 nimeni nu le creează rândul din `public.profiles`. De asta se ocupă migrarea
-`supabase/migrations/20260806_profile_on_signup.sql`: un trigger pe
+`supabase/migrations/007_20260806_profile_on_signup.sql`: un trigger pe
 `auth.users` care generează un username unic din email și preia numele și poza
 din datele primite de la Google (`full_name` / `name`, `avatar_url` /
 `picture`).
@@ -89,7 +89,7 @@ cont dar rămâne fără profil.
 | „Unsupported provider: provider is not enabled" | Providerul Google e OFF în Supabase |
 | `redirect_uri_mismatch` la Google | Lipsește `https://<ref>.supabase.co/auth/v1/callback` din Authorized redirect URIs |
 | Te întorci pe `/login?error=auth` | URL-ul aplicației lipsește din Redirect URLs în Supabase |
-| Intri în cont dar profilul e gol | Migrarea `20260806_profile_on_signup.sql` nu a fost rulată |
+| Intri în cont dar profilul e gol | Migrarea `007_20260806_profile_on_signup.sql` nu a fost rulată |
 | Merge doar cu contul tău | Aplicația e „Testing" în consent screen — publică-o sau adaugă test users |
 
 ---

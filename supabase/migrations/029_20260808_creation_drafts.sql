@@ -12,7 +12,7 @@
 -- rămân în bucket. Curățenia lor e o treabă separată (job periodic peste
 -- storage.objects), nu ceva ce poate face schema.
 --
--- Rulează oricând după 20260806_profile_on_signup.sql.
+-- Rulează oricând după 007_20260806_profile_on_signup.sql.
 -- =====================================================================
 
 create table if not exists public.creation_drafts (

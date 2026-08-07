@@ -59,7 +59,7 @@ export default function AdminLocationsPage() {
       .order('created_at', { ascending: false })
       .limit(300)
 
-    // google_place_id vine din migrarea 20260807_location_photos; până e
+    // google_place_id vine din migrarea 020_20260807_location_photos; până e
     // rulată, pagina merge mai departe fără butoanele de poză
     let { data, error: fetchError } = await query(`${BASE_COLUMNS}, google_place_id`)
     if (fetchError) {

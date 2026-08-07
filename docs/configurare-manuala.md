@@ -32,45 +32,52 @@ schimbi în Vercel, trebuie redeploy.
 Rulează-le în **Supabase → SQL Editor**, în această ordine. Fiecare e
 idempotentă — se poate rula din nou fără efecte secundare.
 
+> **Regula pentru migrările noi:** fiecare migrare nouă primește
+> următorul număr liber, cu 3 cifre, în numele fișierului:
+> `NNN_data_nume.sql`. Numărul din nume e ordinea de rulare.
+
+Fișierele din `supabase/checks/` nu sunt migrări — nu se numerotează și
+nu schimbă nimic, doar citesc schema.
+
 | # | Fișier | Ce face |
 |---|--------|---------|
 | 0 | `supabase/checks/inspect_comments.sql` | doar citește: îți arată schema `comments` înainte de migrarea 5 |
 | 0 | `supabase/checks/inspect_trips.sql` | doar citește: schema `trips` / `trip_locations` / `saves` înainte de migrarea 8 |
-| 1 | `supabase/migrations/20260806_admin_dashboard.sql` | `profiles.role` / `status`, funcția `is_admin()`, politici de moderare |
-| 2 | `supabase/migrations/20260806_location_approval.sql` | status `pending` implicit pe locații, triggere, RLS |
-| 3 | `supabase/migrations/20260806_votes.sql` | tabelul `votes`, trigger pentru contoare, RLS |
-| 4 | `supabase/migrations/20260806_follows.sql` | tabelul `follows`, RLS |
-| 5 | `supabase/migrations/20260806_comments.sql` | `parent_id`, trigger pentru `comment_count`, RLS |
-| 6 | `supabase/migrations/20260806_notifications.sql` | tabelul `notifications` + triggerele care le generează |
-| 7 | `supabase/migrations/20260806_profile_on_signup.sql` | profil automat la înregistrare (necesar pentru Google) |
-| 8 | `supabase/migrations/20260806_trips.sql` | itinerar (`trip_locations`), salvarea călătoriilor, RLS pe `trips` / `saves` |
-| 9 | `supabase/migrations/20260806_onboarding.sql` | `travel_styles`, `favorite_regions`, `onboarding_completed` pe `profiles` |
-| 10 | `supabase/migrations/20260806_experience_owner.sql` | politici ca autorul să-și poată edita și șterge experiențele |
-| 11 | `supabase/migrations/20260806_delete_user.sql` | funcția `delete_user()` — ștergerea contului din aplicație |
-| 12 | `supabase/migrations/20260806_badges.sql` | `badges`, `user_badges`, `check_and_award_badges()` + triggere |
-| 13 | `supabase/migrations/20260806_trip_featured.sql` | `trips.featured`, pentru promovarea din admin |
-| 14 | `supabase/migrations/20260806_visits.sql` | `saves.status` — listele „Vreau să merg" / „Am fost" |
-| 15 | `supabase/migrations/20260806_nearby.sql` | funcția `nearby_locations()` pentru secțiunea „În apropiere" |
-| 16 | `supabase/migrations/20260806_trip_locations_fix.sql` | reconciliază `day` / `day_number`, altfel publicarea itinerariului crapă |
-| 17 | `supabase/migrations/20260807_vote_effects.sql` | `net_score`, voturi pe comentarii, trigger unificat de contoare |
-| 18 | `supabase/migrations/20260807_text_limits.sql` | coloanele lungi devin `text`, limita comentariilor urcă la 10.000 |
-| 19 | `supabase/migrations/20260807_trip_guides.sql` | `trips.is_guide` + trigger care lasă doar adminii să-l seteze |
-| 20 | `supabase/migrations/20260807_location_photos.sql` | `locations.google_place_id` + `cover_source`, pentru copertele luate din Google |
-| 21 | `supabase/migrations/20260807_points_1_core.sql` | registrul de puncte, curba de nivel, `award_points()` |
-| 22 | `supabase/migrations/20260807_points_2_triggers.sql` | triggerele care acordă punctele |
-| 23 | `supabase/migrations/20260807_points_3_badges.sql` | insignele devin milestone-uri cu recompensă |
-| 24 | `supabase/migrations/20260807_points_4_shares.sql` | tabelul `shares` + `record_share()` |
-| 25 | `supabase/migrations/20260807_points_5_referrals.sql` | coduri de invitație și plata lor |
-| 26 | `supabase/migrations/20260807_points_6_backfill.sql` | reconstruiește punctele din istoricul existent (rulează ultima) |
-| 27 | `supabase/migrations/20260808_experience_kinds.sql` | `experiences.kind`: vizite la un loc vs. activități; `location_id` devine opțional |
-| 28 | `supabase/migrations/20260808_trip_activity_stops.sql` | o oprire din itinerar poate fi o activitate, nu doar o locație |
-| 29 | `supabase/migrations/20260808_creation_drafts.sql` | `creation_drafts` — povestea neterminată din ecranul de creare |
-| 30 | `supabase/migrations/20260808_publish_story.sql` | `publish_story()` — publicarea, într-o singură tranzacție |
-| 31 | `supabase/migrations/20260808_ratings_nullable.sql` | `rating_experience` devine opțional — notarea nu mai e obligatorie |
-| 32 | `supabase/migrations/20260808_publish_story_array_guard.sql` | `images` / `tips`: array gol în loc de NULL, în `publish_story()` și în rândurile vechi |
-| 33 | `supabase/migrations/20260808_trip_cover_auto.sql` | `trips.cover_source` + copertă completată automat din opriri, cu backfill |
-| 34 | `supabase/migrations/20260808_visited_period.sql` | `visited_year` / `visited_month` — când a fost cineva acolo; actualizează și `publish_story()` |
-| 35 | `supabase/migrations/20260808_publish_story_days.sql` | `publish_story()` scrie ziua aleasă pentru fiecare loc, nu toate pe ziua 1 |
+| 1 | `supabase/migrations/001_20260806_admin_dashboard.sql` | `profiles.role` / `status`, funcția `is_admin()`, politici de moderare |
+| 2 | `supabase/migrations/002_20260806_location_approval.sql` | status `pending` implicit pe locații, triggere, RLS |
+| 3 | `supabase/migrations/003_20260806_votes.sql` | tabelul `votes`, trigger pentru contoare, RLS |
+| 4 | `supabase/migrations/004_20260806_follows.sql` | tabelul `follows`, RLS |
+| 5 | `supabase/migrations/005_20260806_comments.sql` | `parent_id`, trigger pentru `comment_count`, RLS |
+| 6 | `supabase/migrations/006_20260806_notifications.sql` | tabelul `notifications` + triggerele care le generează |
+| 7 | `supabase/migrations/007_20260806_profile_on_signup.sql` | profil automat la înregistrare (necesar pentru Google) |
+| 8 | `supabase/migrations/008_20260806_trips.sql` | itinerar (`trip_locations`), salvarea călătoriilor, RLS pe `trips` / `saves` |
+| 9 | `supabase/migrations/009_20260806_onboarding.sql` | `travel_styles`, `favorite_regions`, `onboarding_completed` pe `profiles` |
+| 10 | `supabase/migrations/010_20260806_experience_owner.sql` | politici ca autorul să-și poată edita și șterge experiențele |
+| 11 | `supabase/migrations/011_20260806_delete_user.sql` | funcția `delete_user()` — ștergerea contului din aplicație |
+| 12 | `supabase/migrations/012_20260806_badges.sql` | `badges`, `user_badges`, `check_and_award_badges()` + triggere |
+| 13 | `supabase/migrations/013_20260806_trip_featured.sql` | `trips.featured`, pentru promovarea din admin |
+| 14 | `supabase/migrations/014_20260806_visits.sql` | `saves.status` — listele „Vreau să merg" / „Am fost" |
+| 15 | `supabase/migrations/015_20260806_nearby.sql` | funcția `nearby_locations()` pentru secțiunea „În apropiere" |
+| 16 | `supabase/migrations/016_20260806_trip_locations_fix.sql` | reconciliază `day` / `day_number`, altfel publicarea itinerariului crapă |
+| 17 | `supabase/migrations/017_20260807_vote_effects.sql` | `net_score`, voturi pe comentarii, trigger unificat de contoare |
+| 18 | `supabase/migrations/018_20260807_text_limits.sql` | coloanele lungi devin `text`, limita comentariilor urcă la 10.000 |
+| 19 | `supabase/migrations/019_20260807_trip_guides.sql` | `trips.is_guide` + trigger care lasă doar adminii să-l seteze |
+| 20 | `supabase/migrations/020_20260807_location_photos.sql` | `locations.google_place_id` + `cover_source`, pentru copertele luate din Google |
+| 21 | `supabase/migrations/021_20260807_points_1_core.sql` | registrul de puncte, curba de nivel, `award_points()` |
+| 22 | `supabase/migrations/022_20260807_points_2_triggers.sql` | triggerele care acordă punctele |
+| 23 | `supabase/migrations/023_20260807_points_3_badges.sql` | insignele devin milestone-uri cu recompensă |
+| 24 | `supabase/migrations/024_20260807_points_4_shares.sql` | tabelul `shares` + `record_share()` |
+| 25 | `supabase/migrations/025_20260807_points_5_referrals.sql` | coduri de invitație și plata lor |
+| 26 | `supabase/migrations/026_20260807_points_6_backfill.sql` | reconstruiește punctele din istoricul existent (rulează ultima) |
+| 27 | `supabase/migrations/027_20260808_experience_kinds.sql` | `experiences.kind`: vizite la un loc vs. activități; `location_id` devine opțional |
+| 28 | `supabase/migrations/028_20260808_trip_activity_stops.sql` | o oprire din itinerar poate fi o activitate, nu doar o locație |
+| 29 | `supabase/migrations/029_20260808_creation_drafts.sql` | `creation_drafts` — povestea neterminată din ecranul de creare |
+| 30 | `supabase/migrations/030_20260808_publish_story.sql` | `publish_story()` — publicarea, într-o singură tranzacție |
+| 31 | `supabase/migrations/031_20260808_ratings_nullable.sql` | `rating_experience` devine opțional — notarea nu mai e obligatorie |
+| 32 | `supabase/migrations/032_20260808_publish_story_array_guard.sql` | `images` / `tips`: array gol în loc de NULL, în `publish_story()` și în rândurile vechi |
+| 33 | `supabase/migrations/033_20260808_trip_cover_auto.sql` | `trips.cover_source` + copertă completată automat din opriri, cu backfill |
+| 34 | `supabase/migrations/034_20260808_visited_period.sql` | `visited_year` / `visited_month` — când a fost cineva acolo; actualizează și `publish_story()` |
+| 35 | `supabase/migrations/035_20260808_publish_story_days.sql` | `publish_story()` scrie ziua aleasă pentru fiecare loc, nu toate pe ziua 1 |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).

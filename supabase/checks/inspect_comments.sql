@@ -1,5 +1,5 @@
 -- =====================================================================
--- Verificare schemă înainte de migrarea 20260806_comments.sql
+-- Verificare schemă înainte de migrarea 005_20260806_comments.sql
 -- Rulează în Supabase → SQL Editor și uită-te la rezultate.
 -- =====================================================================
 

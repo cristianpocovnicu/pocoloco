@@ -51,7 +51,7 @@ export default function ItineraryLocationPicker({ onPick, excludeIds }: Props) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // kind / title vin din 20260808_experience_kinds; fără migrare,
+      // kind / title vin din 027_20260808_experience_kinds; fără migrare,
       // selectul cade și rămân doar locurile
       const mine = (columns: string) => supabase
         .from('experiences')

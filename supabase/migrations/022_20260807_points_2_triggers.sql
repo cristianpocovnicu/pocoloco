@@ -11,7 +11,7 @@
 --   - trip privat (toate călătoriile sunt publice, deci bonusul de +8
 --     se acordă oricărei călătorii cu status 'active')
 --
--- Rulează DUPĂ 20260807_points_1_core.sql.
+-- Rulează DUPĂ 021_20260807_points_1_core.sql.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------

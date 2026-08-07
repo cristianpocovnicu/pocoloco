@@ -6,7 +6,7 @@
 -- insignă poate avea acum o recompensă în puncte, acordată o singură
 -- dată, la câștigare.
 --
--- Rulează DUPĂ 20260806_badges.sql și 20260807_points_1_core.sql.
+-- Rulează DUPĂ 012_20260806_badges.sql și 021_20260807_points_1_core.sql.
 -- =====================================================================
 
 alter table public.badges add column if not exists points_reward integer not null default 0;
