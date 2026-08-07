@@ -11,6 +11,7 @@ import BadgeGrid from '@/components/profile/BadgeGrid'
 import SavedLocationList from '@/components/profile/SavedLocationList'
 import TravelMap from '@/components/profile/TravelMap'
 import PointsProgress from '@/components/profile/PointsProgress'
+import UnfinishedStory from '@/components/profile/UnfinishedStory'
 import SavedTripList from '@/components/profile/SavedTripList'
 import { fetchSavedLocations, fetchSavedTrips, setLocationSaveStatus, type SavedLocation, type SavedTrip } from '@/lib/saves'
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
@@ -221,6 +222,9 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+
+        {/* Povestea la care ai rămas, dacă e vreuna */}
+        <UnfinishedStory userId={profile.id} />
 
         {/* Progresul pe puncte, discret, sub statistici */}
         <PointsProgress userId={profile.id} />

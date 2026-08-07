@@ -97,12 +97,12 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
     })
 
     if (insertError) {
-      setError('Nu am putut adăuga oprirea. Încearcă din editorul călătoriei.')
+      setError('Nu am putut adăuga oprirea. Încearcă din editare.')
       setBusyId(null)
       return
     }
 
-    toast('Adăugat în călătorie ✈️')
+    toast('Adăugat ✈️')
     onDone()
   }
 
@@ -131,7 +131,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
       .single()
 
     if (tripError || !trip) {
-      setError('Nu am putut crea călătoria.')
+      setError('Nu am putut crea ieșirea.')
       setBusyId(null)
       return
     }
@@ -146,7 +146,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
           <div className="text-4xl mb-2">🎉</div>
           <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Publicat!</h1>
           <p className="text-[14px] text-[#6B6B6B] leading-relaxed">
-            Vrei să adaugi „{title}&rdquo; într-o călătorie?
+            „{title}&rdquo; face parte dintr-o ieșire mai lungă?
           </p>
         </div>
 
@@ -187,7 +187,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
             {creating ? (
               <div className="bg-white border border-[rgba(91,79,207,0.25)] rounded-2xl p-4">
                 <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">
-                  Cum se numește călătoria?
+                  Cum o numim?
                 </label>
                 <input
                   type="text"
@@ -225,7 +225,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
                   <Plane size={17} className="text-[#5B4FCF]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-outfit text-[14px] font-semibold text-[#5B4FCF]">Călătorie nouă</p>
+                  <p className="font-outfit text-[14px] font-semibold text-[#5B4FCF]">Ieșire nouă</p>
                   <p className="text-[12px] text-[#9B9B9B]">Doar numele — restul, oricând mai târziu</p>
                 </div>
               </button>
