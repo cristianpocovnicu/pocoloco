@@ -102,6 +102,9 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
       return
     }
 
+    // dacă ieșirea n-are copertă, oprirea asta poate să-i dea una
+    await supabase.rpc('apply_trip_auto_cover', { p_trip_id: tripId })
+
     toast('Adăugat ✈️')
     onDone()
   }

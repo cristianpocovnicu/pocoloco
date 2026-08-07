@@ -47,6 +47,8 @@ export default function EditTripPage() {
   const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  /** coperta găsită la deschidere — dacă se schimbă, e alegerea userului */
+  const [initialCover, setInitialCover] = useState<string | null>(null)
 
   const [rows, setRows] = useState<Row[]>([])
   const [initialRowIds, setInitialRowIds] = useState<string[]>([])
@@ -77,6 +79,7 @@ export default function EditTripPage() {
         setTransportType(trip.transport_type || 'car')
         setCountries(trip.countries || [])
         setCoverUrl(trip.cover_image)
+        setInitialCover(trip.cover_image)
         setIsGuide(!!trip.is_guide)
 
         const itinerary = await fetchItinerary(supabase, trip.id)
@@ -156,6 +159,10 @@ export default function EditTripPage() {
         finalCover = supabase.storage.from('images').getPublicUrl(path).data.publicUrl
       }
 
+      // o copertă schimbată de om e alegerea lui; una ștearsă lasă locul
+      // liber pentru completarea automată de mai jos
+      const coverChanged = finalCover !== initialCover
+
       const { error: tripError } = await supabase
         .from('trips')
         .update({
@@ -165,6 +172,7 @@ export default function EditTripPage() {
           transport_type: transportType,
           countries,
           cover_image: finalCover,
+          ...(coverChanged ? { cover_source: finalCover ? 'user' : 'auto' } : {}),
           ...(isAdmin ? { is_guide: isGuide } : {}),
         })
         .eq('id', id)
@@ -209,6 +217,11 @@ export default function EditTripPage() {
           }))
         )
         if (insertError) throw new Error(`Nu am putut adăuga opririle noi: ${insertError.message}`)
+      }
+
+      // ștearsă fără alta în loc: recalculăm din opriri, ca să nu rămână goală
+      if (!finalCover) {
+        await supabase.rpc('apply_trip_auto_cover', { p_trip_id: id })
       }
 
       toast('Modificările au fost salvate')

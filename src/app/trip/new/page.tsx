@@ -158,6 +158,11 @@ export default function NewTripPage() {
         .filter(item => !written.has(item.location.id))
         .map(item => ({ id: item.location.id, name: item.location.name, city: item.location.city }))
 
+      // opririle există acum, deci lanțul de fallback are ce căuta
+      if (!coverUrl) {
+        await supabase.rpc('apply_trip_auto_cover', { p_trip_id: trip.id })
+      }
+
       // punctele sunt scrise de triggere în aceeași tranzacție cu insertul
       const gained = await fetchPointsSince(supabase, user.id, since)
       toast(gained > 0 ? `Călătorie publicată! +${gained} puncte 🎉` : 'Călătorie publicată! 🎉')

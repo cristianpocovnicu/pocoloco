@@ -77,7 +77,7 @@ rula de câte ori vrei — totul e `on conflict do nothing`.
 | + notare | +2 | |
 | **Experiență completă** | **27** | |
 | Călătorie (bază) | 20 | |
-| + copertă | +3 | |
+| + copertă | +3 | doar dacă e aleasă de user (`cover_source = 'user'`) |
 | + rezumat (`description`) | +3 | |
 | + publică | +8 | vezi nota despre trip privat |
 | **Călătorie completă** | **34** | |
@@ -103,6 +103,11 @@ rula de câte ori vrei — totul e `on conflict do nothing`.
 
 Retragerea unui vot **nu** retrage punctele deja date — altfel ar deveni o
 armă („îți iau punctele").
+
+Bonusul de copertă are o condiție în plus, din migrarea 33: o călătorie
+fără copertă primește automat prima poză de pe traseu, ca să nu arate a
+card gol. Aia e o completare a sistemului, nu o alegere a autorului, deci
+nu se plătește — bonusul rămâne pentru cine chiar alege o imagine.
 
 ### Milestone-uri = insigne
 

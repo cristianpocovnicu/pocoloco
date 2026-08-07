@@ -327,7 +327,10 @@ export async function publishStory(
     title: draft.trip.title.trim() || suggestTripTitle(stops) || 'Ieșirea mea',
     duration_days: Math.max(draft.trip.durationDays, 1),
     transport_type: draft.trip.transportType,
-    cover_image: draft.trip.coverImage || stops.find(s => s.images[0])?.images[0] || null,
+    // Doar coperta atinsă de user pleacă spre DB. Cea „implicit prima
+    // poză" e doar evidențiere în ecran: dacă n-a apăsat nimeni pe ea,
+    // publish_story pune aceeași imagine, dar marcată 'auto'.
+    cover_image: draft.trip.coverImage,
     countries: Array.from(new Set(
       stops.map(s => s.locationCountry.trim()).filter(Boolean)
     )),

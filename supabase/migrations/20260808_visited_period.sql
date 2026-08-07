@@ -77,8 +77,11 @@ create index if not exists experiences_visited_idx
   where visited_year is not null;
 
 -- ---------------------------------------------------------------------
--- publish_story(), cu perioada
--- (restul funcției e neschimbat față de migrarea 32)
+-- publish_story(), cu perioada și cu coperta automată
+--
+-- Migrarea 33 aduce cover_source și apply_trip_auto_cover(); versiunea de
+-- aici e cea definitivă a funcției, deci rulează 33 ÎNAINTE. Dacă ai
+-- rulat deja 34, rulează-o din nou după 33 — e idempotentă.
 -- ---------------------------------------------------------------------
 create or replace function public.publish_story(
   p_stops jsonb,
@@ -162,9 +165,11 @@ begin
     );
   end if;
 
+  -- coperta vine din payload doar dacă userul a ales una; altfel o
+  -- completăm după ce există opririle, cu apply_trip_auto_cover
   insert into public.trips (
     author_id, title, description, duration_days,
-    transport_type, countries, cover_image, status
+    transport_type, countries, cover_image, cover_source, status
   )
   select
     v_user,
@@ -174,6 +179,7 @@ begin
     coalesce(r.transport_type, 'car'),
     r.countries,
     r.cover_image,
+    case when coalesce(r.cover_image, '') <> '' then 'user' else 'auto' end,
     'active'
   from jsonb_populate_record(null::public.trips, p_trip) r
   returning id into v_trip_id;
@@ -196,6 +202,9 @@ begin
     );
     v_position := v_position + 1;
   end loop;
+
+  -- abia acum există opririle, deci lanțul de fallback are ce căuta
+  perform public.apply_trip_auto_cover(v_trip_id);
 
   return jsonb_build_object(
     'trip_id', v_trip_id,
