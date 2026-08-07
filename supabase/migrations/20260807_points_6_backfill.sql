@@ -183,11 +183,15 @@ on conflict do nothing;
 -- ---------------------------------------------------------------------
 alter table public.points_ledger enable trigger points_sync_total_trg;
 
+-- sum() întoarce bigint, iar level_for_points e pe integer: fără castul
+-- din subinterogare, apelul nu găsește nicio funcție potrivită
 update public.profiles p
-   set points_total = coalesce(l.total, 0),
-       points_level = public.level_for_points(coalesce(l.total, 0))
+   set points_total = l.total,
+       points_level = public.level_for_points(l.total)
 from (
-  select coalesce(recipient_id, actor_id) as user_id, sum(points) as total
+  select
+    coalesce(recipient_id, actor_id) as user_id,
+    coalesce(sum(points), 0)::integer as total
   from public.points_ledger
   group by 1
 ) l

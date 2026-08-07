@@ -79,6 +79,24 @@ as $$
   where min_points <= greatest(coalesce(p_points, 0), 0);
 $$;
 
+-- Varianta pe bigint: sum() întoarce bigint, iar Postgres nu convertește
+-- singur argumentul în jos, spre integer. Fără ea, orice apel de forma
+-- level_for_points(sum(...)) se oprește cu „function does not exist".
+--
+-- drop înainte de create, nu „create or replace": pe instalările unde
+-- funcția a fost adăugată manual, parametrul se poate numi altfel, iar
+-- replace nu are voie să redenumească parametri.
+drop function if exists public.level_for_points(bigint);
+
+create function public.level_for_points(p_points bigint)
+returns integer
+language sql
+stable
+set search_path = public
+as $$
+  select public.level_for_points(least(greatest(coalesce(p_points, 0), 0), 2147483647)::integer);
+$$;
+
 -- ---------------------------------------------------------------------
 -- 3. Registrul
 -- ---------------------------------------------------------------------
@@ -129,7 +147,8 @@ declare
 begin
   if p_user_id is null then return; end if;
 
-  select coalesce(sum(points), 0) into v_total
+  -- ::integer explicit: sum() e bigint, iar v_total e integer
+  select coalesce(sum(points), 0)::integer into v_total
   from public.points_ledger
   where coalesce(recipient_id, actor_id) = p_user_id;
 
@@ -286,6 +305,7 @@ create policy "points_ledger_select_own" on public.points_ledger
 -- funcții `security definer`
 
 grant execute on function public.level_for_points(integer) to anon, authenticated;
+grant execute on function public.level_for_points(bigint)  to anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- 7. Nivelul, adus la zi pentru conturile existente (toate au 0 puncte

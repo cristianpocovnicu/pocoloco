@@ -225,3 +225,27 @@ having p.points_total <> coalesce(sum(l.points), 0);
 
 Ultima interogare trebuie să întoarcă **zero rânduri**. Dacă nu, rulează
 `select public.recalc_points_total(id) from public.profiles;`.
+
+---
+
+## Dacă migrarea se oprește cu „function level_for_points(bigint) does not exist"
+
+`sum()` întoarce **bigint**, iar Postgres nu îngustează singur argumentul
+la `integer` când caută funcția — deci un apel de forma
+`level_for_points(sum(points))` nu găsește nimic potrivit.
+
+E rezolvat în două locuri:
+
+- migrarea 6 castează totalul în subinterogare
+  (`coalesce(sum(points), 0)::integer`);
+- migrarea 1 definește și o variantă pe `bigint`, care doar deleagă către
+  cea pe `integer`.
+
+Dacă ai adăugat manual varianta pe bigint înainte, rularea din nou a
+migrării 1 e în regulă: funcția e ștearsă și recreată, tocmai pentru că
+`create or replace` n-ar putea schimba numele parametrului.
+
+Aceeași capcană apare oriunde un agregat ajunge direct într-un apel de
+funcție. Acolo unde rezultatul intră într-o variabilă sau într-o coloană
+(`select count(*) into v_int`, `set comment_count = (select count(*) ...)`)
+nu e nicio problemă: conversia de atribuire se face automat.

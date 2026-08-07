@@ -121,7 +121,7 @@ begin
   select count(*) into v_upvotes_given
     from public.votes where user_id = p_user_id and type = 'up';
 
-  select coalesce(sum(coalesce(upvotes, 0)), 0) into v_upvotes_received
+  select coalesce(sum(coalesce(upvotes, 0)), 0)::integer into v_upvotes_received
     from public.experiences where author_id = p_user_id and status = 'active';
 
   -- insertul stă într-un CTE: PL/pgSQL nu poate itera direct peste
