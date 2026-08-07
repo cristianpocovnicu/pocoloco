@@ -1,7 +1,7 @@
 'use client'
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import OutingCard from './OutingCard'
-import { stopLabel, stopSubtitle, type StopDraft, type TripDraft } from '@/lib/story'
+import { stopLabel, type StopDraft, type TripDraft } from '@/lib/story'
 
 type Props = {
   trip: TripDraft
@@ -102,9 +102,13 @@ export default function DetailsScreen({
 
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-medium text-[#0F0F0F] truncate">{stopLabel(stop)}</p>
-                  {stopSubtitle(stop) && (
-                    <p className="text-[11px] text-[#9B9B9B] truncate">{stopSubtitle(stop)}</p>
-                  )}
+                  <input
+                    value={stop.note}
+                    onChange={e => onStopChange(stop.key, { note: e.target.value.slice(0, 500) })}
+                    placeholder="Notă (opțional)"
+                    aria-label={`Notă pentru ${stopLabel(stop)}`}
+                    className="w-full bg-transparent text-[11px] text-[#6B6B6B] outline-none placeholder:text-[#9B9B9B] mt-0.5"
+                  />
                 </div>
 
                 <select

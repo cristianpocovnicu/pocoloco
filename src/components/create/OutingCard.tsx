@@ -2,6 +2,7 @@
 import { Minus, Plus } from 'lucide-react'
 import { TRANSPORT_TYPES } from '@/lib/utils'
 import CharCounter from '@/components/ui/CharCounter'
+import CountryPicker from '@/components/trip/CountryPicker'
 import { suggestTripTitle, type StopDraft, type TripDraft } from '@/lib/story'
 
 type Props = {
@@ -94,7 +95,15 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
         </div>
       </div>
 
-      {photos.length > 0 && (
+      <div className="py-3 border-t border-[rgba(0,0,0,0.06)]">
+        <span className="text-[13px] text-[#6B6B6B] block mb-2">În ce țări</span>
+        <CountryPicker
+          value={trip.countries}
+          onChange={countries => onChange({ countries })}
+        />
+      </div>
+
+      {photos.length > 0 ? (
         <div className="py-3 border-t border-[rgba(0,0,0,0.06)]">
           <span className="text-[13px] text-[#6B6B6B] block mb-2">
             Poza de deasupra <span className="text-[#9B9B9B]">— implicit prima</span>
@@ -115,6 +124,14 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
               )
             })}
           </div>
+        </div>
+      ) : (
+        <div className="py-3 border-t border-[rgba(0,0,0,0.06)]">
+          <span className="text-[13px] text-[#6B6B6B] block mb-1">Poza de deasupra</span>
+          <p className="text-[12px] text-[#9B9B9B] leading-relaxed">
+            Se alege automat, din locurile pe care le-ai adăugat. O poți schimba oricând
+            după publicare.
+          </p>
         </div>
       )}
     </div>

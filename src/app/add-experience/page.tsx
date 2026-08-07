@@ -19,6 +19,7 @@ import {
   saveDraft,
   stopHasSubject,
   stopLabel,
+  suggestTripCountries,
   type StopDraft,
   type StoryDraft,
   type StoryMode,
@@ -295,6 +296,11 @@ ${text}` : text,
    */
   const continueToDetails = () => {
     dirty.current = true
+    // țările se deduc o singură dată, la intrarea în pasul 2; de acolo
+    // încolo sunt ale userului, inclusiv dacă le golește
+    setTrip(prev => (prev.countries.length > 0
+      ? prev
+      : { ...prev, countries: suggestTripCountries(usableStops) }))
     setStops(usableStops)
     setExpandedKey(usableStops[usableStops.length - 1]?.key || null)
     setStep('details')

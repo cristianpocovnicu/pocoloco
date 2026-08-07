@@ -51,6 +51,8 @@ export type TripDraft = {
   durationDays: number
   transportType: string
   coverImage: string | null
+  /** dedus din locurile alese la intrarea în pasul 2, apoi editabil */
+  countries: string[]
 }
 
 /** La ce ecran era userul. Draftul vechi n-are câmpul — pornește de la 'story'. */
@@ -116,7 +118,14 @@ export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
 }
 
 export function emptyTrip(): TripDraft {
-  return { title: '', description: '', durationDays: 1, transportType: 'car', coverImage: null }
+  return {
+    title: '',
+    description: '',
+    durationDays: 1,
+    transportType: 'car',
+    coverImage: null,
+    countries: [],
+  }
 }
 
 /** Are oprirea un subiect — un loc ales sau o activitate cu nume? */
@@ -165,6 +174,22 @@ export function suggestTripTitle(stops: StopDraft[]): string {
   return common(cities) || common(areas) || common(countries) || ''
 }
 
+/**
+ * Țările deduse din locurile alese.
+ *
+ * Doar din opriri care chiar au un loc: o activitate fără loc poartă
+ * „România" ca valoare implicită a formularului, nu ca informație despre
+ * unde a fost omul.
+ */
+export function suggestTripCountries(stops: StopDraft[]): string[] {
+  const found = stops
+    .filter(stop => stop.kind === 'place_visit' && stop.locationName.trim())
+    .map(stop => stop.locationCountry.trim())
+    .filter(Boolean)
+
+  return Array.from(new Set(found))
+}
+
 // ---------------------------------------------------------------------
 // Draft
 // ---------------------------------------------------------------------
@@ -206,6 +231,7 @@ export async function loadDraft(
         description: typeof saved.description === 'string' ? saved.description : base.description,
         transportType: typeof saved.transportType === 'string' ? saved.transportType : base.transportType,
         durationDays: Number.isFinite(saved.durationDays) ? (saved.durationDays as number) : base.durationDays,
+        countries: Array.isArray(saved.countries) ? saved.countries.filter(c => typeof c === 'string') : base.countries,
       },
       step: payload.step === 'details' ? 'details' : 'story',
       // draft de dinaintea rutării: un titlu completat înseamnă că omul
@@ -391,9 +417,8 @@ export async function publishStory(
     // poză" e doar evidențiere în ecran: dacă n-a apăsat nimeni pe ea,
     // publish_story pune aceeași imagine, dar marcată 'auto'.
     cover_image: draft.trip.coverImage,
-    countries: Array.from(new Set(
-      stops.map(s => s.locationCountry.trim()).filter(Boolean)
-    )),
+    // ce a rămas la pasul 2, dedus sau editat de om
+    countries: draft.trip.countries,
   }
 
   const { data, error } = await supabase.rpc('publish_story', {
