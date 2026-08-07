@@ -1,8 +1,7 @@
 'use client'
-import { Camera, Check, ChevronDown, ChevronUp, MessageSquare, Pencil, Star, Trash2 } from 'lucide-react'
+import { Camera, ChevronDown, ChevronUp, MessageSquare, Star, Trash2 } from 'lucide-react'
 import SubjectPicker from './SubjectPicker'
 import { PeriodPicker, PhotoEditor, RatingEditor, Section, StoryEditor } from './StopSections'
-import { useState } from 'react'
 import { stopHasSubject, stopLabel, stopSubtitle, type StopDraft } from '@/lib/story'
 
 type Props = {
@@ -17,11 +16,8 @@ type Props = {
   /** ce secțiuni sunt deschise acum, ținut în afara draftului */
   open: { photos: boolean; ratings: boolean; story: boolean }
   onToggleSection: (section: 'photos' | 'ratings' | 'story') => void
-  /** doar primul card poate numi ieșirea cu o zonă aleasă din greșeală */
-  onUseAsOutingName?: (name: string) => void
-  /** numele poveștii, citit direct din TripDraft — chipul nu ține copie */
-  outingName?: string
-  onOutingNameChange?: (name: string) => void
+  /** textul din câmpul gol, când cardul cere primul loc dintr-o zonă */
+  placeholder?: string
 }
 
 /**
@@ -39,32 +35,11 @@ export default function StopCard({
   onMove,
   open,
   onToggleSection,
-  onUseAsOutingName,
-  outingName,
-  onOutingNameChange,
+  placeholder,
 }: Props) {
   // la primul loc totul e deschis de la început; la următoarele, doar
   // căutarea și nota, restul la cerere
   const alwaysOpen = index === 0
-
-  /** o zonă aleasă din greșeală așteaptă un răspuns înainte de orice */
-  const [regionPending, setRegionPending] = useState(false)
-  /** editarea numelui poveștii, direct din chip */
-  const [editingName, setEditingName] = useState(false)
-  const [nameDraft, setNameDraft] = useState('')
-
-  const showChip = index === 0 && !!outingName?.trim()
-
-  const startEditing = () => {
-    setNameDraft(outingName || '')
-    setEditingName(true)
-  }
-
-  /** Enter sau blur salvează; numele golit face chipul să dispară. */
-  const commitName = () => {
-    onOutingNameChange?.(nameDraft.trim())
-    setEditingName(false)
-  }
 
   const photoSummary = stop.images.length > 0
     ? `${stop.images.length} ${stop.images.length === 1 ? 'poză' : 'poze'}`
@@ -147,64 +122,14 @@ export default function StopCard({
         </div>
       )}
 
-      {/* Ce s-a întâmplat după „le adaug pe rând" trebuie să se vadă pe
-          loc, altfel alegerea arată ca și cum n-ar fi făcut nimic. */}
-      {showChip && (
-        <div className="mb-3">
-          {editingName ? (
-            <div className="flex items-center gap-1.5">
-              <input
-                value={nameDraft}
-                onChange={e => setNameDraft(e.target.value.slice(0, 120))}
-                onBlur={commitName}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') commitName()
-                  if (e.key === 'Escape') setEditingName(false)
-                }}
-                autoFocus
-                aria-label="Numele poveștii"
-                className="flex-1 min-w-0 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-lg px-2.5 py-1.5 text-[12px] outline-none focus:border-[#E8440A] transition-colors"
-              />
-              <button
-                type="button"
-                onClick={commitName}
-                aria-label="Salvează numele"
-                className="w-7 h-7 rounded-lg bg-[#FFF0EB] flex items-center justify-center flex-shrink-0"
-              >
-                <Check size={13} className="text-[#E8440A]" />
-              </button>
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 bg-[#FFF0EB] border border-[rgba(232,68,10,0.2)] rounded-full pl-3 pr-1.5 py-1">
-              <span className="text-[12px] text-[#0F0F0F]">
-                Povestea ta: <strong className="font-outfit font-semibold">{outingName}</strong>
-              </span>
-              <button
-                type="button"
-                onClick={startEditing}
-                aria-label="Schimbă numele poveștii"
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[#E8440A]"
-              >
-                <Pencil size={12} />
-              </button>
-            </div>
-          )}
-
-          {!stopHasSubject(stop) && !editingName && (
-            <p className="text-[12px] text-[#9B9B9B] mt-1.5">Acum adaugă primul loc de acolo.</p>
-          )}
-        </div>
-      )}
-
       <SubjectPicker
         stop={stop}
         onChange={onChange}
         autoFocus={index === 0 && !stopHasSubject(stop)}
-        onUseAsOutingName={index === 0 ? onUseAsOutingName : undefined}
-        onDecisionPending={setRegionPending}
+        placeholder={placeholder}
       />
 
-      {stopHasSubject(stop) && !regionPending && (
+      {stopHasSubject(stop) && (
         <div className="mt-3">
           {/* Perioada stă lângă „unde", nu în secțiunea de notare: ține de
               vizită, nu de cât de bun a fost locul. Un singur rând, deci

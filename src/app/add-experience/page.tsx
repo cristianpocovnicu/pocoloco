@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { useToast } from '@/components/ui/Toast'
 import StopCard from '@/components/create/StopCard'
+import SubjectPicker from '@/components/create/SubjectPicker'
 import DetailsScreen from '@/components/create/DetailsScreen'
 import AddToTripDialog from '@/components/trip/AddToTripDialog'
 import {
@@ -19,6 +20,7 @@ import {
   stopLabel,
   type StopDraft,
   type StoryDraft,
+  type StoryMode,
   type StoryStep,
   type TripDraft,
 } from '@/lib/story'
@@ -29,12 +31,17 @@ type SectionState = Record<string, { photos: boolean; ratings: boolean; story: b
 const SAVE_DEBOUNCE_MS = 1500
 
 /**
- * Ecranul de creare: unul singur, care crește pe măsură ce ai ce spune.
+ * Ecranul de creare.
  *
- * Nu există pași și nu există „înapoi": tot terenul e vizibil de la
- * început — prima oprire, invitația de a mai adăuga una, detaliile ieșirii
- * (blocate până există a doua oprire). Nimic nu cere o decizie despre ce
- * fel de conținut faci; asta se decide singură, la publicare.
+ * Începe cu o singură căutare. Ce alegi acolo decide drumul, fără să ți se
+ * ceară vreo decizie de taxonomie:
+ *
+ *   un obiectiv (loc sau activitate) -> scrii despre el;
+ *   o zonă întreagă (țară, regiune)  -> numele ei devine numele poveștii,
+ *                                       iar locurile se adaugă pe rând.
+ *
+ * Ramificarea stabilește punctul de plecare, nu închide drumuri: din
+ * oricare dintre ele se ajunge la mai multe locuri și la pasul 2.
  */
 function CreateScreen() {
   const router = useRouter()
@@ -44,6 +51,10 @@ function CreateScreen() {
   const [userId, setUserId] = useState<string | null>(null)
   const [stops, setStops] = useState<StopDraft[]>([])
   const [trip, setTrip] = useState<TripDraft>(emptyTrip())
+  /** null cât timp nimic n-a fost ales: atunci se vede doar căutarea */
+  const [mode, setMode] = useState<StoryMode | null>(null)
+  /** oprirea folosită de căutarea de la intrare, până se decide ramura */
+  const [entryStop, setEntryStop] = useState<StopDraft>(() => newStop())
   /** ecranul curent: povestea sau detaliile călătoriei */
   const [step, setStep] = useState<StoryStep>('story')
   /** câte locuri au rămas fără zi după ce a scăzut durata */
@@ -81,11 +92,13 @@ function CreateScreen() {
         return
       }
 
-      const first = newStop(preLocationId && preName
-        ? { locationId: preLocationId, locationName: preName }
-        : {})
-      setStops([first])
-      setExpandedKey(first.key)
+      // venit de pe pagina unui loc: locul e ales, deci e clar un obiectiv
+      if (preLocationId && preName) {
+        const first = newStop({ locationId: preLocationId, locationName: preName })
+        setStops([first])
+        setExpandedKey(first.key)
+        setMode('review')
+      }
       setLoading(false)
     }
     start()
@@ -97,33 +110,46 @@ function CreateScreen() {
     if (!userId || loading || pendingDraft || !dirty.current) return
 
     const timer = setTimeout(() => {
-      void saveDraft(createClient(), userId, { stops, trip, step })
+      void saveDraft(createClient(), userId, { stops, trip, step, mode: mode || 'review' })
     }, SAVE_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
-  }, [stops, trip, step, userId, loading, pendingDraft])
+  }, [stops, trip, step, mode, userId, loading, pendingDraft])
 
   const patchStop = useCallback((key: string, patch: Partial<StopDraft>) => {
     dirty.current = true
     setStops(prev => prev.map(stop => (stop.key === key ? { ...stop, ...patch } : stop)))
   }, [])
 
-  /**
-   * Zona aleasă din greșeală devine numele ieșirii, dacă n-are deja unul.
-   * Nu deschide pasul 2 și nu schimbă butonul: alea depind doar de câte
-   * locuri există.
-   */
-  const useRegionAsOutingName = (name: string) => {
-    dirty.current = true
-    // (prev.title || '') intenționat: un draft vechi poate avea title null,
-    // iar o excepție aici ar reseta tot ecranul — se vede ca un refresh
-    setTrip(prev => ((prev.title || '').trim() ? prev : { ...prev, title: name }))
-  }
-
-  /** Editarea din chip suprascrie: e o acțiune explicită, nu o sugestie. */
+  /** Numele poveștii, editabil direct din antet. */
   const setOutingName = (name: string) => {
     dirty.current = true
     setTrip(prev => ({ ...prev, title: name }))
+  }
+
+  /**
+   * Un obiectiv ales la intrare: devine primul card, cu tot ce a apucat
+   * căutarea să afle despre el.
+   */
+  const startReview = (patch: Partial<StopDraft>) => {
+    dirty.current = true
+    const first = newStop({ ...entryStop, ...patch, key: undefined as unknown as string })
+    setStops([first])
+    setExpandedKey(first.key)
+    setMode('review')
+  }
+
+  /**
+   * O zonă aleasă la intrare: nu devine loc și nu ajunge în locations —
+   * dă numele poveștii, iar primul card așteaptă gol primul loc de acolo.
+   */
+  const startJourney = (name: string) => {
+    dirty.current = true
+    const first = newStop()
+    setTrip(prev => ({ ...prev, title: name }))
+    setStops([first])
+    setExpandedKey(first.key)
+    setMode('journey')
   }
 
   const addStop = () => {
@@ -175,6 +201,7 @@ function CreateScreen() {
     if (!pendingDraft) return
     setStops(pendingDraft.stops)
     setTrip(pendingDraft.trip)
+    setMode(pendingDraft.mode || 'review')
     // te întorci unde erai, nu la începutul poveștii
     setStep(pendingDraft.step === 'details' ? 'details' : 'story')
     setExpandedKey(pendingDraft.stops[pendingDraft.stops.length - 1]?.key || null)
@@ -184,17 +211,18 @@ function CreateScreen() {
   const discard = async () => {
     if (!window.confirm('Ștergi ce ai început? Nu se mai poate recupera.')) return
     if (userId) await deleteDraft(createClient(), userId)
-    const first = newStop()
-    setStops([first])
+    setStops([])
     setTrip(emptyTrip())
     setStep('story')
-    setExpandedKey(first.key)
+    setMode(null)
+    setEntryStop(newStop())
+    setExpandedKey(null)
     setPendingDraft(null)
   }
 
   const saveForLater = async () => {
     if (!userId) return
-    await saveDraft(createClient(), userId, { stops, trip, step })
+    await saveDraft(createClient(), userId, { stops, trip, step, mode: mode || 'review' })
     toast('Salvat. O găsești în profil când vrei să continui.')
     router.push('/profile')
   }
@@ -217,10 +245,13 @@ function CreateScreen() {
   }
 
   const usableStops = stops.filter(stopHasSubject)
-  // pe ecranul poveștii: un singur loc se publică direct, mai multe merg
-  // mai departe la detalii
+  /**
+   * O poveste pornită de la o zonă are deja nume, deci trece prin pasul 2
+   * chiar cu un singur loc. Una pornită de la un obiectiv merge direct la
+   * publicare până apare al doilea loc.
+   */
   const canContinue = usableStops.length > 0
-  const isMulti = usableStops.length > 1
+  const isMulti = mode === 'journey' ? usableStops.length >= 1 : usableStops.length > 1
 
   /**
    * Semnul că povestea întregii ieșiri a ajuns în textul primului loc:
@@ -323,6 +354,45 @@ ${text}` : text,
     />
   )
 
+  // nimic ales încă: o singură întrebare pe ecran
+  if (!pendingDraft && mode === null) return (
+    <div className="min-h-screen bg-[#F8F7F5]">
+      <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 sticky top-0 z-30">
+        <div className="max-w-[680px] mx-auto flex items-center gap-3">
+          <Link
+            href="/"
+            aria-label="Înapoi"
+            className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0"
+          >
+            <ArrowLeft size={16} className="text-[#6B6B6B]" />
+          </Link>
+          <div className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">Povestește</div>
+        </div>
+      </div>
+
+      <div className="max-w-[560px] mx-auto px-5 pt-12">
+        <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1.5 text-center">
+          De unde începe povestea?
+        </h1>
+        <p className="text-[13px] text-[#9B9B9B] leading-relaxed mb-6 text-center">
+          Scrie ce-ți vine primul în minte. Restul vine după.
+        </p>
+
+        <SubjectPicker
+          stop={entryStop}
+          onChange={patch => {
+            setEntryStop(prev => ({ ...prev, ...patch }))
+            // orice altceva decât o zonă e un obiectiv: intrăm pe review
+            if (patch.locationName || patch.activityTitle) startReview(patch)
+          }}
+          onRegionPicked={startJourney}
+          placeholder="Un loc, o activitate sau o zonă întreagă — de unde începe povestea?"
+          autoFocus
+        />
+      </div>
+    </div>
+  )
+
   if (step === 'details' && isMulti) return (
     <DetailsScreen
       trip={trip}
@@ -385,8 +455,8 @@ ${text}` : text,
               Pare că ai povestit toată ieșirea în textul primului loc
             </p>
             <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-3">
-              O mutăm la povestea călătoriei? Acolo stă ce ține de întreaga ieșire, iar
-              la fiecare loc rămâne ce e despre el.
+              O mutăm la povestea întregii ieșiri? Acolo stă ce ține de toată ieșirea,
+              iar la fiecare loc rămâne ce e despre el.
             </p>
             <div className="flex gap-2">
               <button type="button"
@@ -411,6 +481,23 @@ ${text}` : text,
           </div>
         )}
 
+        {!pendingDraft && mode === 'journey' && (
+          <div className="mb-4">
+            <label className="text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide block mb-1.5">
+              Povestea ta
+            </label>
+            <input
+              value={trip.title}
+              onChange={e => setOutingName(e.target.value.slice(0, 120))}
+              placeholder="Cum o numim?"
+              className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 font-outfit text-[18px] font-semibold text-[#0F0F0F] outline-none focus:border-[#E8440A] transition-colors placeholder:font-normal placeholder:text-[#9B9B9B]"
+            />
+            {usableStops.length === 0 && (
+              <p className="text-[12px] text-[#9B9B9B] mt-1.5">Adaugă primul loc de acolo.</p>
+            )}
+          </div>
+        )}
+
         {!pendingDraft && (
           <>
             <div className="flex flex-col gap-2.5">
@@ -427,9 +514,9 @@ ${text}` : text,
                   onMove={direction => moveStop(index, direction)}
                   open={sections[stop.key] || { photos: false, ratings: false, story: false }}
                   onToggleSection={section => toggleSection(stop.key, section)}
-                  onUseAsOutingName={useRegionAsOutingName}
-                  outingName={trip.title}
-                  onOutingNameChange={setOutingName}
+                  placeholder={mode === 'journey' && index === 0
+                    ? 'Primul loc de acolo: un vârf, un sat, o plajă...'
+                    : undefined}
                 />
               ))}
             </div>

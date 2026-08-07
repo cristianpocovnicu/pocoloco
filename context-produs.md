@@ -127,6 +127,34 @@ toast-uri, restul aplicației.
   (migrarea 33). Bonusul de 3 puncte se dă doar pentru coperta aleasă de
   om: sistemul nu se răsplătește singur.
 
+### Iterația 7 — rutare prin natura selecției *(implementată, 8 august 2026)*
+
+Între 6 și 7 a existat o încercare, **6b**: la alegerea unei zone apărea o
+întrebare cu două opțiuni („ai fost în mai multe locuri" / „povestesc
+despre zonă ca întreg"), plus un chip cu numele poveștii. A acumulat
+edge case-uri la fiecare test — ce se randează cât timp întrebarea
+așteaptă, ce se întâmplă cu selecția, cum se vede că alegerea a avut
+efect, cum se editează numele rezultat.
+
+Înlocuită cu **rutare prin natura selecției**. Primul ecran are o singură
+căutare. Ce alege omul decide drumul:
+
+- **un obiectiv** — loc din Pocoloco, loc din Google, activitate → scrii
+  despre el, exact fluxul de până acum;
+- **o zonă întreagă** — țară, regiune, formă de relief (detecția de
+  `types` din iterația 6b, singura ei parte păstrată) → numele zonei
+  devine numele poveștii, iar locurile se adaugă pe rând dedesubt. Zona
+  **nu** ajunge în `locations`: n-are pin, n-are moderare, n-o poate
+  recenza nimeni.
+
+**De ce nu e bifurcația respinsă la iterația 3.** Aceea cerea userului o
+decizie taxonomică conștientă — „experiență" sau „călătorie" — înainte să
+scrie un cuvânt. Aici decizia o ia gestul lui natural: ce scrie în
+căutare. Primul ecran rămâne o singură întrebare.
+
+Ramificarea stabilește punctul de plecare, nu închide drumuri: din ambele
+se ajunge la mai multe locuri și la pasul 2.
+
 ---
 
 ## 4. Alte decizii

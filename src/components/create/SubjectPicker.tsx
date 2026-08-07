@@ -17,17 +17,13 @@ type Props = {
   /** primul card primește autofocus, restul nu */
   autoFocus?: boolean
   /**
-   * Doar la primul card: numele unei zone alese din greșeală poate deveni
-   * numele ieșirii. La celelalte lipsește, deci întrebarea doar golește
-   * selecția.
+   * Doar la ecranul de intrare: o zonă întreagă nu devine loc, ci dă numele
+   * poveștii. Când lipsește (în interiorul cardurilor), o zonă aleasă se
+   * comportă ca orice alt loc.
    */
-  onUseAsOutingName?: (name: string) => void
-  /**
-   * Cât timp întrebarea despre zonă e pe ecran, cardul nu trebuie să arate
-   * restul formularului: ar cere o decizie și s-ar purta simultan ca și cum
-   * ar fi fost luată.
-   */
-  onDecisionPending?: (pending: boolean) => void
+  onRegionPicked?: (name: string) => void
+  /** textul din câmpul gol, diferit la intrare față de cardurile de loc */
+  placeholder?: string
 }
 
 /**
@@ -41,24 +37,15 @@ export default function SubjectPicker({
   stop,
   onChange,
   autoFocus,
-  onUseAsOutingName,
-  onDecisionPending,
+  onRegionPicked,
+  placeholder,
 }: Props) {
   const [query, setQuery] = useState('')
-  /** numele zonei alese, cât timp întrebăm dacă chiar despre ea e vorba */
-  const [broadRegion, setBroadRegion] = useState<string | null>(null)
-  /** după ce zona a ieșit din selecție, câmpul cere primul loc concret */
-  const [justClearedRegion, setJustClearedRegion] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const [dbResults, setDbResults] = useState<DbLocation[]>([])
   const [placeResults, setPlaceResults] = useState<PlaceSuggestion[]>([])
   const [searching, setSearching] = useState(false)
   const sessionToken = useRef(newSessionToken())
-
-  // cardul ascunde secțiunile cât timp întrebarea așteaptă răspuns
-  useEffect(() => {
-    onDecisionPending?.(!!broadRegion)
-  }, [broadRegion, onDecisionPending])
 
   useEffect(() => {
     const term = query.trim()
@@ -79,7 +66,6 @@ export default function SubjectPicker({
         searchPlaces(term, sessionToken.current),
       ])
 
-      setJustClearedRegion(false)
       setDbResults((dbRes.data || []) as DbLocation[])
       const known = new Set((dbRes.data || []).map((l: DbLocation) => l.name.toLowerCase()))
       setPlaceResults(places.filter(p => !known.has(p.mainText.toLowerCase())).slice(0, 5))
@@ -89,9 +75,8 @@ export default function SubjectPicker({
     return () => clearTimeout(timer)
   }, [query])
 
-  // locurile din baza noastră au trecut deja prin moderare: nu întrebăm
+  // locurile din baza noastră au trecut deja prin moderare: sunt obiective
   const pickExisting = (loc: DbLocation) => {
-    setBroadRegion(null)
     onChange({
       kind: 'place_visit',
       locationId: loc.id,
@@ -110,9 +95,14 @@ export default function SubjectPicker({
     const details = await getPlaceDetails(place.placeId, sessionToken.current)
     sessionToken.current = newSessionToken()
 
-    // „Madeira" ales ca loc ar deveni un pin pe hartă, de moderat și de
-    // recenzat de alții — când de fapt omul își numea povestea
-    setBroadRegion(isBroadRegion(details?.types) ? (details?.name || place.mainText) : null)
+    // O zonă întreagă nu devine pin pe hartă: la ecranul de intrare dă
+    // numele poveștii, iar userul continuă cu primul loc de acolo.
+    if (onRegionPicked && isBroadRegion(details?.types)) {
+      onRegionPicked(details?.name || place.mainText)
+      setQuery('')
+      setSearching(false)
+      return
+    }
 
     onChange({
       kind: 'place_visit',
@@ -160,23 +150,6 @@ export default function SubjectPicker({
       placeId: null,
     })
     setQuery('')
-  }
-
-  /**
-   * „E toată povestea mea de acolo": zona iese din selecție.
-   *
-   * preventDefault deși nu există niciun <form> în flux: butoanele au
-   * type="button", dar dacă mâine ecranul ajunge într-un formular,
-   * clickul n-are voie să devină submit.
-   */
-  const useRegionAsName = (e?: React.MouseEvent) => {
-    e?.preventDefault()
-    if (broadRegion && onUseAsOutingName) onUseAsOutingName(broadRegion)
-    setBroadRegion(null)
-    setJustClearedRegion(true)
-    clear()
-    // câmpul de căutare revine; îi dăm focus la următorul tur de randare
-    setTimeout(() => searchRef.current?.focus(), 0)
   }
 
   const clear = () => onChange({
@@ -256,32 +229,7 @@ export default function SubjectPicker({
         </button>
       </div>
 
-      {/* Cât nu s-a răspuns, cardul nu arată nimic altceva: întrebarea și
-          formularul complet nu pot sta pe ecran în același timp. */}
-      {broadRegion ? (
-        <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.25)] rounded-xl px-3.5 py-3">
-          <p className="text-[13px] font-medium text-[#0F0F0F] mb-2.5 leading-relaxed">
-            Ai fost în mai multe locuri din {broadRegion}, sau povestești despre {broadRegion} ca destinație?
-          </p>
-
-          <button type="button"
-            onClick={useRegionAsName}
-            className="bg-[#E8440A] text-white font-outfit text-[12px] font-semibold px-3.5 py-2 rounded-full"
-          >
-            Am fost în mai multe locuri — le adaug pe rând
-          </button>
-          <p className="text-[11px] text-[#9B9B9B] leading-relaxed mt-1.5 mb-3">
-            {broadRegion} devine numele poveștii; tu începi cu primul loc.
-          </p>
-
-          <button type="button"
-            onClick={e => { e.preventDefault(); setBroadRegion(null) }}
-            className="text-[12px] text-[#6B6B6B] font-medium underline underline-offset-2"
-          >
-            Povestesc despre {broadRegion} ca întreg
-          </button>
-        </div>
-      ) : !stop.locationId && (
+      {!stop.locationId && (
         <>
           <input
             value={stop.locationCity}
@@ -307,9 +255,7 @@ export default function SubjectPicker({
           ref={searchRef}
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder={justClearedRegion
-            ? 'Începe cu primul loc: un vârf, un sat, o plajă...'
-            : 'Castelul Bran, snorkeling, o cafenea...'}
+          placeholder={placeholder || 'Castelul Bran, snorkeling, o cafenea...'}
           autoFocus={autoFocus}
           className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl pl-10 pr-10 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
         />

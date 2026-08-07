@@ -56,10 +56,22 @@ export type TripDraft = {
 /** La ce ecran era userul. Draftul vechi n-are câmpul — pornește de la 'story'. */
 export type StoryStep = 'story' | 'details'
 
+/**
+ * Ce a ales userul la prima căutare, nu ce fel de conținut a cerut.
+ *
+ *   'review'  — un obiectiv: un loc sau o activitate. Povestea e despre el.
+ *   'journey' — o zonă întreagă: numele ei devine numele poveștii, iar
+ *               locurile se adaugă pe rând dedesubt.
+ *
+ * Draftul vechi n-are câmpul: îl deducem din titlu (vezi loadDraft).
+ */
+export type StoryMode = 'review' | 'journey'
+
 export type StoryDraft = {
   stops: StopDraft[]
   trip: TripDraft
   step?: StoryStep
+  mode?: StoryMode
 }
 
 let counter = 0
@@ -196,6 +208,11 @@ export async function loadDraft(
         durationDays: Number.isFinite(saved.durationDays) ? (saved.durationDays as number) : base.durationDays,
       },
       step: payload.step === 'details' ? 'details' : 'story',
+      // draft de dinaintea rutării: un titlu completat înseamnă că omul
+      // pornise de la o zonă, altfel scria despre un obiectiv
+      mode: payload.mode === 'journey' || payload.mode === 'review'
+        ? payload.mode
+        : ((saved.title || '').trim() ? 'journey' : 'review'),
     }
   } catch {
     return null
@@ -325,8 +342,24 @@ export async function publishStory(
     create_experience: stopHasContent(stop),
   }))
 
+  // O poveste pornită de la o zonă are titlu propriu: chiar cu un singur
+  // loc e o călătorie, nu o experiență răzleață.
+  const isJourney = draft.mode === 'journey' && draft.trip.title.trim().length > 0
+
+  /*
+   * publish_story() (migrarea 35) întoarce fără să creeze călătoria dacă
+   * primește sub două opriri — dar creează experiențele înainte de asta.
+   * Cu o singură oprire am publica experiența și am pierde titlul în
+   * tăcere, așa că ne oprim înainte, cu un mesaj.
+   *
+   * Se scoate în momentul în care pragul din funcție coboară la 1.
+   */
+  if (isJourney && stops.length === 1) {
+    throw new Error('Deocamdată o poveste cu nume are nevoie de cel puțin două locuri. Mai adaugă unul.')
+  }
+
   // O singură oprire: un insert, fără călătorie inventată în jurul ei
-  if (stops.length === 1) {
+  if (stops.length === 1 && !isJourney) {
     const single = payload[0]
     if (!single.create_experience && single.kind === 'place_visit') {
       throw new Error('Adaugă măcar o poză, o notă sau câteva cuvinte.')
