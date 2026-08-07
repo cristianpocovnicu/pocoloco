@@ -15,6 +15,7 @@ import SavedTripList from '@/components/profile/SavedTripList'
 import { fetchSavedLocations, fetchSavedTrips, setLocationSaveStatus, type SavedLocation, type SavedTrip } from '@/lib/saves'
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
 import { formatCount, timeAgo } from '@/lib/utils'
+import { activityLabel } from '@/lib/activities'
 import ShareButton from '@/components/ui/ShareButton'
 import { useToast } from '@/components/ui/Toast'
 import Link from 'next/link'
@@ -31,6 +32,10 @@ type Profile = {
 
 type Experience = {
   id: string
+  kind?: string | null
+  title?: string | null
+  activity_category?: string | null
+  activity_area?: string | null
   content: string
   images: string[]
   rating_experience: number
@@ -39,7 +44,7 @@ type Experience = {
   upvotes: number
   comment_count: number
   created_at: string
-  location: { id: string; name: string; city: string }
+  location: { id: string; name: string; city: string } | null
 }
 
 const TABS = ['Experiențe', 'Salvate', 'Am fost', 'Insigne']
@@ -247,9 +252,25 @@ export default function ProfilePage() {
                 // să stea într-un <a>
                 <div key={exp.id} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5">
                   <div className="flex items-start justify-between mb-1 gap-2">
-                    <Link href={`/location/${exp.location?.id}`} className="min-w-0 hover:text-[#E8440A] transition-colors">
-                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] truncate">{exp.location?.name}</h3>
-                      <p className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5"><MapPin size={10} /> {exp.location?.city}</p>
+                    <Link
+                      href={exp.location ? `/location/${exp.location.id}` : `/experience/${exp.id}`}
+                      className="min-w-0 hover:text-[#E8440A] transition-colors"
+                    >
+                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] truncate">
+                        {exp.kind === 'activity' ? (exp.title || 'Activitate') : exp.location?.name}
+                      </h3>
+                      <p className="text-[11px] text-[#9B9B9B] flex items-center gap-1 flex-wrap">
+                        {exp.kind === 'activity' ? (
+                          <>
+                            <span className="bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
+                              {activityLabel(exp.activity_category) || '🪂 Activitate'}
+                            </span>
+                            {exp.activity_area && <span className="flex items-center gap-0.5"><MapPin size={10} /> {exp.activity_area}</span>}
+                          </>
+                        ) : (
+                          <span className="flex items-center gap-0.5"><MapPin size={10} /> {exp.location?.city}</span>
+                        )}
+                      </p>
                     </Link>
                     <div className="flex gap-0.5 flex-shrink-0">
                       {[1,2,3,4,5].map(i => <Star key={i} size={12} className={i <= exp.rating_experience ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />)}
@@ -291,7 +312,7 @@ export default function ProfilePage() {
                       <Trash2 size={11} /> Șterge
                     </button>
                     <Link
-                      href={`/location/${exp.location?.id}`}
+                      href={exp.location ? `/location/${exp.location.id}` : `/experience/${exp.id}`}
                       className="ml-auto text-[11px] text-[#6B6B6B] px-3 py-1.5 rounded-lg font-medium"
                     >
                       Vezi →

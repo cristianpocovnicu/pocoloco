@@ -42,11 +42,14 @@ type TripRow = {
 
 type ExperienceRow = {
   id: string
+  kind?: string | null
+  title?: string | null
+  activity_area?: string | null
   content: string | null
   images: string[] | null
   upvotes: number | null
   author_id: string
-  location: { id: string; name: string; city: string | null } | null
+  location: { id: string; name: string; city: string | null; status?: string } | null
 }
 
 export default function FeaturedSection() {
@@ -94,25 +97,29 @@ export default function FeaturedSection() {
       // fără călătorii încă => cele mai apreciate experiențe
       const { data: experiences } = await supabase
         .from('experiences')
-        .select('id, content, images, upvotes, author_id, location:locations!location_id!inner(id, name, city, status)')
+        .select('id, kind, title, activity_area, content, images, upvotes, author_id, location:locations!location_id(id, name, city, status)')
         .eq('status', 'active')
-        .eq('location.status', 'approved')
         .order('upvotes', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(6)
 
-      const experienceRows = (experiences || []) as unknown as ExperienceRow[]
+      const experienceRows = ((experiences || []) as unknown as ExperienceRow[])
+        .filter(e => e.kind === 'activity' || e.location?.status === 'approved')
       const authors = await fetchProfilesMap(supabase, experienceRows.map(e => e.author_id))
 
       setCards(experienceRows.map(e => ({
         id: e.id,
         kind: 'experience' as const,
-        title: e.content?.slice(0, 90) || 'Experiență',
-        subtitle: e.location ? `${e.location.name}${e.location.city ? `, ${e.location.city}` : ''}` : 'Experiență',
+        title: e.kind === 'activity'
+          ? (e.title || 'Activitate')
+          : (e.content?.slice(0, 90) || 'Experiență'),
+        subtitle: e.location
+          ? `${e.location.name}${e.location.city ? `, ${e.location.city}` : ''}`
+          : (e.activity_area || 'Activitate'),
         cover: e.images?.[0] || null,
         metric: e.upvotes || 0,
         author: authors[e.author_id] || null,
-        href: e.location ? `/location/${e.location.id}` : '#',
+        href: e.location ? `/location/${e.location.id}` : `/experience/${e.id}`,
       })))
       setLoading(false)
     }

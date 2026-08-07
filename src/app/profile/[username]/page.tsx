@@ -15,6 +15,7 @@ import TravelMap from '@/components/profile/TravelMap'
 import LevelBadge from '@/components/profile/LevelBadge'
 import { fetchSavedLocations, type SavedLocation } from '@/lib/saves'
 import { formatCount, timeAgo } from '@/lib/utils'
+import { activityLabel } from '@/lib/activities'
 import Image from 'next/image'
 
 type PublicProfile = {
@@ -31,6 +32,10 @@ type PublicProfile = {
 
 type Experience = {
   id: string
+  kind?: string | null
+  title?: string | null
+  activity_category?: string | null
+  activity_area?: string | null
   content: string
   images: string[] | null
   rating_experience: number
@@ -76,10 +81,9 @@ export default function PublicProfilePage() {
       const [exps, followCounts, userBadges, been] = await Promise.all([
         supabase
           .from('experiences')
-          .select('id, content, images, rating_experience, upvotes, comment_count, created_at, location:locations!location_id!inner(id, name, city, status)')
+          .select('id, kind, title, activity_category, activity_area, content, images, rating_experience, upvotes, comment_count, created_at, location:locations!location_id(id, name, city, status)')
           .eq('author_id', publicProfile.id)
           .eq('status', 'active')
-          .eq('location.status', 'approved')
           .order('created_at', { ascending: false })
           .limit(50),
         getFollowCounts(supabase, publicProfile.id),
@@ -87,7 +91,10 @@ export default function PublicProfilePage() {
         fetchSavedLocations(supabase, publicProfile.id, 'visited'),
       ])
 
-      setExperiences((exps.data || []) as unknown as Experience[])
+      // join stâng: activitățile n-au locație. Ce e legat de un loc
+      // neaprobat rămâne ascuns, ca înainte.
+      setExperiences(((exps.data || []) as unknown as Experience[])
+        .filter(e => e.kind === 'activity' || (e.location as { status?: string } | null)?.status === 'approved'))
       setCounts(followCounts)
       setBadges(userBadges.earned)
       setVisited(been)
@@ -242,14 +249,25 @@ export default function PublicProfilePage() {
               {experiences.map(exp => (
                 <Link
                   key={exp.id}
-                  href={exp.location ? `/location/${exp.location.id}` : '#'}
+                  href={exp.location ? `/location/${exp.location.id}` : `/experience/${exp.id}`}
                   className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5 block hover:border-[rgba(0,0,0,0.15)] transition-colors"
                 >
                   <div className="flex items-start justify-between mb-1">
                     <div className="min-w-0">
-                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] truncate">{exp.location?.name}</h3>
-                      <p className="text-[11px] text-[#9B9B9B] flex items-center gap-0.5">
-                        <MapPin size={10} /> {exp.location?.city}
+                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] truncate">
+                        {exp.kind === 'activity' ? (exp.title || 'Activitate') : exp.location?.name}
+                      </h3>
+                      <p className="text-[11px] text-[#9B9B9B] flex items-center gap-1 flex-wrap">
+                        {exp.kind === 'activity' ? (
+                          <>
+                            <span className="bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
+                              {activityLabel(exp.activity_category) || '🪂 Activitate'}
+                            </span>
+                            {exp.activity_area && <span className="flex items-center gap-0.5"><MapPin size={10} /> {exp.activity_area}</span>}
+                          </>
+                        ) : (
+                          <span className="flex items-center gap-0.5"><MapPin size={10} /> {exp.location?.city}</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex gap-0.5 flex-shrink-0">

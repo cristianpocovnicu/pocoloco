@@ -14,6 +14,7 @@ import {
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import TripKindBadge from '@/components/trip/TripKindBadge'
 import CoverImage from '@/components/ui/CoverImage'
+import { activityLabel } from '@/lib/activities'
 
 export default function FollowingSection() {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -115,7 +116,9 @@ export default function FollowingSection() {
           const cover = item.images[0]
           const subtitle = item.kind === 'trip'
             ? (item.countries?.join(', ') || 'Călătorie')
-            : `${item.location?.name}${item.location?.city ? `, ${item.location.city}` : ''}`
+            : item.activityTitle
+              ? (item.activityArea || activityLabel(item.activityCategory) || 'Activitate')
+              : `${item.location?.name}${item.location?.city ? `, ${item.location.city}` : ''}`
 
           return (
             <Link
@@ -129,6 +132,10 @@ export default function FollowingSection() {
                   : <span>{item.kind === 'trip' ? '🧭' : '📍'}</span>}
                 {item.kind === 'trip' ? (
                   <TripKindBadge isGuide={item.isGuide} onCover className="absolute top-2 left-2" />
+                ) : item.activityTitle ? (
+                  <span className="absolute top-2 left-2 bg-[#5B4FCF] text-white text-[10px] font-outfit font-bold uppercase px-2 py-0.5 rounded-full">
+                    {activityLabel(item.activityCategory) || 'Activitate'}
+                  </span>
                 ) : (
                   <span className="absolute top-2 left-2 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase px-2 py-0.5 rounded-full">
                     Experienta
@@ -148,7 +155,7 @@ export default function FollowingSection() {
                   </span>
                 </div>
                 <p className="text-[13px] font-outfit font-semibold text-[#0F0F0F] leading-tight mb-1 line-clamp-2 whitespace-pre-line">
-                  {item.kind === 'trip' ? item.title : item.text}
+                  {item.kind === 'trip' ? item.title : (item.activityTitle || item.text)}
                 </p>
                 <p className="text-[11px] text-[#9B9B9B] truncate">📍 {subtitle}</p>
               </div>

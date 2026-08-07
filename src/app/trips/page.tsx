@@ -13,13 +13,6 @@ import type { Trip } from '@/lib/trips'
 import CoverImage from '@/components/ui/CoverImage'
 
 type SortKey = 'popular' | 'recent'
-type KindFilter = 'all' | 'guides' | 'community'
-
-const KIND_FILTERS: { id: KindFilter; label: string }[] = [
-  { id: 'all', label: 'Toate' },
-  { id: 'guides', label: 'Ghiduri' },
-  { id: 'community', label: 'De la comunitate' },
-]
 
 const SORTS: { id: SortKey; label: string }[] = [
   { id: 'popular', label: 'Populare' },
@@ -33,12 +26,11 @@ export default function TripsPage() {
   const [authors, setAuthors] = useState<Record<string, MiniProfile>>({})
   const [stopCounts, setStopCounts] = useState<Record<string, number>>({})
   const [sort, setSort] = useState<SortKey>('popular')
-  const [kind, setKind] = useState<KindFilter>('all')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async (sortKey: SortKey, q: string, kindFilter: KindFilter) => {
+  const load = useCallback(async (sortKey: SortKey, q: string) => {
     setLoading(true)
     const supabase = createClient()
 
@@ -47,9 +39,6 @@ export default function TripsPage() {
       .select('*')
       .eq('status', 'active')
       .limit(PAGE_SIZE)
-
-    if (kindFilter === 'guides') request = request.eq('is_guide', true)
-    if (kindFilter === 'community') request = request.eq('is_guide', false)
 
     request = sortKey === 'popular'
       ? request.order('is_guide', { ascending: false }).order('save_count', { ascending: false }).order('created_at', { ascending: false })
@@ -80,9 +69,85 @@ export default function TripsPage() {
   }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => load(sort, query, kind), 300)
+    const timer = setTimeout(() => load(sort, query), 300)
     return () => clearTimeout(timer)
-  }, [sort, query, kind, load])
+  }, [sort, query, load])
+
+  /** Cardul unei călătorii — același, în ambele secțiuni. */
+  const renderTrip = (trip: Trip) => {
+    const author = authors[trip.author_id]
+    const transport = TRANSPORT_TYPES.find(t => t.id === trip.transport_type)
+    const stops = stopCounts[trip.id] || 0
+
+    return (
+      <Link
+        key={trip.id}
+        href={`/trip/${trip.id}`}
+        className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden block hover:border-[rgba(0,0,0,0.15)] transition-colors"
+      >
+        <div className="h-36 bg-gradient-to-br from-[#5B4FCF] to-[#8B7FE8] relative overflow-hidden">
+          {trip.cover_image
+            ? <CoverImage src={trip.cover_image} />
+            : <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">🧭</div>}
+          <TripKindBadge isGuide={trip.is_guide} onCover className="absolute top-2.5 left-2.5" />
+          {(trip.save_count || 0) > 0 && (
+            <span className="absolute top-2.5 right-2.5 bg-black/45 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Bookmark size={9} /> {formatCount(trip.save_count || 0)}
+            </span>
+          )}
+        </div>
+
+        <div className="p-3.5">
+          <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight mb-1.5">{trip.title}</h3>
+
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {trip.duration_days && (
+              <span className="text-[11px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5 flex items-center gap-1">
+                <Calendar size={10} /> {trip.duration_days} zile
+              </span>
+            )}
+            {stops > 0 && (
+              <span className="text-[11px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5 flex items-center gap-1">
+                <MapPin size={10} /> {stops} opriri
+              </span>
+            )}
+            {transport && (
+              <span className="text-[11px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5">
+                {transport.emoji} {transport.label}
+              </span>
+            )}
+            {trip.countries && trip.countries.length > 0 && (
+              <span className="text-[11px] text-[#5B4FCF] bg-[#EEEDFB] rounded-full px-2 py-0.5 flex items-center gap-1">
+                <Globe size={10} /> {trip.countries.join(', ')}
+              </span>
+            )}
+          </div>
+
+          {trip.description && (
+            <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-2 mb-2 whitespace-pre-line">{trip.description}</p>
+          )}
+
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+              style={{ background: colorFor(trip.author_id) }}
+            >
+              {initialsOf(author?.full_name || author?.username)}
+            </div>
+            <span className="text-[12px] text-[#6B6B6B] truncate">
+              {author?.full_name || author?.username || 'Călător'}
+            </span>
+            <span className="text-[11px] text-[#9B9B9B] ml-auto flex-shrink-0">{timeAgo(trip.created_at)}</span>
+          </div>
+        </div>
+      </Link>
+    )
+  }
+
+  // ghidurile editoriale stau sus, restul dedesubt — o singură listă,
+  // fără taburi de ales
+  const verified = trips.filter(t => t.is_guide)
+  const rest = trips.filter(t => !t.is_guide)
 
   return (
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
@@ -128,22 +193,6 @@ export default function TripsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mt-2 overflow-x-auto scrollbar-hide">
-            {KIND_FILTERS.map(f => (
-              <button
-                key={f.id}
-                onClick={() => setKind(f.id)}
-                className={cn(
-                  'text-[12px] px-3 py-1 rounded-full font-outfit font-medium border whitespace-nowrap flex-shrink-0',
-                  kind === f.id
-                    ? 'bg-[#5B4FCF] text-white border-[#5B4FCF]'
-                    : 'bg-white text-[#6B6B6B] border-[rgba(0,0,0,0.08)]'
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -168,77 +217,22 @@ export default function TripsPage() {
             action={query.trim() ? undefined : { href: '/trip/new', label: '+ Creează prima călătorie' }}
           />
         ) : (
+          <>
+          {verified.length > 0 && (
+            <>
+              <h2 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-2.5 flex items-center gap-1.5">
+                <span className="text-[#5B4FCF]">✓</span> Verificate de Pocoloco
+              </h2>
+              <div className="flex flex-col gap-3 mb-6">
+                {verified.map(renderTrip)}
+              </div>
+            </>
+          )}
+
           <div className="flex flex-col gap-3">
-            {trips.map(trip => {
-              const author = authors[trip.author_id]
-              const transport = TRANSPORT_TYPES.find(t => t.id === trip.transport_type)
-              const stops = stopCounts[trip.id] || 0
-
-              return (
-                <Link
-                  key={trip.id}
-                  href={`/trip/${trip.id}`}
-                  className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden block hover:border-[rgba(0,0,0,0.15)] transition-colors"
-                >
-                  <div className="h-36 bg-gradient-to-br from-[#5B4FCF] to-[#8B7FE8] relative overflow-hidden">
-                    {trip.cover_image
-                      ? <CoverImage src={trip.cover_image} />
-                      : <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">🧭</div>}
-                    <TripKindBadge isGuide={trip.is_guide} onCover className="absolute top-2.5 left-2.5" />
-                    {(trip.save_count || 0) > 0 && (
-                      <span className="absolute top-2.5 right-2.5 bg-black/45 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Bookmark size={9} /> {formatCount(trip.save_count || 0)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="p-3.5">
-                    <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight mb-1.5">{trip.title}</h3>
-
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {trip.duration_days && (
-                        <span className="text-[11px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5 flex items-center gap-1">
-                          <Calendar size={10} /> {trip.duration_days} zile
-                        </span>
-                      )}
-                      {stops > 0 && (
-                        <span className="text-[11px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5 flex items-center gap-1">
-                          <MapPin size={10} /> {stops} opriri
-                        </span>
-                      )}
-                      {transport && (
-                        <span className="text-[11px] text-[#6B6B6B] bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5">
-                          {transport.emoji} {transport.label}
-                        </span>
-                      )}
-                      {trip.countries && trip.countries.length > 0 && (
-                        <span className="text-[11px] text-[#5B4FCF] bg-[#EEEDFB] rounded-full px-2 py-0.5 flex items-center gap-1">
-                          <Globe size={10} /> {trip.countries.join(', ')}
-                        </span>
-                      )}
-                    </div>
-
-                    {trip.description && (
-                      <p className="text-[13px] text-[#6B6B6B] leading-relaxed line-clamp-2 mb-2 whitespace-pre-line">{trip.description}</p>
-                    )}
-
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                        style={{ background: colorFor(trip.author_id) }}
-                      >
-                        {initialsOf(author?.full_name || author?.username)}
-                      </div>
-                      <span className="text-[12px] text-[#6B6B6B] truncate">
-                        {author?.full_name || author?.username || 'Călător'}
-                      </span>
-                      <span className="text-[11px] text-[#9B9B9B] ml-auto flex-shrink-0">{timeAgo(trip.created_at)}</span>
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
+            {rest.map(renderTrip)}
           </div>
+          </>
         )}
       </div>
       <BottomNav />

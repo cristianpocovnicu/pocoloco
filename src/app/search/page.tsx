@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, Loader2, MapPin, Users, Clock, X, Star, LayoutList, Map as MapIcon } from 'lucide-react'
+import { Search, Loader2, MapPin, Users, Clock, X, Star, LayoutList, Compass, Map as MapIcon } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import NotificationBell from '@/components/layout/NotificationBell'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
 import { cn, CATEGORIES, CATEGORY_ICONS } from '@/lib/utils'
+import { activityLabel } from '@/lib/activities'
 import { fetchFollowingIds, type SuggestedUser } from '@/lib/follows'
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches'
 import { LocationRowSkeleton } from '@/components/ui/Skeleton'
@@ -24,7 +25,17 @@ const RATING_FILTERS = [
   { value: 9, label: '9+' },
 ]
 
-type Tab = 'locations' | 'users'
+type Tab = 'locations' | 'activities' | 'users'
+
+type ActivityResult = {
+  id: string
+  title: string | null
+  activity_category: string | null
+  activity_area: string | null
+  images: string[] | null
+  upvotes: number | null
+  created_at: string
+}
 
 type Location = {
   id: string
@@ -43,6 +54,7 @@ type View = 'list' | 'map'
 
 export default function SearchPage() {
   const [tab, setTab] = useState<Tab>('locations')
+  const [activities, setActivities] = useState<ActivityResult[]>([])
   const [view, setView] = useState<View>('list')
   const [query, setQuery] = useState('')
   const [activeChip, setActiveChip] = useState('Toate')
@@ -144,6 +156,30 @@ export default function SearchPage() {
     setLoading(false)
   }, [])
 
+  /** Activitățile: n-au pin, deci nu pot apărea în lista de locuri. */
+  const searchActivities = useCallback(async (q: string) => {
+    setLoading(true)
+    const supabase = createClient()
+
+    let request = supabase
+      .from('experiences')
+      .select('id, title, activity_category, activity_area, images, upvotes, created_at')
+      .eq('kind', 'activity')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(30)
+
+    if (q.trim()) request = request.ilike('title', `%${q.trim()}%`)
+
+    const { data, error: searchError } = await request
+
+    // coloana kind vine din 20260808_experience_kinds; până e rulată,
+    // tabul rămâne gol în loc să arunce o eroare în față
+    setError(null)
+    setActivities(searchError ? [] : ((data || []) as ActivityResult[]))
+    setLoading(false)
+  }, [])
+
   // pe cine urmăresc deja, ca butoanele din rezultate să pornească corect
   useEffect(() => {
     const load = async () => {
@@ -156,12 +192,13 @@ export default function SearchPage() {
 
   // Rulează și la montare (query gol) — doSearch filtrează mereu status = 'approved'
   useEffect(() => {
-    const timer = setTimeout(
-      () => (tab === 'locations' ? doSearch(query, activeChip, minScore) : searchUsers(query)),
-      300
-    )
+    const timer = setTimeout(() => {
+      if (tab === 'locations') doSearch(query, activeChip, minScore)
+      else if (tab === 'activities') searchActivities(query)
+      else searchUsers(query)
+    }, 300)
     return () => clearTimeout(timer)
-  }, [tab, query, activeChip, minScore, doSearch, searchUsers])
+  }, [tab, query, activeChip, minScore, doSearch, searchUsers, searchActivities])
 
   // sugestiile din dropdown, separat de rezultate ca să apară instant
   useEffect(() => {
@@ -205,7 +242,11 @@ export default function SearchPage() {
                   onFocus={() => setDropdownOpen(true)}
                   onKeyDown={e => { if (e.key === 'Enter') commitSearch(query); if (e.key === 'Escape') setDropdownOpen(false) }}
                   className="flex-1 min-w-0 bg-transparent text-sm text-[#0F0F0F] outline-none placeholder:text-[#9B9B9B]"
-                  placeholder={tab === 'locations' ? 'Caută locuri...' : 'Caută după nume sau @username...'}
+                  placeholder={
+                    tab === 'locations' ? 'Caută locuri...'
+                      : tab === 'activities' ? 'Caută activități: buggy, scufundări...'
+                        : 'Caută după nume sau @username...'
+                  }
                   autoFocus
                 />
                 {query && (
@@ -278,6 +319,7 @@ export default function SearchPage() {
           <div className="flex gap-2 mb-3">
             {([
               { id: 'locations' as const, label: 'Locuri', Icon: MapPin },
+              { id: 'activities' as const, label: 'Activități', Icon: Compass },
               { id: 'users' as const, label: 'Useri', Icon: Users },
             ]).map(({ id, label, Icon }) => (
               <button
@@ -344,7 +386,9 @@ export default function SearchPage() {
               <span className="text-[13px] text-[#9B9B9B]">
                 {tab === 'locations'
                   ? `${results.length} locuri găsite`
-                  : `${users.length} ${users.length === 1 ? 'user găsit' : 'useri găsiți'}`}
+                  : tab === 'activities'
+                    ? `${activities.length} ${activities.length === 1 ? 'activitate găsită' : 'activități găsite'}`
+                    : `${users.length} ${users.length === 1 ? 'user găsit' : 'useri găsiți'}`}
               </span>
 
               {tab === 'locations' && results.length > 0 && (
@@ -437,6 +481,53 @@ export default function SearchPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {tab === 'activities' && (
+            <div className="flex flex-col gap-2.5">
+              {activities.map(activity => (
+                <Link
+                  key={activity.id}
+                  href={`/experience/${activity.id}`}
+                  className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex hover:border-[rgba(0,0,0,0.15)] transition-colors"
+                >
+                  <div className="relative w-24 flex-shrink-0 bg-[#EEEDFB] flex items-center justify-center text-3xl">
+                    {activity.images?.[0]
+                      ? <CoverImage src={activity.images[0]} alt={activity.title || ''} sizes="96px" />
+                      : '🪂'}
+                  </div>
+                  <div className="flex-1 p-3.5 min-w-0">
+                    <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight mb-1 truncate">
+                      {activity.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] bg-[#EEEDFB] text-[#5B4FCF] px-2 py-0.5 rounded-full font-outfit font-semibold">
+                        {activityLabel(activity.activity_category) || 'Activitate'}
+                      </span>
+                      {activity.activity_area && (
+                        <span className="text-[12px] text-[#9B9B9B] truncate">📍 {activity.activity_area}</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+
+              {activities.length === 0 && !loading && (
+                <div className="text-center py-12 bg-white rounded-2xl border border-[rgba(0,0,0,0.08)]">
+                  <div className="text-4xl mb-3">🪂</div>
+                  <p className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-1">Nicio activitate încă</p>
+                  <p className="text-[13px] text-[#9B9B9B] mb-4">
+                    Tururi, scufundări, cursuri de gătit — lucrurile pe care le faci, nu doar locurile.
+                  </p>
+                  <Link
+                    href="/add-experience"
+                    className="inline-flex bg-[#E8440A] text-white font-outfit text-[13px] font-semibold px-4 py-2 rounded-full"
+                  >
+                    Povestește una
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 

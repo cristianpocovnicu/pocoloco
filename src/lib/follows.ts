@@ -102,6 +102,10 @@ export type FeedItem = {
   author: MiniProfile | null
   /** doar pentru experiențe */
   location?: { id: string; name: string; city: string | null } | null
+  /** completate doar la experiențele de tip activitate */
+  activityTitle?: string | null
+  activityCategory?: string | null
+  activityArea?: string | null
   /** doar pentru călătorii */
   title?: string
   cover_image?: string | null
@@ -113,6 +117,10 @@ export type FeedItem = {
 
 type ExperienceRow = {
   id: string
+  kind?: string | null
+  title?: string | null
+  activity_category?: string | null
+  activity_area?: string | null
   content: string | null
   images: string[] | null
   created_at: string
@@ -146,10 +154,9 @@ export async function fetchFollowingFeed(
 
   let experienceQuery = supabase
     .from('experiences')
-    .select('id, content, images, created_at, author_id, location:locations!location_id!inner(id, name, city, status)')
+    .select('id, kind, title, activity_category, activity_area, content, images, created_at, author_id, location:locations!location_id(id, name, city, status)')
     .in('author_id', authorIds)
     .eq('status', 'active')
-    .eq('location.status', 'approved')
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -168,7 +175,10 @@ export async function fetchFollowingFeed(
 
   const [experiencesRes, tripsRes] = await Promise.all([experienceQuery, tripQuery])
 
-  const experiences = (experiencesRes.data || []) as unknown as ExperienceRow[]
+  // join stâng: activitățile n-au locație, dar au ce căuta în feed.
+  // Experiențele legate de un loc neaprobat le filtrăm aici.
+  const experiences = ((experiencesRes.data || []) as unknown as ExperienceRow[])
+    .filter(e => e.kind === 'activity' || e.location?.status === 'approved')
   // tabelul trips poate lipsi / poate fi gol — nu blocăm feedul pentru asta
   const trips = (tripsRes.error ? [] : (tripsRes.data || [])) as unknown as TripRow[]
 
@@ -186,7 +196,10 @@ export async function fetchFollowingFeed(
       images: e.images || [],
       author: authors[e.author_id] || null,
       location: e.location,
-      href: e.location ? `/location/${e.location.id}` : '#',
+      activityTitle: e.kind === 'activity' ? e.title ?? null : null,
+      activityCategory: e.kind === 'activity' ? e.activity_category ?? null : null,
+      activityArea: e.kind === 'activity' ? e.activity_area ?? null : null,
+      href: e.location ? `/location/${e.location.id}` : `/experience/${e.id}`,
     })),
     ...trips.map(t => ({
       kind: 'trip' as const,

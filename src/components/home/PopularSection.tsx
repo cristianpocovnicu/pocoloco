@@ -7,11 +7,16 @@ import { ExperienceCardSkeleton } from '@/components/ui/Skeleton'
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo } from '@/lib/utils'
 import { fetchMyVotes, netScore, HIDE_THRESHOLD_EXPERIENCE, type VoteType } from '@/lib/votes'
+import { activityLabel } from '@/lib/activities'
 import VoteButtons from '@/components/experience/VoteButtons'
 import HiddenByVotes from '@/components/experience/HiddenByVotes'
 
 type Post = {
   id: string
+  kind?: 'place_visit' | 'activity'
+  title?: string | null
+  activity_category?: string | null
+  activity_area?: string | null
   content: string
   images: string[]
   rating_experience: number
@@ -28,7 +33,7 @@ type Post = {
     name: string
     city: string
     status: string
-  }
+  } | null
 }
 
 const PAGE_SIZE = 10
@@ -57,13 +62,13 @@ export default function PopularSection() {
     let request = supabase
       .from('experiences')
       .select(`
-        id, content, images, rating_experience,
+        id, kind, title, activity_category, activity_area,
+        content, images, rating_experience,
         upvotes, downvotes, comment_count, created_at,
         author:profiles!author_id(full_name, is_guide),
-        location:locations!location_id!inner(id, name, city, status)
+        location:locations!location_id(id, name, city, status)
       `)
       .eq('status', 'active')
-      .eq('location.status', 'approved')
 
     if (sortKey === 'popular') {
       request = request
@@ -78,7 +83,11 @@ export default function PopularSection() {
     const { data, error } = await request
     if (error || !data) return { list: [] as Post[], done: true }
 
-    const list = data as unknown as Post[]
+    // join stâng, ca activitățile (fără locație) să rămână în listă;
+    // experiențele legate de un loc neaprobat le scoatem aici
+    const list = (data as unknown as Post[]).filter(
+      post => post.kind === 'activity' || post.location?.status === 'approved'
+    )
     const votes = await fetchMyVotes(supabase, list.map(p => p.id))
     setMyVotes(prev => ({ ...prev, ...votes }))
 
@@ -185,7 +194,7 @@ export default function PopularSection() {
               key={post.id}
               className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(0,0,0,0.15)] transition-colors"
             >
-              <Link href={`/location/${post.location?.id}`} className="block">
+              <Link href={post.location ? `/location/${post.location.id}` : `/experience/${post.id}`} className="block">
                 <div className="p-3.5 pb-2.5">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0">
@@ -198,13 +207,24 @@ export default function PopularSection() {
                           <span className="text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-medium">Ghid</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] text-[#9B9B9B]">
-                        <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">Experienta</span>
-                        <span>📍 {post.location?.name}{post.location?.city ? `, ${post.location.city}` : ''}</span>
+                      <div className="flex items-center gap-1 text-[11px] text-[#9B9B9B] flex-wrap">
+                        {post.kind === 'activity' ? (
+                          <span className="bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
+                            {activityLabel(post.activity_category) || '🪂 Activitate'}
+                          </span>
+                        ) : (
+                          <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">Experienta</span>
+                        )}
+                        {post.kind === 'activity'
+                          ? post.activity_area && <span>📍 {post.activity_area}</span>
+                          : <span>📍 {post.location?.name}{post.location?.city ? `, ${post.location.city}` : ''}</span>}
                       </div>
                     </div>
                     <span className="text-[11px] text-[#9B9B9B]">{timeAgo(post.created_at)}</span>
                   </div>
+                  {post.kind === 'activity' && post.title && (
+                    <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight mb-1">{post.title}</h3>
+                  )}
                   <p className="text-[14px] text-[#0F0F0F] leading-relaxed line-clamp-3 whitespace-pre-line">{post.content}</p>
                 </div>
 
@@ -230,7 +250,7 @@ export default function PopularSection() {
                   />
                 </div>
                 <Link
-                  href={`/location/${post.location?.id}`}
+                  href={post.location ? `/location/${post.location.id}` : `/experience/${post.id}`}
                   className="flex items-center gap-1 text-[12px] text-[#6B6B6B] hover:text-[#E8440A] transition-colors"
                 >
                   <Eye size={13} /> Deschide
