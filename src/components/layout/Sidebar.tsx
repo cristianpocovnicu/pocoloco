@@ -13,7 +13,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Acasă', Icon: Home },
   { href: '/search', label: 'Caută', Icon: Search },
   { href: '/trips', label: 'Călătorii', Icon: BookOpen },
-  { href: '/following', label: 'Urmaresc', Icon: Users },
+  { href: '/following', label: 'Urmăresc', Icon: Users },
   { href: '/add-experience', label: 'Povestește', Icon: Plus },
 ]
 

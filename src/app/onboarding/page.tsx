@@ -175,7 +175,7 @@ export default function OnboardingPage() {
             <div className="text-5xl mb-4">👋</div>
             <h1 className="font-outfit text-[24px] font-bold text-[#0F0F0F] mb-2">Urmărește câțiva călători</h1>
             <p className="text-[14px] text-[#6B6B6B] leading-relaxed mb-2">
-              Cei mai activi din comunitate. Feedul „Urmaresc&rdquo; se umple cu ce postează ei.
+              Cei mai activi din comunitate. Feedul „Urmăresc&rdquo; se umple cu ce postează ei.
             </p>
             <p className="text-[12px] text-[#9B9B9B] mb-6">
               {followed.length === 0

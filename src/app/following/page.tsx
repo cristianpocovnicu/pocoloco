@@ -74,7 +74,7 @@ export default function FollowingPage() {
       <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 sticky top-0 z-30">
         <div className="max-w-[780px] mx-auto flex items-center gap-2">
           <Users size={18} className="text-[#E8440A]" />
-          <span className="font-outfit text-[17px] font-semibold text-[#0F0F0F]">Urmaresc</span>
+          <span className="font-outfit text-[17px] font-semibold text-[#0F0F0F]">Urmăresc</span>
           {followingIds.length > 0 && (
             <span className="text-[12px] text-[#9B9B9B]">· {followingIds.length} urmăriți</span>
           )}
@@ -94,7 +94,7 @@ export default function FollowingPage() {
                 title={loggedIn ? 'Feedul tău e gol deocamdată' : 'Intră în cont ca să-ți urmărești călătorii'}
                 description={loggedIn
                   ? 'Urmărește câțiva călători și aici o să apară locurile pe care le descoperă ei — înaintea tuturor.'
-                  : 'Feedul „Urmaresc" adună postările oamenilor pe care îi urmărești, într-un singur loc.'}
+                  : 'Feedul „Urmăresc" adună postările oamenilor pe care îi urmărești, într-un singur loc.'}
                 action={loggedIn ? undefined : { href: '/login', label: 'Intră în cont' }}
               />
             </div>
@@ -127,7 +127,7 @@ export default function FollowingPage() {
                               <TripKindBadge isGuide={item.isGuide} />
                             ) : (
                               <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
-                                Experienta
+                                Experiența
                               </span>
                             )}
                           </div>

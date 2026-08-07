@@ -81,7 +81,7 @@ export default function BottomNav() {
             )}
           </span>
           <span className={cn('text-[10px] font-outfit', profileActive ? 'font-semibold text-[#E8440A]' : 'text-[#9B9B9B]')}>
-            Profil
+            {profile ? 'Profil' : 'Cont'}
           </span>
         </Link>
       </div>

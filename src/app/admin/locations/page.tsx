@@ -287,7 +287,8 @@ ${detalii}`)) {
   })
 
   const missingCoords = locations.filter(l => l.latitude == null || l.longitude == null).length
-  const missingCovers = locations.filter(l => !l.cover_image).length
+  const withoutCover = locations.filter(l => !l.cover_image)
+  const missingCovers = withoutCover.length
 
   const counts = {
     pending: locations.filter(l => l.status === 'pending').length,
@@ -385,6 +386,24 @@ ${detalii}`)) {
               <p className="text-[12px] text-[#6B6B6B] leading-relaxed">
                 Aducem prima poză a locului din Google. Unde nu există poză, locația rămâne
                 cu imaginea din experiențe.
+              </p>
+
+              {/* numele lor, ca să poți intra direct la ce te interesează */}
+              <p className="text-[12px] text-[#6B6B6B] leading-relaxed mt-1.5">
+                {withoutCover.slice(0, 10).map((loc, i) => (
+                  <span key={loc.id}>
+                    {i > 0 && ', '}
+                    <a
+                      href={`/location/${loc.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#5B4FCF] hover:underline"
+                    >
+                      {loc.name}
+                    </a>
+                  </span>
+                ))}
+                {missingCovers > 10 && ` și încă ${missingCovers - 10}`}
               </p>
             </div>
 

@@ -37,7 +37,9 @@ export const viewport: Viewport = {
   themeColor: '#E8440A',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // fără maximumScale: blocarea zoom-ului e o problemă de accesibilitate.
+  // Zoom-ul automat la focus pe iOS e ținut în frâu din CSS, cu 16px pe
+  // câmpuri la ecranele tactile — vezi styles/globals.css.
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

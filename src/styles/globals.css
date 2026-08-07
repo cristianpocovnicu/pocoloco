@@ -122,3 +122,18 @@ html, body {
     @apply w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm text-[#0F0F0F] outline-none focus:border-[#E8440A] focus:bg-white transition-colors placeholder:text-[#9B9B9B];
   }
 }
+
+/*
+ * Pe iOS, Safari mărește pagina automat când intri într-un câmp cu text
+ * sub 16px. Blocarea zoom-ului din viewport ar rezolva simptomul, dar ar
+ * lua zoom-ul cu totul — inclusiv celui care chiar are nevoie de el.
+ * Așa că mărim câmpurile, dar numai pe ecranele tactile: pe desktop
+ * rămân dimensiunile din design.
+ */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

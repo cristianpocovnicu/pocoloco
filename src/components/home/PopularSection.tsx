@@ -213,7 +213,7 @@ export default function PopularSection() {
                             {activityLabel(post.activity_category) || '🪂 Activitate'}
                           </span>
                         ) : (
-                          <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">Experienta</span>
+                          <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">Experiența</span>
                         )}
                         {post.kind === 'activity'
                           ? post.activity_area && <span>📍 {post.activity_area}</span>

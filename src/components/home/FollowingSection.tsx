@@ -61,7 +61,7 @@ export default function FollowingSection() {
 
   if (loading) return (
     <section className="mb-7">
-      <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F] mb-3">Urmaresc</h2>
+      <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F] mb-3">Urmăresc</h2>
       <div className="flex items-center justify-center py-10">
         <Loader2 size={20} className="animate-spin text-[#E8440A]" />
       </div>
@@ -72,7 +72,7 @@ export default function FollowingSection() {
   if (items.length === 0) return (
     <section className="mb-7">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F]">Urmaresc</h2>
+        <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F]">Urmăresc</h2>
         <Link href="/following" className="text-sm text-[#E8440A] font-medium">Vezi tot</Link>
       </div>
       <p className="text-[13px] text-[#9B9B9B] mb-3">
@@ -85,7 +85,7 @@ export default function FollowingSection() {
   return (
     <section className="mb-7">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F]">Urmaresc</h2>
+        <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F]">Urmăresc</h2>
         <div className="flex items-center gap-2">
           <div className="hidden md:flex items-center gap-1">
             <button
@@ -138,7 +138,7 @@ export default function FollowingSection() {
                   </span>
                 ) : (
                   <span className="absolute top-2 left-2 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase px-2 py-0.5 rounded-full">
-                    Experienta
+                    Experiența
                   </span>
                 )}
               </div>

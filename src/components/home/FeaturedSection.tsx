@@ -198,7 +198,7 @@ export default function FeaturedSection() {
               <TripKindBadge isGuide={card.isGuide} onCover className="absolute top-2.5 left-2.5" />
             ) : (
               <span className="absolute top-2.5 left-2.5 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
-                Experienta
+                Experiența
               </span>
             )}
             {card.metric > 0 && (
