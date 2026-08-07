@@ -97,7 +97,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
     })
 
     if (insertError) {
-      setError('Nu am putut adăuga oprirea. Încearcă din editare.')
+      setError('Nu am putut adăuga. Încearcă din editare.')
       setBusyId(null)
       return
     }
@@ -175,7 +175,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
                 <div className="flex-1 min-w-0">
                   <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F] truncate">{trip.title}</p>
                   <p className="text-[12px] text-[#9B9B9B]">
-                    {trip.stops} {trip.stops === 1 ? 'oprire' : 'opriri'}
+                    {trip.stops} {trip.stops === 1 ? 'loc' : 'locuri'}
                   </p>
                 </div>
                 {busyId === trip.id

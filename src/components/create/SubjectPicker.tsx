@@ -220,7 +220,7 @@ export default function SubjectPicker({ stop, onChange, autoFocus }: Props) {
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Unde ai fost?"
+          placeholder="Castelul Bran, snorkeling, o cafenea..."
           autoFocus={autoFocus}
           className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl pl-10 pr-10 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
         />

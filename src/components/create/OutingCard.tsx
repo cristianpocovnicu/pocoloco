@@ -26,7 +26,7 @@ export default function OutingCard({ trip, stops, onChange, active }: Props) {
     <div className="border border-dashed border-[rgba(0,0,0,0.15)] rounded-2xl px-4 py-4 bg-[rgba(255,255,255,0.5)]">
       <p className="font-outfit text-[14px] font-semibold text-[#9B9B9B] mb-0.5">Detaliile ieșirii</p>
       <p className="text-[12px] text-[#9B9B9B] leading-relaxed">
-        Nume, durată, transport, copertă — se deschid de la a doua oprire.
+        Nume, durată, transport, copertă — se deschid când adaugi al doilea loc.
       </p>
     </div>
   )

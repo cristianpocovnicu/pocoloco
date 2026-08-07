@@ -287,7 +287,7 @@ function CreateScreen() {
               ))}
             </div>
 
-            {/* mereu sub ultima oprire, vizibil de la început */}
+            {/* mereu sub ultimul card, vizibil de la început */}
             <button
               onClick={addStop}
               className="w-full mt-2.5 bg-white border border-dashed border-[rgba(232,68,10,0.35)] rounded-2xl px-4 py-3.5 flex items-center gap-3 text-left"
@@ -295,14 +295,17 @@ function CreateScreen() {
               <div className="w-9 h-9 rounded-xl bg-[#FFF0EB] flex items-center justify-center flex-shrink-0">
                 <Plus size={17} className="text-[#E8440A]" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F]">
-                  Ai mai fost undeva în aceeași ieșire?
+                  Ai mai făcut ceva în aceeași ieșire?
                 </p>
                 <p className="text-[12px] text-[#9B9B9B]">
-                  Adaugă oprirea {stops.length + 1} — poate fi doar locul și o notă.
+                  Un alt loc sau o activitate — ajunge și doar numele cu o notă.
                 </p>
               </div>
+              <span className="text-[13px] font-outfit font-semibold text-[#E8440A] flex-shrink-0">
+                + Mai adaugă
+              </span>
             </button>
 
             <div className="mt-4">

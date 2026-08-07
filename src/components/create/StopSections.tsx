@@ -92,7 +92,7 @@ export function PhotoEditor({
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
     if (images.length + files.length > 5) {
-      setError('Maxim 5 poze pentru o oprire.')
+      setError('Maxim 5 poze aici.')
       return
     }
 
