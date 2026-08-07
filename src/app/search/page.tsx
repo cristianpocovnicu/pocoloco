@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, Loader2, MapPin, Users, Clock, X, Star, LayoutList, Map as MapIcon } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
+import NotificationBell from '@/components/layout/NotificationBell'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
@@ -194,80 +195,83 @@ export default function SearchPage() {
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
       <div className="max-w-[780px] mx-auto">
         <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 pt-4 pb-3 sticky top-0 z-30">
-          <div ref={searchBoxRef} className="relative mb-3">
-            <div className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-4 py-2.5 flex items-center gap-2">
-              <Search size={15} className="text-[#9B9B9B] flex-shrink-0" />
-              <input
-                value={query}
-                onChange={e => { setQuery(e.target.value); setDropdownOpen(true) }}
-                onFocus={() => setDropdownOpen(true)}
-                onKeyDown={e => { if (e.key === 'Enter') commitSearch(query); if (e.key === 'Escape') setDropdownOpen(false) }}
-                className="flex-1 min-w-0 bg-transparent text-sm text-[#0F0F0F] outline-none placeholder:text-[#9B9B9B]"
-                placeholder={tab === 'locations' ? 'Caută locuri...' : 'Caută după nume sau @username...'}
-                autoFocus
-              />
-              {query && (
-                <button onClick={() => { setQuery(''); setSuggestions([]) }} aria-label="Șterge căutarea">
-                  <X size={14} className="text-[#9B9B9B]" />
-                </button>
-              )}
-              {loading && <Loader2 size={14} className="animate-spin text-[#9B9B9B] flex-shrink-0" />}
-            </div>
-
-            {/* Autocomplete + căutări recente */}
-            {(showSuggestions || showRecent) && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl shadow-lg z-40 overflow-hidden">
-                {showRecent && (
-                  <>
-                    <div className="flex items-center justify-between px-4 pt-3 pb-1.5">
-                      <span className="text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide">Căutări recente</span>
-                      <button
-                        onClick={() => { clearRecentSearches(); setRecent([]) }}
-                        className="text-[11px] text-[#E8440A] font-medium"
-                      >
-                        Șterge
-                      </button>
-                    </div>
-                    {recent.map(term => (
-                      <button
-                        key={term}
-                        onClick={() => commitSearch(term)}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] text-left"
-                      >
-                        <Clock size={14} className="text-[#9B9B9B] flex-shrink-0" />
-                        <span className="text-[13px] text-[#0F0F0F] truncate">{term}</span>
-                      </button>
-                    ))}
-                  </>
+          <div className="flex items-start gap-2 mb-3">
+            <div ref={searchBoxRef} className="relative flex-1 min-w-0">
+              <div className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-4 py-2.5 flex items-center gap-2">
+                <Search size={15} className="text-[#9B9B9B] flex-shrink-0" />
+                <input
+                  value={query}
+                  onChange={e => { setQuery(e.target.value); setDropdownOpen(true) }}
+                  onFocus={() => setDropdownOpen(true)}
+                  onKeyDown={e => { if (e.key === 'Enter') commitSearch(query); if (e.key === 'Escape') setDropdownOpen(false) }}
+                  className="flex-1 min-w-0 bg-transparent text-sm text-[#0F0F0F] outline-none placeholder:text-[#9B9B9B]"
+                  placeholder={tab === 'locations' ? 'Caută locuri...' : 'Caută după nume sau @username...'}
+                  autoFocus
+                />
+                {query && (
+                  <button onClick={() => { setQuery(''); setSuggestions([]) }} aria-label="Șterge căutarea">
+                    <X size={14} className="text-[#9B9B9B]" />
+                  </button>
                 )}
-
-                {showSuggestions && suggestions.map(loc => (
-                  <Link
-                    key={loc.id}
-                    href={`/location/${loc.id}`}
-                    onClick={() => addRecentSearch(query)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] border-b border-[rgba(0,0,0,0.05)] last:border-0"
-                  >
-                    <div className="relative w-8 h-8 rounded-lg bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {loc.cover_image
-                        ? <CoverImage src={loc.cover_image} sizes="32px" />
-                        : <span className="text-sm">{CATEGORY_ICONS[loc.category || ''] || '📍'}</span>}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{loc.name}</div>
-                      <div className="text-[11px] text-[#9B9B9B] truncate">
-                        {loc.city}{loc.country ? `, ${loc.country}` : ''} · {loc.experience_count} experiențe
-                      </div>
-                    </div>
-                    {loc.score > 0 && (
-                      <span className="bg-[#FFF0EB] text-[#E8440A] font-outfit text-[11px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0">
-                        {loc.score.toFixed(1)}
-                      </span>
-                    )}
-                  </Link>
-                ))}
+                {loading && <Loader2 size={14} className="animate-spin text-[#9B9B9B] flex-shrink-0" />}
               </div>
-            )}
+
+              {/* Autocomplete + căutări recente */}
+              {(showSuggestions || showRecent) && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl shadow-lg z-40 overflow-hidden">
+                  {showRecent && (
+                    <>
+                      <div className="flex items-center justify-between px-4 pt-3 pb-1.5">
+                        <span className="text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide">Căutări recente</span>
+                        <button
+                          onClick={() => { clearRecentSearches(); setRecent([]) }}
+                          className="text-[11px] text-[#E8440A] font-medium"
+                        >
+                          Șterge
+                        </button>
+                      </div>
+                      {recent.map(term => (
+                        <button
+                          key={term}
+                          onClick={() => commitSearch(term)}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] text-left"
+                        >
+                          <Clock size={14} className="text-[#9B9B9B] flex-shrink-0" />
+                          <span className="text-[13px] text-[#0F0F0F] truncate">{term}</span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {showSuggestions && suggestions.map(loc => (
+                    <Link
+                      key={loc.id}
+                      href={`/location/${loc.id}`}
+                      onClick={() => addRecentSearch(query)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] border-b border-[rgba(0,0,0,0.05)] last:border-0"
+                    >
+                      <div className="relative w-8 h-8 rounded-lg bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {loc.cover_image
+                          ? <CoverImage src={loc.cover_image} sizes="32px" />
+                          : <span className="text-sm">{CATEGORY_ICONS[loc.category || ''] || '📍'}</span>}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{loc.name}</div>
+                        <div className="text-[11px] text-[#9B9B9B] truncate">
+                          {loc.city}{loc.country ? `, ${loc.country}` : ''} · {loc.experience_count} experiențe
+                        </div>
+                      </div>
+                      {loc.score > 0 && (
+                        <span className="bg-[#FFF0EB] text-[#E8440A] font-outfit text-[11px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0">
+                          {loc.score.toFixed(1)}
+                        </span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+            <NotificationBell className="mt-0.5" />
           </div>
 
           {/* Locuri / Useri */}

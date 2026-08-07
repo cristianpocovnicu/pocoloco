@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
+import NotificationBell from '@/components/layout/NotificationBell'
 import { Settings, Star, MapPin, ArrowUp, MessageCircle, Loader2, LogOut, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
@@ -154,7 +155,8 @@ export default function ProfilePage() {
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
       <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 flex items-center justify-between sticky top-0 z-30">
         <span className="font-outfit text-[17px] font-semibold text-[#0F0F0F]">Profilul meu</span>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <NotificationBell />
           <button onClick={handleLogout} className="w-8 h-8 rounded-full bg-[#FEF2F2] border border-[rgba(220,38,38,0.1)] flex items-center justify-center">
             <LogOut size={16} className="text-[#DC2626]" />
           </button>

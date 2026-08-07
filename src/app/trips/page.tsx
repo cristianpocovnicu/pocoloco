@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Bookmark, Calendar, Globe, Loader2, MapPin, Plus, Route, Search } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
+import NotificationBell from '@/components/layout/NotificationBell'
 import EmptyState from '@/components/ui/EmptyState'
 import TripKindBadge from '@/components/trip/TripKindBadge'
 import { createClient } from '@/lib/supabase-client'
@@ -96,6 +97,7 @@ export default function TripsPage() {
             >
               <Plus size={13} /> Adaugă
             </Link>
+            <NotificationBell />
           </div>
 
           <div className="flex items-center gap-2">
