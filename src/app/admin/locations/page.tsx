@@ -94,13 +94,58 @@ export default function AdminLocationsPage() {
     setBusyId(null)
   }
 
+  /**
+   * Ștergerea trece prin admin_delete_location (migrarea 36): ordinea
+   * contează, iar funcția refuză dacă locul are experiențe scrise.
+   * Înainte de confirmare spunem exact ce se pierde.
+   */
   const remove = async (loc: LocationRow) => {
-    if (!window.confirm(`Ștergi definitiv locația „${loc.name}"? Experiențele legate de ea rămân fără locație.`)) return
     setBusyId(loc.id)
+    setError(null)
     const supabase = createClient()
-    const { error: deleteError } = await supabase.from('locations').delete().eq('id', loc.id)
-    if (deleteError) setError(deleteError.message)
-    else {
+
+    const [stopsRes, expRes] = await Promise.all([
+      supabase.from('trip_locations').select('trip_id, experience_id').eq('location_id', loc.id),
+      supabase.from('experiences').select('id, kind').eq('location_id', loc.id),
+    ])
+
+    const stops = (stopsRes.data || []) as { trip_id: string; experience_id: string | null }[]
+    const experiences = (expRes.data || []) as { id: string; kind?: string | null }[]
+    const written = experiences.filter(e => e.kind !== 'activity').length
+
+    if (written > 0) {
+      setError(
+        `„${loc.name}" are ${written} ${written === 1 ? 'experiență scrisă' : 'experiențe scrise'} de useri, deci nu poate fi ștearsă. ` +
+        'Dacă vrei s-o scoți din căutare și din feed, apasă „Respinge" — rămâne vizibilă doar autorului și vouă.'
+      )
+      setBusyId(null)
+      return
+    }
+
+    const trips = new Set(stops.map(s => s.trip_id)).size
+    const doarLocul = stops.filter(s => !s.experience_id).length
+    const cuPoveste = stops.length - doarLocul
+
+    const detalii = stops.length === 0
+      ? 'Nu e folosită în nicio călătorie.'
+      : `Folosită în ${trips} ${trips === 1 ? 'călătorie' : 'călătorii'} ` +
+        `(${doarLocul} ${doarLocul === 1 ? 'oprire doar cu locația va dispărea' : 'opriri doar cu locația vor dispărea'}, ` +
+        `${cuPoveste} ${cuPoveste === 1 ? 'oprire cu poveste rămâne' : 'opriri cu poveste rămân'} fără pin).`
+
+    if (!window.confirm(`Ștergi definitiv „${loc.name}"?
+
+${detalii}`)) {
+      setBusyId(null)
+      return
+    }
+
+    const { error: rpcError } = await supabase.rpc('admin_delete_location', { p_location_id: loc.id })
+
+    if (rpcError) {
+      setError(rpcError.message.includes('admin_delete_location')
+        ? 'Ștergerea are nevoie de migrarea 36 (admin_delete_location).'
+        : rpcError.message)
+    } else {
       setLocations(prev => prev.filter(l => l.id !== loc.id))
       setError(null)
     }
