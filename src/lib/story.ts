@@ -180,9 +180,21 @@ export async function loadDraft(
     const payload = (data as { payload: unknown }).payload as StoryDraft | null
     if (!payload || !Array.isArray(payload.stops) || payload.stops.length === 0) return null
 
+    // un payload vechi sau stricat poate avea null unde codul așteaptă
+    // string; normalizăm la intrare, nu la fiecare folosire
+    const base = emptyTrip()
+    const saved = (payload.trip || {}) as Partial<TripDraft>
+
     return {
       stops: payload.stops.map(stop => newStop(stop)),
-      trip: { ...emptyTrip(), ...(payload.trip || {}) },
+      trip: {
+        ...base,
+        ...saved,
+        title: typeof saved.title === 'string' ? saved.title : base.title,
+        description: typeof saved.description === 'string' ? saved.description : base.description,
+        transportType: typeof saved.transportType === 'string' ? saved.transportType : base.transportType,
+        durationDays: Number.isFinite(saved.durationDays) ? (saved.durationDays as number) : base.durationDays,
+      },
       step: payload.step === 'details' ? 'details' : 'story',
     }
   } catch {

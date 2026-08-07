@@ -30,7 +30,7 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
         className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] mb-1"
       />
       {!trip.title.trim() && suggestion && (
-        <button
+        <button type="button"
           onClick={() => onChange({ title: suggestion })}
           className="text-[12px] text-[#5B4FCF] font-medium mb-3"
         >
@@ -55,7 +55,7 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
       <div className="flex items-center justify-between py-3 border-t border-[rgba(0,0,0,0.06)]">
         <span className="text-[13px] text-[#6B6B6B]">Câte zile a ținut</span>
         <div className="flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={() => onChange({ durationDays: Math.max(trip.durationDays - 1, 1) })}
             aria-label="Mai puține zile"
             className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center"
@@ -65,7 +65,7 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
           <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F] w-6 text-center">
             {trip.durationDays}
           </span>
-          <button
+          <button type="button"
             onClick={() => onChange({ durationDays: Math.min(trip.durationDays + 1, 60) })}
             aria-label="Mai multe zile"
             className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center"
@@ -79,7 +79,7 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
         <span className="text-[13px] text-[#6B6B6B] block mb-2">Cum ai ajuns</span>
         <div className="flex flex-wrap gap-1.5">
           {TRANSPORT_TYPES.map(type => (
-            <button
+            <button type="button"
               key={type.id}
               onClick={() => onChange({ transportType: type.id })}
               className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
@@ -103,7 +103,7 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
             {photos.map(url => {
               const chosen = (trip.coverImage || photos[0]) === url
               return (
-                <button
+                <button type="button"
                   key={url}
                   onClick={() => onChange({ coverImage: url })}
                   className={`w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${

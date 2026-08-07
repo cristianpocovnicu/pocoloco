@@ -76,7 +76,7 @@ export default function DetailsScreen({
                 className="flex items-center gap-2.5 py-2.5 border-t border-[rgba(0,0,0,0.06)] first:border-t-0"
               >
                 <div className="flex flex-col flex-shrink-0">
-                  <button
+                  <button type="button"
                     onClick={() => onMove(index, -1)}
                     disabled={index === 0}
                     aria-label={`Mută ${stopLabel(stop)} mai sus`}
@@ -84,7 +84,7 @@ export default function DetailsScreen({
                   >
                     <ChevronUp size={14} />
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => onMove(index, 1)}
                     disabled={index === stops.length - 1}
                     aria-label={`Mută ${stopLabel(stop)} mai jos`}
@@ -131,7 +131,7 @@ export default function DetailsScreen({
         style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="max-w-[680px] mx-auto flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={onPublish}
             disabled={!canPublish || publishing}
             className={`flex-1 font-outfit text-[15px] font-semibold py-3 rounded-full flex items-center justify-center gap-2 transition-colors ${
@@ -141,7 +141,7 @@ export default function DetailsScreen({
             {publishing && <Loader2 size={16} className="animate-spin" />}
             Publică
           </button>
-          <button
+          <button type="button"
             onClick={onBack}
             disabled={publishing}
             className="text-[13px] text-[#6B6B6B] font-medium px-2 disabled:opacity-50"

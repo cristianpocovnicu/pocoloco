@@ -55,7 +55,7 @@ export function Section({
 
   return (
     <div className="border-t border-[rgba(0,0,0,0.06)]">
-      <button
+      <button type="button"
         onClick={onToggle}
         className="w-full flex items-center gap-2.5 py-3 text-left"
       >
@@ -185,7 +185,7 @@ export function PhotoEditor({
         {images.map((url, i) => (
           <div key={url} className="relative w-[calc(33%-7px)] aspect-square rounded-xl overflow-hidden">
             <img src={url} alt="" className="w-full h-full object-cover" />
-            <button
+            <button type="button"
               onClick={() => onChange(images.filter((_, idx) => idx !== i))}
               aria-label="Scoate poza"
               className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center"
@@ -196,7 +196,7 @@ export function PhotoEditor({
         ))}
 
         {images.length < 5 && (
-          <button
+          <button type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
             className="w-[calc(33%-7px)] aspect-square rounded-xl border-2 border-dashed border-[rgba(232,68,10,0.3)] bg-[#FFF0EB] flex flex-col items-center justify-center gap-1.5 disabled:opacity-60"
@@ -220,7 +220,7 @@ function Stars({ value, onChange, label }: { value: number; onChange: (v: number
       <span className="text-[13px] text-[#6B6B6B]">{label}</span>
       <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map(i => (
-          <button key={i} onClick={() => onChange(i === value ? 0 : i)} aria-label={`${label}: ${i}`}>
+          <button type="button" key={i} onClick={() => onChange(i === value ? 0 : i)} aria-label={`${label}: ${i}`}>
             <Star size={22} className={i <= value ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
           </button>
         ))}
@@ -272,7 +272,7 @@ export function StoryEditor({
       <div className="text-[12px] font-medium text-[#6B6B6B] mb-2">Ponturi rapide — opțional</div>
       <div className="flex flex-wrap gap-1.5">
         {TIPS_OPTIONS.map(tip => (
-          <button
+          <button type="button"
             key={tip}
             onClick={() => toggleTip(tip)}
             className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${

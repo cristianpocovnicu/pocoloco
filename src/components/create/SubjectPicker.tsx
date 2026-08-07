@@ -145,8 +145,15 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
     setQuery('')
   }
 
-  /** „E toată povestea mea de acolo": zona iese din selecție. */
-  const useRegionAsName = () => {
+  /**
+   * „E toată povestea mea de acolo": zona iese din selecție.
+   *
+   * preventDefault deși nu există niciun <form> în flux: butoanele au
+   * type="button", dar dacă mâine ecranul ajunge într-un formular,
+   * clickul n-are voie să devină submit.
+   */
+  const useRegionAsName = (e?: React.MouseEvent) => {
+    e?.preventDefault()
     if (broadRegion && onUseAsOutingName) onUseAsOutingName(broadRegion)
     setBroadRegion(null)
     setJustClearedRegion(true)
@@ -189,14 +196,14 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
             className="w-full text-[12px] text-[#6B6B6B] bg-transparent outline-none placeholder:text-[#9B9B9B] mt-0.5"
           />
         </div>
-        <button onClick={clear} aria-label="Schimbă" className="text-[#9B9B9B] flex-shrink-0 mt-1">
+        <button type="button" onClick={clear} aria-label="Schimbă" className="text-[#9B9B9B] flex-shrink-0 mt-1">
           <X size={16} />
         </button>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
         {ACTIVITY_CATEGORIES.map(category => (
-          <button
+          <button type="button"
             key={category.id}
             onClick={() => onChange({
               activityCategory: stop.activityCategory === category.id ? null : category.id,
@@ -227,7 +234,7 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
             {stop.locationCity || 'Fără oraș'}{stop.locationCountry ? `, ${stop.locationCountry}` : ''}
           </p>
         </div>
-        <button onClick={clear} aria-label="Schimbă" className="text-[#9B9B9B] flex-shrink-0 mt-1">
+        <button type="button" onClick={clear} aria-label="Schimbă" className="text-[#9B9B9B] flex-shrink-0 mt-1">
           <X size={16} />
         </button>
       </div>
@@ -242,14 +249,14 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
             pozele și povestea lui.
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <button type="button"
               onClick={useRegionAsName}
               className="bg-[#E8440A] text-white font-outfit text-[12px] font-semibold px-3.5 py-2 rounded-full"
             >
               E toată povestea mea de acolo
             </button>
-            <button
-              onClick={() => setBroadRegion(null)}
+            <button type="button"
+              onClick={e => { e.preventDefault(); setBroadRegion(null) }}
               className="text-[12px] text-[#6B6B6B] font-medium px-2"
             >
               Vreau să povestesc chiar despre {broadRegion}
@@ -298,7 +305,7 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
       {query.trim().length >= 2 && (
         <div className="mt-2 bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden">
           {dbResults.map(loc => (
-            <button
+            <button type="button"
               key={loc.id}
               onClick={() => pickExisting(loc)}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
@@ -315,7 +322,7 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
           ))}
 
           {placeResults.map(place => (
-            <button
+            <button type="button"
               key={place.placeId}
               onClick={() => pickPlace(place)}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
@@ -332,7 +339,7 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
           ))}
 
           {query.trim().length >= 3 && (
-            <button
+            <button type="button"
               onClick={useAsActivity}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] text-left border-b border-[rgba(0,0,0,0.05)]"
             >
@@ -343,7 +350,7 @@ export default function SubjectPicker({ stop, onChange, autoFocus, onUseAsOuting
             </button>
           )}
 
-          <button
+          <button type="button"
             onClick={useAsNewPlace}
             className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#F8F7F5] text-left"
           >

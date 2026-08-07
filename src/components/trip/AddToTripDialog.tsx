@@ -166,7 +166,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
         ) : (
           <div className="flex flex-col gap-2.5 mb-5">
             {trips.map(trip => (
-              <button
+              <button type="button"
                 key={trip.id}
                 onClick={() => addStop(trip.id)}
                 disabled={!!busyId}
@@ -202,7 +202,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
                   className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#5B4FCF] transition-colors placeholder:text-[#9B9B9B] mb-2.5"
                 />
                 <div className="flex gap-2">
-                  <button
+                  <button type="button"
                     onClick={createTrip}
                     disabled={newTitle.trim().length < 3 || !!busyId}
                     className="flex-1 bg-[#5B4FCF] text-white font-outfit text-[13px] font-semibold py-2.5 rounded-full flex items-center justify-center gap-2 disabled:opacity-50"
@@ -210,7 +210,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
                     {busyId === 'new' && <Loader2 size={14} className="animate-spin" />}
                     Creează și adaugă
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => { setCreating(false); setNewTitle('') }}
                     className="px-4 text-[13px] text-[#6B6B6B] font-medium"
                   >
@@ -219,7 +219,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
                 </div>
               </div>
             ) : (
-              <button
+              <button type="button"
                 onClick={() => setCreating(true)}
                 disabled={!!busyId}
                 className="bg-white border border-dashed border-[rgba(91,79,207,0.35)] rounded-2xl px-4 py-3.5 flex items-center gap-3 text-left disabled:opacity-60"
@@ -236,7 +236,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
           </div>
         )}
 
-        <button
+        <button type="button"
           onClick={onDone}
           disabled={!!busyId}
           className="w-full text-[13px] text-[#6B6B6B] font-outfit font-medium py-3 disabled:opacity-50"

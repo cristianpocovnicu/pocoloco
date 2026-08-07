@@ -56,7 +56,7 @@ export default function StopCard({
   // ---- strâns ----
   if (!expanded) return (
     <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl px-3.5 py-3 flex items-center gap-3">
-      <button onClick={onExpand} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+      <button type="button" onClick={onExpand} className="flex items-center gap-3 flex-1 min-w-0 text-left">
         <div className="w-10 h-10 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
           {stop.images[0]
             ? <img src={stop.images[0]} alt="" className="w-full h-full object-cover" />
@@ -79,16 +79,16 @@ export default function StopCard({
 
       <div className="flex items-center gap-0.5 flex-shrink-0">
         {index > 0 && (
-          <button onClick={() => onMove(-1)} aria-label="Mută mai sus" className="w-7 h-7 flex items-center justify-center text-[#9B9B9B] hover:text-[#0F0F0F]">
+          <button type="button" onClick={() => onMove(-1)} aria-label="Mută mai sus" className="w-7 h-7 flex items-center justify-center text-[#9B9B9B] hover:text-[#0F0F0F]">
             <ChevronUp size={15} />
           </button>
         )}
         {index < total - 1 && (
-          <button onClick={() => onMove(1)} aria-label="Mută mai jos" className="w-7 h-7 flex items-center justify-center text-[#9B9B9B] hover:text-[#0F0F0F]">
+          <button type="button" onClick={() => onMove(1)} aria-label="Mută mai jos" className="w-7 h-7 flex items-center justify-center text-[#9B9B9B] hover:text-[#0F0F0F]">
             <ChevronDown size={15} />
           </button>
         )}
-        <button onClick={onRemove} aria-label={`Șterge ${stopLabel(stop)}`} className="w-7 h-7 flex items-center justify-center text-[#9B9B9B] hover:text-[#DC2626]">
+        <button type="button" onClick={onRemove} aria-label={`Șterge ${stopLabel(stop)}`} className="w-7 h-7 flex items-center justify-center text-[#9B9B9B] hover:text-[#DC2626]">
           <Trash2 size={14} />
         </button>
       </div>
@@ -107,7 +107,7 @@ export default function StopCard({
             {index === 0 ? 'Unde ai fost?' : 'Ce ai mai făcut?'}
           </h2>
           {total > 1 && (
-            <button onClick={onRemove} aria-label="Șterge" className="text-[#9B9B9B] hover:text-[#DC2626] flex-shrink-0">
+            <button type="button" onClick={onRemove} aria-label="Șterge" className="text-[#9B9B9B] hover:text-[#DC2626] flex-shrink-0">
               <Trash2 size={15} />
             </button>
           )}
@@ -116,7 +116,7 @@ export default function StopCard({
 
       {stopHasSubject(stop) && total > 1 && (
         <div className="flex justify-end mb-1">
-          <button onClick={onRemove} aria-label={`Șterge ${stopLabel(stop)}`} className="text-[#9B9B9B] hover:text-[#DC2626]">
+          <button type="button" onClick={onRemove} aria-label={`Șterge ${stopLabel(stop)}`} className="text-[#9B9B9B] hover:text-[#DC2626]">
             <Trash2 size={15} />
           </button>
         </div>

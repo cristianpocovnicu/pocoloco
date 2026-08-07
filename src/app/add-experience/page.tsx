@@ -115,7 +115,9 @@ function CreateScreen() {
    */
   const useRegionAsOutingName = (name: string) => {
     dirty.current = true
-    setTrip(prev => (prev.title.trim() ? prev : { ...prev, title: name }))
+    // (prev.title || '') intenționat: un draft vechi poate avea title null,
+    // iar o excepție aici ar reseta tot ecranul — se vede ca un refresh
+    setTrip(prev => ((prev.title || '').trim() ? prev : { ...prev, title: name }))
   }
 
   const addStop = () => {
@@ -358,13 +360,13 @@ ${text}` : text,
               {pendingDraft.stops.length > 1 && ` + încă ${pendingDraft.stops.length - 1}`}
             </p>
             <div className="flex gap-2">
-              <button
+              <button type="button"
                 onClick={resume}
                 className="bg-[#E8440A] text-white font-outfit text-[13px] font-semibold px-4 py-2 rounded-full"
               >
                 Continuă
               </button>
-              <button onClick={discard} className="text-[13px] text-[#6B6B6B] font-medium px-3">
+              <button type="button" onClick={discard} className="text-[13px] text-[#6B6B6B] font-medium px-3">
                 Începe altceva
               </button>
             </div>
@@ -381,13 +383,13 @@ ${text}` : text,
               la fiecare loc rămâne ce e despre el.
             </p>
             <div className="flex gap-2">
-              <button
+              <button type="button"
                 onClick={moveStoryToTrip}
                 className="bg-[#E8440A] text-white font-outfit text-[13px] font-semibold px-4 py-2 rounded-full"
               >
                 Mută
               </button>
-              <button
+              <button type="button"
                 onClick={() => { setOfferMove(false); continueToDetails() }}
                 className="text-[13px] text-[#6B6B6B] font-medium px-3"
               >
@@ -425,7 +427,7 @@ ${text}` : text,
             </div>
 
             {/* mereu sub ultimul card, vizibil de la început */}
-            <button
+            <button type="button"
               onClick={addStop}
               className="w-full mt-2.5 bg-white border border-dashed border-[rgba(232,68,10,0.35)] rounded-2xl px-4 py-3.5 flex items-center gap-3 text-left"
             >
@@ -455,7 +457,7 @@ ${text}` : text,
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
         >
           <div className="max-w-[680px] mx-auto flex items-center gap-3">
-            <button
+            <button type="button"
               onClick={() => (isMulti ? goToDetails() : handlePublish())}
               disabled={!canContinue || publishing}
               className={`flex-1 font-outfit text-[15px] font-semibold py-3 rounded-full flex items-center justify-center gap-2 transition-colors ${
@@ -465,7 +467,7 @@ ${text}` : text,
               {publishing && <Loader2 size={16} className="animate-spin" />}
               {isMulti ? 'Continuă' : 'Publică'}
             </button>
-            <button
+            <button type="button"
               onClick={saveForLater}
               disabled={publishing}
               className="text-[13px] text-[#6B6B6B] font-medium px-2 disabled:opacity-50"
