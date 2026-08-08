@@ -224,6 +224,12 @@ acolo.**
   categorie (`locations.category` nu se completează nicăieri) și pragurile
   de notă 7+/8+/9+ (`locations.score` nu se calculează nicăieri). Toggle-ul
   Listă/Hartă a rămas, pe secțiunea de locuri, unde are sens.
+- **Autentificare: Google + email/parolă.** **Facebook a fost retras în
+  august 2026** — platforma își schimba fluxurile și scope-urile sub noi
+  (`Invalid Scopes` pe `email`, review capricios), iar publicul nostru are
+  Google oricum. De revizitat doar dacă o cer userii, explicit. Apple Sign
+  In rămâne neimplementat: cere cont de developer plătit. Partajarea către
+  Facebook e altceva și rămâne — e un link, nu o aplicație.
 - **Crawlerele AI sunt permise explicit** (august 2026): `GPTBot`,
   `ClaudeBot`, `PerplexityBot` și `Google-Extended` sunt trecute pe nume în
   [`robots.ts`](src/app/robots.ts), cu `Allow: /`, nu lăsate să treacă prin

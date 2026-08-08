@@ -230,12 +230,40 @@ la `locations/<location-id>/cover.jpg`.
 
 ---
 
-## 5. Autentificare cu Google
+## 5. Autentificare
 
-Pași detaliați în [`google-auth-setup.md`](./google-auth-setup.md). Pe scurt:
-client OAuth în Google Cloud Console, Client ID + Secret în Supabase →
-Authentication → Providers → Google, plus URL-urile aplicației în
-Authentication → URL Configuration.
+Două căi: **Google** și **email + parolă**.
+
+Pentru Google, pași detaliați în
+[`google-auth-setup.md`](./google-auth-setup.md). Pe scurt: client OAuth în
+Google Cloud Console, Client ID + Secret în Supabase → Authentication →
+Providers → Google, plus URL-urile aplicației în Authentication → URL
+Configuration.
+
+### Retrase
+
+- **Facebook** — scos în august 2026. *Motivul:* instabilitatea platformei
+  (`Invalid Scopes` pe `email`, fluxuri de review schimbate de la o lună la
+  alta), iar publicul nostru are Google aproape universal. Butonul și
+  apelul din cod au dispărut; **furnizorul rămâne activ în Supabase până îl
+  dezactivezi manual**, iar aplicația din Facebook Developers se
+  dezactivează separat, din consola lor.
+  De revizitat doar la cerere explicită a userilor.
+  Înainte să dezactivezi furnizorul, rulează interogarea de mai jos: dacă
+  există conturi create prin Facebook, ele au nevoie de un drum de migrare
+  (parolă setată pe același email), nu de o ușă închisă.
+
+  ```sql
+  -- conturile legate de Facebook, dacă există
+  select i.user_id, u.email, i.provider, i.created_at
+  from auth.identities i
+  join auth.users u on u.id = i.user_id
+  where i.provider = 'facebook'
+  order by i.created_at;
+  ```
+
+  Partajarea către Facebook (butonul de share) **nu** are legătură cu asta
+  și rămâne: e un link `sharer.php`, fără aplicație și fără autentificare.
 
 ---
 
