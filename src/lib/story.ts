@@ -38,8 +38,6 @@ export type StopDraft = {
   ratingCrowd: number
   content: string
   tips: string[]
-  /** nota scurtă de itinerar, doar pentru opririle care nu devin experiențe */
-  note: string
   /** ziua din călătorie, aleasă la pasul de finalizare; null = neîmpărțit */
   day: number | null
 }
@@ -54,6 +52,13 @@ export type TripDraft = {
   coverImage: string | null
   /** dedus din locurile alese, până pune omul mâna pe câmp */
   countries: string[]
+  /**
+   * Când a fost ieșirea. Pe ramura journey se întreabă o singură dată,
+   * aici, și coboară la publicare pe fiecare experiență: schema rămâne
+   * per-experiență, doar întrebarea s-a mutat.
+   */
+  visitedYear: number | null
+  visitedMonth: number | null
 }
 
 /**
@@ -71,6 +76,11 @@ export type StoryDraft = {
   stops: StopDraft[]
   trip: TripDraft
   mode?: StoryMode
+}
+
+/** Un număr bun sau null — orice altceva dintr-un draft vechi e gunoi. */
+function numberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 let counter = 0
@@ -106,7 +116,6 @@ export function newStop(partial: Partial<StopDraft> = {}): StopDraft {
     ratingCrowd: 0,
     content: '',
     tips: [],
-    note: '',
     day: null,
     ...partial,
   }
@@ -122,6 +131,8 @@ export function emptyTrip(): TripDraft {
     transportTypes: ['car'],
     coverImage: null,
     countries: [],
+    visitedYear: null,
+    visitedMonth: null,
   }
 }
 
@@ -235,6 +246,10 @@ export async function loadDraft(
             : base.transportTypes,
         durationDays: Number.isFinite(saved.durationDays) ? (saved.durationDays as number) : base.durationDays,
         countries: Array.isArray(saved.countries) ? saved.countries.filter(c => typeof c === 'string') : base.countries,
+        // draft de dinainte de urcarea perioadei: valoarea era pe primul
+        // loc, deci o ridicăm de acolo
+        visitedYear: numberOrNull(saved.visitedYear) ?? numberOrNull(payload.stops[0]?.visitedYear),
+        visitedMonth: numberOrNull(saved.visitedMonth) ?? numberOrNull(payload.stops[0]?.visitedMonth),
       },
       // draft de dinaintea rutării: un titlu completat înseamnă că omul
       // pornise de la o zonă, altfel scria despre un obiectiv
@@ -349,6 +364,8 @@ export async function publishStory(
     locationIds.push(stop.kind === 'activity' ? null : await resolveLocation(supabase, userId, stop))
   }
 
+  const period = { year: draft.trip.visitedYear, month: draft.trip.visitedMonth }
+
   const payload = stops.map((stop, i) => ({
     kind: stop.kind,
     location_id: locationIds[i],
@@ -363,9 +380,10 @@ export async function publishStory(
     rating_experience: stop.ratingExperience || null,
     rating_access: stop.ratingAccess || null,
     rating_crowd: stop.ratingCrowd || null,
-    visited_year: stop.visitedYear,
-    visited_month: stop.visitedYear ? stop.visitedMonth : null,
-    note: stop.note.trim() || null,
+    // perioada ieșirii, când a fost întrebată o singură dată sus; altfel
+    // cea a locului
+    visited_year: period.year ?? stop.visitedYear,
+    visited_month: (period.year ?? stop.visitedYear) ? (period.year ? period.month : stop.visitedMonth) : null,
     day: stop.day,
     create_experience: stopHasContent(stop),
   }))

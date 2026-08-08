@@ -168,12 +168,9 @@ function CreateScreen() {
 
   const addStop = () => {
     dirty.current = true
-    // perioada se moștenește: de obicei toate locurile sunt din aceeași
-    // ieșire, iar valoarea rămâne modificabilă pe fiecare card
-    const reference = stops.find(s => s.visitedYear)
-    const stop = newStop(reference
-      ? { visitedYear: reference.visitedYear, visitedMonth: reference.visitedMonth }
-      : {})
+    // perioada nu se mai moștenește de la un card la altul: pe o ieșire
+    // întreagă e întrebată o singură dată, în detalii
+    const stop = newStop()
     setStops(prev => [...prev, stop])
     setExpandedKey(stop.key)
   }
@@ -274,6 +271,23 @@ function CreateScreen() {
   const showDetails = mode === 'journey' || usableStops.length > 1
   const days = Array.from({ length: Math.max(trip.durationDays, 1) }, (_, i) => i + 1)
   const nameSuggestion = suggestTripTitle(usableStops)
+
+  /**
+   * Perioada urcă la nivel de ieșire în momentul în care apar detaliile.
+   *
+   * Cazul e al unei povești pornite ca review: primul loc și-a spus deja
+   * perioada pe card, iar al doilea loc mută întrebarea sus. Ridicăm
+   * valoarea, ca să n-o piardă din ochi și să nu rămână doar pe un loc.
+   */
+  const liftedPeriod = usableStops.find(stop => stop.visitedYear)
+  useEffect(() => {
+    if (!showDetails || trip.visitedYear || !liftedPeriod) return
+    setTrip(prev => ({
+      ...prev,
+      visitedYear: liftedPeriod.visitedYear,
+      visitedMonth: liftedPeriod.visitedMonth,
+    }))
+  }, [showDetails, trip.visitedYear, liftedPeriod])
 
   /**
    * Țările se completează singure din locurile alese, atâta timp cât n-a
@@ -593,6 +607,7 @@ ${text}` : text,
                     ? 'Primul loc de acolo: un vârf, un sat, o plajă...'
                     : undefined}
                   days={showDetails ? days : undefined}
+                  showPeriod={!showDetails}
                 />
               ))}
             </div>
@@ -610,7 +625,7 @@ ${text}` : text,
                   Ai mai făcut ceva în aceeași ieșire?
                 </p>
                 <p className="text-[12px] text-[#9B9B9B]">
-                  Un alt loc sau o activitate — ajunge și doar numele cu o notă.
+                  Un alt loc sau o activitate — ajunge și doar numele.
                 </p>
               </div>
               <span className="text-[13px] font-outfit font-semibold text-[#E8440A] flex-shrink-0">

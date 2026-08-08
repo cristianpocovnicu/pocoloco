@@ -23,6 +23,11 @@ type Props = {
    * Lipsesc când ieșirea are o singură zi: n-ar fi nimic de ales.
    */
   days?: number[]
+  /**
+   * Perioada se întreabă pe card doar când povestea e despre un singur
+   * obiectiv. Pe o ieșire întreagă e o singură dată, în detalii.
+   */
+  showPeriod?: boolean
 }
 
 /**
@@ -42,6 +47,7 @@ export default function StopCard({
   onToggleSection,
   placeholder,
   days,
+  showPeriod = true,
 }: Props) {
   const showDays = !!days && days.length > 1 && stopHasSubject(stop)
 
@@ -95,7 +101,7 @@ export default function StopCard({
             <span className="flex items-center gap-1.5 flex-shrink-0">
               {stop.images.length > 0 && <Camera size={11} />}
               {stop.ratingExperience > 0 && <Star size={11} />}
-              {(stop.content.trim() || stop.note.trim()) && <MessageSquare size={11} />}
+              {stop.content.trim() && <MessageSquare size={11} />}
             </span>
           </div>
         </div>
@@ -160,28 +166,22 @@ export default function StopCard({
       {stopHasSubject(stop) && (
         <div className="mt-3">
           {/* Perioada stă lângă „unde", nu în secțiunea de notare: ține de
-              vizită, nu de cât de bun a fost locul. Un singur rând, deci
-              nu îngreunează nici cardurile de după primul. */}
-          <div className="pb-3 border-b border-[rgba(0,0,0,0.06)] mb-1 flex items-center gap-2 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <PeriodPicker
-                year={stop.visitedYear}
-                month={stop.visitedMonth}
-                onChange={onChange}
-              />
+              vizită, nu de cât de bun a fost locul. Pe o ieșire întreagă
+              se întreabă o singură dată, sus, deci aici rămâne doar ziua. */}
+          {(showPeriod || showDays) && (
+            <div className="pb-3 border-b border-[rgba(0,0,0,0.06)] mb-1 flex items-center gap-2 flex-wrap">
+              {showPeriod && (
+                <div className="flex-1 min-w-0">
+                  <PeriodPicker
+                    year={stop.visitedYear}
+                    month={stop.visitedMonth}
+                    onChange={onChange}
+                  />
+                </div>
+              )}
+              {/* ziua din ieșire stă tot aici: e despre când, nu despre cum a fost */}
+              {showDays && daySelect(false)}
             </div>
-            {/* ziua din ieșire stă tot aici: e despre când, nu despre cum a fost */}
-            {showDays && daySelect(false)}
-          </div>
-
-          {/* după primul, ajunge și doar numele cu o notă */}
-          {index > 0 && (
-            <input
-              value={stop.note}
-              onChange={e => onChange({ note: e.target.value.slice(0, 500) })}
-              placeholder="Ce ai făcut acolo? (opțional)"
-              className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] mb-1"
-            />
           )}
 
           <Section

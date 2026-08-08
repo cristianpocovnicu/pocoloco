@@ -4,6 +4,7 @@ import { Camera, Loader2, Minus, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { TRANSPORT_TYPES } from '@/lib/utils'
 import CountryPicker from '@/components/trip/CountryPicker'
+import { PeriodPicker } from './StopSections'
 import type { StopDraft, TripDraft } from '@/lib/story'
 
 type Props = {
@@ -95,6 +96,17 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
             <Plus size={14} className="text-[#6B6B6B]" />
           </button>
         </div>
+      </div>
+
+      {/* Perioada stă imediat sub durată: ambele răspund la „cât și când",
+          iar întrebarea e una singură pentru toată ieșirea. La publicare
+          coboară pe fiecare experiență. */}
+      <div className="py-3 border-t border-[rgba(0,0,0,0.06)]">
+        <PeriodPicker
+          year={trip.visitedYear}
+          month={trip.visitedMonth}
+          onChange={patch => onChange(patch)}
+        />
       </div>
 
       <div className="py-3 border-t border-[rgba(0,0,0,0.06)]">
