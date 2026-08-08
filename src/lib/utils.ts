@@ -93,6 +93,21 @@ export const TRANSPORT_TYPES = [
 ]
 
 /**
+ * Câte povești are un loc, spus în cuvinte.
+ *
+ * Zero nu se numără: „0 experiențe" anunță golul, în loc să cheme pe
+ * cineva în el. Formularea e aceeași peste tot — carduri, căutare,
+ * salvate — ca să nu se despartă la prima modificare.
+ *
+ * Sursa rămâne `locations.experience_count`, contorul din bază. Dacă
+ * arată altceva decât realitatea, se repară acolo (migrarea 41), nu aici.
+ */
+export function experienceCountLabel(count: number | null | undefined): string {
+  if (!count || count < 1) return 'Nicio poveste încă'
+  return count === 1 ? '1 experiență' : `${count} experiențe`
+}
+
+/**
  * Mijloacele de transport ale unei călătorii, în ordinea din listă.
  *
  * Citește coloana nouă (`transport_types`) și cade pe cea veche

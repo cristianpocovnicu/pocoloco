@@ -6,7 +6,7 @@ import NotificationBell from '@/components/layout/NotificationBell'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
 import { createClient } from '@/lib/supabase-client'
 import Link from 'next/link'
-import { cn, formatCount, CATEGORY_ICONS } from '@/lib/utils'
+import { cn, formatCount, experienceCountLabel, CATEGORY_ICONS } from '@/lib/utils'
 import { activityLabel } from '@/lib/activities'
 import { fetchFollowingIds, type SuggestedUser } from '@/lib/follows'
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches'
@@ -291,7 +291,7 @@ export default function SearchPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-[13px] font-medium text-[#0F0F0F] truncate">{loc.name}</div>
                         <div className="text-[11px] text-[#9B9B9B] truncate">
-                          {loc.city}{loc.country ? `, ${loc.country}` : ''} · {loc.experience_count} experiențe
+                          {loc.city}{loc.country ? `, ${loc.country}` : ''} · {experienceCountLabel(loc.experience_count)}
                         </div>
                       </div>
                     </Link>
@@ -395,7 +395,7 @@ export default function SearchPage() {
                       <div className="flex-1 p-3.5 min-w-0">
                         <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight mb-1">{loc.name}</h3>
                         <p className="text-[12px] text-[#9B9B9B] mb-1.5 truncate">📍 {loc.city}{loc.country ? `, ${loc.country}` : ''}</p>
-                        <span className="text-[11px] text-[#9B9B9B]">{loc.experience_count} experiențe</span>
+                        <span className="text-[11px] text-[#9B9B9B]">{experienceCountLabel(loc.experience_count)}</span>
                       </div>
                     </Link>
                   ))}

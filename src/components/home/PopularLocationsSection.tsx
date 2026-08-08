@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
-import { CATEGORY_ICONS } from '@/lib/utils'
+import { CATEGORY_ICONS, experienceCountLabel } from '@/lib/utils'
 import { fetchLocationCovers } from '@/lib/covers'
 import CoverImage from '@/components/ui/CoverImage'
 
@@ -87,7 +87,7 @@ export default function PopularLocationsSection() {
                 {loc.city || loc.country || 'Locație'}
               </p>
               <p className="text-[11px] text-[#6B6B6B] mt-0.5">
-                {loc.experience_count || 0} {loc.experience_count === 1 ? 'experiență' : 'experiențe'}
+                {experienceCountLabel(loc.experience_count)}
               </p>
             </div>
           </Link>

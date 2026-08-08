@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { CheckCircle, Loader2, MapPin } from 'lucide-react'
 import CoverImage from '@/components/ui/CoverImage'
-import { CATEGORY_ICONS } from '@/lib/utils'
+import { CATEGORY_ICONS, experienceCountLabel } from '@/lib/utils'
 import type { SavedLocation } from '@/lib/saves'
 
 type Props = {
@@ -65,7 +65,7 @@ export default function SavedLocationList({
 
             <div className="flex items-center justify-between gap-2 mt-2">
               <span className="text-[11px] text-[#9B9B9B]">
-                {location.experience_count || 0} experiențe
+                {experienceCountLabel(location.experience_count)}
               </span>
               {onMarkVisited && (
                 <button
