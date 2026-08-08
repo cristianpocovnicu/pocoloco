@@ -141,11 +141,25 @@ căutare. Ce alege omul decide drumul:
 
 - **un obiectiv** — loc din Pocoloco, loc din Google, activitate → scrii
   despre el, exact fluxul de până acum;
-- **o zonă întreagă** — țară, regiune, formă de relief (detecția de
-  `types` din iterația 6b, singura ei parte păstrată) → numele zonei
-  devine numele poveștii, iar locurile se adaugă pe rând dedesubt. Zona
-  **nu** ajunge în `locations`: n-are pin, n-are moderare, n-o poate
-  recenza nimeni.
+- **o zonă întreagă** — țară sau nivel administrativ (detecția de `types`
+  din iterația 6b, singura ei parte păstrată) → numele zonei devine numele
+  poveștii, iar locurile se adaugă pe rând dedesubt. Zona **nu** ajunge în
+  `locations`: n-are pin, n-are moderare, n-o poate recenza nimeni.
+
+  **`natural_feature` a ieșit din listă (10 august 2026).** Google îl pune
+  și pe insule, și pe vârfuri de munte — iar Pico do Arieiro ajungea pe
+  ramura călătorie, deși e exact genul de loc despre care se scrie o
+  recenzie. Cât timp detecția doar întreba (6b), falsul pozitiv costa un
+  tap; de când rutează singură, costă tot fluxul. Rămân `country`,
+  `administrative_area_level_1` și `administrative_area_level_2`, cu
+  `locality` / `sublocality` care blochează.
+  *Ce pierdem, asumat:* o insulă care la Google e **doar**
+  `natural_feature`, fără niciun nivel administrativ, pleacă acum pe
+  ramura de recenzie.
+  *Plasa de siguranță:* pe ecranul journey, sub numele preluat din
+  selecție, stă un link discret — „Nu voiam asta — povestesc doar despre
+  X" — care comută pe ramura de recenzie cu aceeași selecție (place id,
+  coordonate, geografie), fără o a doua căutare.
 
 **De ce nu e bifurcația respinsă la iterația 3.** Aceea cerea userului o
 decizie taxonomică conștientă — „experiență" sau „călătorie" — înainte să

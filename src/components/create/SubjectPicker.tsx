@@ -21,7 +21,7 @@ type Props = {
    * poveștii. Când lipsește (în interiorul cardurilor), o zonă aleasă se
    * comportă ca orice alt loc.
    */
-  onRegionPicked?: (name: string) => void
+  onRegionPicked?: (name: string, asPlace: Partial<StopDraft>) => void
   /** textul din câmpul gol, diferit la intrare față de cardurile de loc */
   placeholder?: string
 }
@@ -95,16 +95,7 @@ export default function SubjectPicker({
     const details = await getPlaceDetails(place.placeId, sessionToken.current)
     sessionToken.current = newSessionToken()
 
-    // O zonă întreagă nu devine pin pe hartă: la ecranul de intrare dă
-    // numele poveștii, iar userul continuă cu primul loc de acolo.
-    if (onRegionPicked && isBroadRegion(details?.types)) {
-      onRegionPicked(details?.name || place.mainText)
-      setQuery('')
-      setSearching(false)
-      return
-    }
-
-    onChange({
+    const asPlace: Partial<StopDraft> = {
       kind: 'place_visit',
       locationId: null,
       locationName: details?.name || place.mainText,
@@ -117,7 +108,22 @@ export default function SubjectPicker({
       adminArea1: details?.adminArea1 ?? null,
       adminArea2: details?.adminArea2 ?? null,
       countryCode: details?.countryCode ?? null,
-    })
+    }
+
+    // O zonă întreagă nu devine pin pe hartă: la ecranul de intrare dă
+    // numele poveștii, iar userul continuă cu primul loc de acolo.
+    //
+    // Trimitem și forma de loc a aceleiași selecții: dacă detecția a
+    // greșit, ecranul de acolo o poate folosi ca să comute pe recenzie
+    // fără să mai caute nimeni nimic a doua oară.
+    if (onRegionPicked && isBroadRegion(details?.types)) {
+      onRegionPicked(details?.name || place.mainText, asPlace)
+      setQuery('')
+      setSearching(false)
+      return
+    }
+
+    onChange(asPlace)
     setQuery('')
     setSearching(false)
   }

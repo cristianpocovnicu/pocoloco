@@ -63,6 +63,8 @@ function CreateScreen() {
   const [mode, setMode] = useState<StoryMode | null>(null)
   /** oprirea folosită de căutarea de la intrare, până se decide ramura */
   const [entryStop, setEntryStop] = useState<StopDraft>(() => newStop())
+  /** selecția care a rutat spre journey, ținută și ca loc — vezi switchToReview */
+  const [regionAsPlace, setRegionAsPlace] = useState<Partial<StopDraft> | null>(null)
   /** câte locuri au rămas fără zi după ce a scăzut durata */
   const [clearedDays, setClearedDays] = useState(0)
   /** propunerea de a muta povestea ieșirii din textul primului loc */
@@ -156,14 +158,28 @@ function CreateScreen() {
   /**
    * O zonă aleasă la intrare: nu devine loc și nu ajunge în locations —
    * dă numele poveștii, iar primul card așteaptă gol primul loc de acolo.
+   *
+   * Ținem și forma de loc a aceleiași selecții: detecția lucrează pe
+   * tipurile Google și mai greșește, iar cu ea la îndemână ieșirea din
+   * ramura greșită e un click, nu un restart.
    */
-  const startJourney = (name: string) => {
+  const startJourney = (name: string, asPlace: Partial<StopDraft>) => {
     dirty.current = true
     const first = newStop()
     setTrip(prev => ({ ...prev, title: name }))
     setStops([first])
     setExpandedKey(first.key)
     setMode('journey')
+    setRegionAsPlace(asPlace)
+  }
+
+  /** „Nu voiam asta": aceeași selecție, dar ca loc de recenzat. */
+  const switchToReview = () => {
+    if (!regionAsPlace) return
+    dirty.current = true
+    setTrip(prev => ({ ...prev, title: '' }))
+    setRegionAsPlace(null)
+    startReview(regionAsPlace)
   }
 
   const addStop = () => {
@@ -212,6 +228,9 @@ function CreateScreen() {
     if (!pendingDraft) return
     setStops(pendingDraft.stops)
     setTrip(pendingDraft.trip)
+    // draftul nu ține selecția Google; plasa de siguranță e pentru
+    // momentul rutării, nu pentru o poveste reluată peste o zi
+    setRegionAsPlace(null)
     setMode(pendingDraft.mode || 'review')
     // draftul vechi putea fi salvat pe pasul 2; ecranul e acum unul singur,
     // deci nu mai există „unde erai"
@@ -226,6 +245,7 @@ function CreateScreen() {
     setStops([])
     setTrip(emptyTrip())
     setMode(null)
+    setRegionAsPlace(null)
     countriesTouched.current = false
     setEntryStop(newStop())
     setExpandedKey(null)
@@ -535,6 +555,19 @@ ${text}` : text,
                 Dă-i un nume ca s-o putem publica.
               </p>
             )}
+            {/* Plasa de siguranță a rutării: detecția merge pe tipurile
+                Google și mai ia un vârf de munte drept regiune. Cât timp
+                selecția care a adus aici e la îndemână, ieșirea e un
+                click — nu un restart. */}
+            {regionAsPlace && (
+              <button type="button"
+                onClick={switchToReview}
+                className="text-[12px] text-[#9B9B9B] underline underline-offset-2 mt-1.5 text-left"
+              >
+                Nu voiam asta — povestesc doar despre {regionAsPlace.locationName}
+              </button>
+            )}
+
             {/* propunerea din locurile alese, cât timp câmpul e gol */}
             {!trip.title.trim() && nameSuggestion && (
               <button type="button"

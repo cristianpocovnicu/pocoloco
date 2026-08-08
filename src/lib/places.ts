@@ -44,15 +44,24 @@ export type PlaceDetails = PlaceGeography & {
  * Tipurile care descriu o zonă întreagă, nu un loc anume.
  *
  * Orașele lipsesc intenționat: o recenzie la un oraș e legitimă și
- * folositoare. `natural_feature` e cel mai lat dintre ele — Google îl
- * pune și pe insule, și pe vârfuri de munte — dar dialogul e o întrebare,
- * nu un blocaj: cine chiar vrea să scrie despre vârf răspunde că da.
+ * folositoare.
+ *
+ * `natural_feature` a fost aici până la iterația 8. Google îl pune și pe
+ * insule, și pe vârfuri de munte — iar un vârf, o cascadă sau o plajă e
+ * exact genul de loc despre care se scrie o recenzie. Cât timp detecția
+ * doar întreba, un fals pozitiv costa un tap. De când rutează singură
+ * (iterația 7), costă tot fluxul: Pico do Arieiro ajungea pe ramura
+ * călătorie, ca și cum ar fi fost o regiune.
+ *
+ * Ce pierdem, asumat: o insulă care la Google e **doar**
+ * `natural_feature`, fără niciun nivel administrativ, pleacă acum pe
+ * ramura de recenzie. Insulele mari sunt și regiuni administrative, deci
+ * rămân acoperite; pentru restul există comutarea de pe ecranul journey.
  */
 const BROAD_TYPES = [
   'country',
   'administrative_area_level_1',
   'administrative_area_level_2',
-  'natural_feature',
 ]
 
 export function isBroadRegion(types: string[] | null | undefined): boolean {
