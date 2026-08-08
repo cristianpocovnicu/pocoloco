@@ -84,6 +84,7 @@ nu schimbă nimic, doar citesc schema.
 | 39 | `supabase/migrations/039_20260809_trip_transport_types.sql` | `trips.transport_types` — mai multe mijloace pe o călătorie; normalizează valorile vechi |
 | 40 | `supabase/migrations/040_20260810_location_featured.sql` | `locations.featured` — locațiile intră și ele în „Recomandate" |
 | 41 | `supabase/migrations/041_20260810_experience_count_fix.sql` | `locations.experience_count` recalculat de un trigger `security definer`, cu backfill |
+| 42 | `supabase/migrations/042_20260810_visited_on_publish.sql` | o experiență publicată marchează locul ca „am fost" pentru autor + backfill |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).
