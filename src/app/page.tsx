@@ -7,6 +7,7 @@ import PopularTripsSection from '@/components/home/PopularTripsSection'
 import GuidesSection from '@/components/home/GuidesSection'
 import PopularSection from '@/components/home/PopularSection'
 import SearchBar from '@/components/home/SearchBar'
+import { FeedScopeProvider } from '@/components/feed/FeedScope'
 
 export default function HomePage() {
   return (
@@ -24,9 +25,12 @@ export default function HomePage() {
         <FeaturedSection />
         <PopularLocationsSection />
         <PopularTripsSection />
-        <FollowingSection />
-        <GuidesSection />
-        <PopularSection />
+        {/* „Urmăresc" publică ce a arătat, „Din comunitate" nu-l repetă */}
+        <FeedScopeProvider>
+          <FollowingSection />
+          <GuidesSection />
+          <PopularSection />
+        </FeedScopeProvider>
       </div>
       <BottomNav />
     </main>

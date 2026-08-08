@@ -8,6 +8,7 @@ import { activityLabel } from '@/lib/activities'
 import TripKindBadge from '@/components/trip/TripKindBadge'
 import VoteButtons from '@/components/experience/VoteButtons'
 import type { VoteType } from '@/lib/votes'
+import type { FeedItem } from '@/lib/follows'
 
 export type FeedCardItem = {
   id: string
@@ -36,10 +37,50 @@ export type FeedCardItem = {
   saveCount?: number
 }
 
+/**
+ * Postarea din feedul „Urmăresc" în forma cardului.
+ *
+ * Stă aici, lângă tip, pentru că o folosesc și homepage-ul, și pagina
+ * /following — două copii ale aceleiași conversii ar fi început să difere
+ * la prima schimbare.
+ */
+export function toFeedCardItem(item: FeedItem): FeedCardItem {
+  return {
+    id: item.id,
+    kind: item.kind,
+    href: item.href,
+    createdAt: item.created_at,
+    author: item.author,
+    isActivity: !!item.activityTitle,
+    activityCategory: item.activityCategory,
+    place: item.kind === 'trip'
+      ? (item.countries?.join(', ') || null)
+      : item.activityTitle
+        ? (item.activityArea || activityLabel(item.activityCategory) || null)
+        : item.location
+          ? `${item.location.name}${item.location.city ? `, ${item.location.city}` : ''}`
+          : null,
+    isGuide: item.isGuide,
+    title: item.kind === 'trip' ? item.title : item.activityTitle,
+    text: item.text,
+    images: item.images,
+    upvotes: item.upvotes,
+    downvotes: item.downvotes,
+    commentCount: item.commentCount,
+    saveCount: item.saveCount,
+  }
+}
+
 type Props = {
   item: FeedCardItem
   /** votul meu, dacă îl știe apelantul; fără el butoanele pornesc neutre */
   myVote?: VoteType | null
+  /**
+   * `following` marchează postările oamenilor pe care îi urmărești. Doar
+   * avatarul și un micro-badge se schimbă — forma cardului rămâne una
+   * singură, ca ochiul să nu învețe două tipare pentru același lucru.
+   */
+  variant?: 'default' | 'following'
 }
 
 /**
@@ -53,9 +94,10 @@ type Props = {
  * Cardul e link, dar footerul stă în afara lui: butoanele de vot n-au voie
  * să fie imbricate într-un <a>.
  */
-export default function FeedCard({ item, myVote = null }: Props) {
+export default function FeedCard({ item, myVote = null, variant = 'default' }: Props) {
   const name = item.author?.full_name || item.author?.username || 'Călător'
   const avatar = item.author?.id ? colorFor(item.author.id) : '#E8440A'
+  const followed = variant === 'following'
 
   return (
     <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(0,0,0,0.15)] transition-colors">
@@ -63,7 +105,9 @@ export default function FeedCard({ item, myVote = null }: Props) {
         <div className="p-3.5 pb-2.5">
           <div className="flex items-center gap-2 mb-2">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0 ${
+                followed ? 'ring-2 ring-[#5B4FCF] ring-offset-1 ring-offset-white' : ''
+              }`}
               style={{ background: avatar }}
             >
               {initialsOf(name)}
@@ -71,6 +115,11 @@ export default function FeedCard({ item, myVote = null }: Props) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-[13px] font-semibold text-[#0F0F0F] truncate">{name}</span>
+                {followed && (
+                  <span className="text-[9px] text-[#5B4FCF] font-outfit font-semibold uppercase tracking-wide flex-shrink-0">
+                    Urmărești
+                  </span>
+                )}
                 {item.author?.is_guide && (
                   <span className="text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">Ghid</span>
                 )}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ExperienceCardSkeleton } from '@/components/ui/Skeleton'
 import { createClient } from '@/lib/supabase-client'
 import FeedCard from '@/components/feed/FeedCard'
+import { useFeedScope } from '@/components/feed/FeedScope'
 import { fetchMyVotes, netScore, HIDE_THRESHOLD_EXPERIENCE, type VoteType } from '@/lib/votes'
 import HiddenByVotes from '@/components/experience/HiddenByVotes'
 
@@ -45,6 +46,14 @@ export default function PopularSection() {
   const [hasMore, setHasMore] = useState(true)
   const [revealed, setRevealed] = useState<string[]>([])
   const sentinel = useRef<HTMLDivElement>(null)
+  const { shown } = useFeedScope()
+
+  /**
+   * Ce a apărut deja în „Urmăresc" nu se mai repetă aici. Excluderea se
+   * face pe client: cererile pleacă în paralel, iar id-urile de sus se
+   * știu abia după ce răspunde secțiunea lor.
+   */
+  const visible = shown ? posts.filter(post => !shown.has(post.id)) : []
 
   /**
    * „Recente" folosește cursor pe created_at, ca postările noi să nu
@@ -125,7 +134,7 @@ export default function PopularSection() {
   }, [loadMore, hasMore])
 
   // schelet cu aceeași siluetă ca postările, ca pagina să nu sară la încărcare
-  if (loading) return (
+  if (loading || !shown) return (
     <section className="mb-7">
       <h2 className="font-outfit text-lg font-semibold text-[#0F0F0F] mb-3">Din comunitate</h2>
       <div className="flex flex-col gap-3">
@@ -135,6 +144,9 @@ export default function PopularSection() {
       </div>
     </section>
   )
+
+  // tot ce era aici a apărut deja mai sus: secțiunea n-are ce spune
+  if (posts.length > 0 && visible.length === 0) return null
 
   if (posts.length === 0) return (
     <div className="text-center py-12">
@@ -169,7 +181,7 @@ export default function PopularSection() {
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        {posts.map(post => {
+        {visible.map(post => {
           if (netScore(post.upvotes, post.downvotes) <= HIDE_THRESHOLD_EXPERIENCE && !revealed.includes(post.id)) {
             return (
               <HiddenByVotes

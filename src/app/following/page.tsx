@@ -1,15 +1,13 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, MapPin, Route, Users } from 'lucide-react'
+import { Loader2, Users } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
-import TripKindBadge from '@/components/trip/TripKindBadge'
 import EmptyState from '@/components/ui/EmptyState'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
+import FeedCard, { toFeedCardItem } from '@/components/feed/FeedCard'
 import { createClient } from '@/lib/supabase-client'
-import { colorFor, initialsOf } from '@/lib/profiles'
-import { timeAgo } from '@/lib/utils'
-import Image from 'next/image'
+import { fetchMyVotes, type VoteType } from '@/lib/votes'
 import {
   fetchFollowingFeed,
   fetchFollowingIds,
@@ -20,8 +18,15 @@ import {
 
 const PAGE_SIZE = 10
 
+/** Voturile mele pe experiențele din pagină; călătoriile nu se votează. */
+const loadVotes = (
+  supabase: ReturnType<typeof createClient>,
+  feed: FeedItem[],
+) => fetchMyVotes(supabase, feed.filter(item => item.kind === 'experience').map(item => item.id))
+
 export default function FollowingPage() {
   const [items, setItems] = useState<FeedItem[]>([])
+  const [myVotes, setMyVotes] = useState<Record<string, VoteType>>({})
   const [followingIds, setFollowingIds] = useState<string[]>([])
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,6 +48,7 @@ export default function FollowingPage() {
         : []
       setItems(feed)
       setHasMore(feed.length === PAGE_SIZE)
+      if (feed.length > 0) setMyVotes(await loadVotes(supabase, feed))
 
       if (feed.length === 0) {
         setSuggestions(await fetchSuggestedUsers(supabase, [...ids, user?.id || ''], 6))
@@ -66,6 +72,10 @@ export default function FollowingPage() {
 
     setItems(prev => [...prev, ...next])
     setHasMore(next.length === PAGE_SIZE)
+    if (next.length > 0) {
+      const votes = await loadVotes(supabase, next)
+      setMyVotes(prev => ({ ...prev, ...votes }))
+    }
     setLoadingMore(false)
   }, [items, followingIds, loadingMore])
 
@@ -105,62 +115,12 @@ export default function FollowingPage() {
           <>
             <div className="flex flex-col gap-3">
               {items.map(item => (
-                <article key={`${item.kind}-${item.id}`} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden">
-                  <div className="p-3.5 pb-2.5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Link
-                        href={item.author?.username ? `/profile/${item.author.username}` : '#'}
-                        className="flex items-center gap-2 min-w-0"
-                      >
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
-                          style={{ background: colorFor(item.author?.id || item.id) }}
-                        >
-                          {initialsOf(item.author?.full_name || item.author?.username)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-[13px] font-semibold text-[#0F0F0F] truncate">
-                            {item.author?.full_name || item.author?.username || 'User'}
-                          </div>
-                          <div className="flex items-center gap-1 text-[11px] text-[#9B9B9B]">
-                            {item.kind === 'trip' ? (
-                              <TripKindBadge isGuide={item.isGuide} />
-                            ) : (
-                              <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
-                                Experiența
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                      <span className="text-[11px] text-[#9B9B9B] ml-auto flex-shrink-0">{timeAgo(item.created_at)}</span>
-                    </div>
-
-                    {item.kind === 'trip' && (
-                      <p className="font-outfit text-[15px] font-semibold text-[#0F0F0F] mb-1">{item.title}</p>
-                    )}
-                    <p className="text-[14px] text-[#0F0F0F] leading-relaxed line-clamp-4 whitespace-pre-line">{item.text}</p>
-                  </div>
-
-                  {item.images.length > 0 && (
-                    <div className="flex gap-1.5 px-3.5 pb-3">
-                      {item.images.slice(0, 3).map((img, i) => (
-                        <Image key={i} src={img} alt="" width={80} height={80} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="px-3.5 py-2.5 flex items-center justify-between border-t border-[rgba(0,0,0,0.06)]">
-                    <span className="text-[12px] text-[#6B6B6B] flex items-center gap-1 min-w-0">
-                      {item.kind === 'trip'
-                        ? <><Route size={13} className="flex-shrink-0" /> <span className="truncate">{item.countries?.join(', ') || 'Călătorie'}</span></>
-                        : <><MapPin size={13} className="flex-shrink-0" /> <span className="truncate">{item.location?.name}{item.location?.city ? `, ${item.location.city}` : ''}</span></>}
-                    </span>
-                    <Link href={item.href} className="text-[12px] text-[#E8440A] font-medium flex-shrink-0">
-                      Deschide →
-                    </Link>
-                  </div>
-                </article>
+                <FeedCard
+                  key={`${item.kind}-${item.id}`}
+                  variant="following"
+                  myVote={myVotes[item.id] ?? null}
+                  item={toFeedCardItem(item)}
+                />
               ))}
             </div>
 
