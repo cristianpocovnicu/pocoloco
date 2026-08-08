@@ -175,6 +175,18 @@ se ajunge la mai multe locuri și la pasul 2.
   „Urmăresc" și „Ghizi de urmărit".
   *Motivul:* conținutul e marketingul. Fricțiunea la intrare alungă exact
   vizitatorul pe care SEO-ul îl aduce.
+- **Căutarea e o listă unificată, fără taburi** (9 august 2026). Un singur
+  termen întoarce Locuri, Călătorii, Activități și Oameni, în secțiuni
+  verticale, primele cinci din fiecare, cu „Vezi toate (N)" care expandează
+  inline; secțiunile goale nu apar.
+  *Motivul:* taburile Locuri/Activități/Useri cereau alegerea tipului
+  **înainte** de căutare — exact decizia taxonomică pe care fluxul de
+  creare a eliminat-o la intrare (iterația 7). Omul nu știe dinainte dacă
+  ce caută e „loc" sau „activitate"; motorul știe.
+  Odată cu asta au dispărut și filtrele care nu filtrau: chips-urile de
+  categorie (`locations.category` nu se completează nicăieri) și pragurile
+  de notă 7+/8+/9+ (`locations.score` nu se calculează nicăieri). Toggle-ul
+  Listă/Hartă a rămas, pe secțiunea de locuri, unde are sens.
 - **Ștergerea unei locații din admin** e posibilă doar cât timp nu are
   experiențe scrise: acelea o cer prin schemă
   (`experiences_kind_target_check`), iar alternativa e respingerea, care o
@@ -198,6 +210,8 @@ Lucruri decise, dar nefăcute — niciunul nu blochează altceva.
 | Trip privat | toate călătoriile sunt publice, deci bonusul de +8 se acordă necondiționat până apare opțiunea |
 | Full-text pe conținutul experiențelor | amânat până volumul o cere; azi recenziile se găsesc prin locul lor |
 | Transport per segment (de la X la Y cu...) | granularitate pe care userii n-o completează; transportul rămâne la nivel de călătorie — mai multe mijloace, o singură dată, în metadate (migrarea 39) |
+| Categorii pe locații (castele/natură/muzee...) | cere taxonomie + completare la creare + backfill; se decide după seed, când vedem ce categorii emerg real |
+| Filtru pe notă în search | cere agregarea stelelor per loc; după volum |
 
 ---
 
