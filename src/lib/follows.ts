@@ -112,6 +112,11 @@ export type FeedItem = {
   countries?: string[]
   duration_days?: number | null
   isGuide?: boolean | null
+  saveCount?: number
+  /** doar pentru experiențe: votes și comments n-au trip_id */
+  upvotes?: number
+  downvotes?: number
+  commentCount?: number
   href: string
 }
 
@@ -123,6 +128,9 @@ type ExperienceRow = {
   activity_area?: string | null
   content: string | null
   images: string[] | null
+  upvotes: number | null
+  downvotes: number | null
+  comment_count: number | null
   created_at: string
   author_id: string
   location: { id: string; name: string; city: string | null; status: string } | null
@@ -135,6 +143,7 @@ type TripRow = {
   cover_image: string | null
   countries: string[] | null
   duration_days: number | null
+  save_count: number | null
   created_at: string
   author_id: string
   is_guide: boolean | null
@@ -154,7 +163,7 @@ export async function fetchFollowingFeed(
 
   let experienceQuery = supabase
     .from('experiences')
-    .select('id, kind, title, activity_category, activity_area, content, images, created_at, author_id, location:locations!location_id(id, name, city, status)')
+    .select('id, kind, title, activity_category, activity_area, content, images, upvotes, downvotes, comment_count, created_at, author_id, location:locations!location_id(id, name, city, status)')
     .in('author_id', authorIds)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -162,7 +171,7 @@ export async function fetchFollowingFeed(
 
   let tripQuery = supabase
     .from('trips')
-    .select('id, title, description, cover_image, countries, duration_days, created_at, author_id, is_guide')
+    .select('id, title, description, cover_image, countries, duration_days, save_count, created_at, author_id, is_guide')
     .in('author_id', authorIds)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -199,6 +208,9 @@ export async function fetchFollowingFeed(
       activityTitle: e.kind === 'activity' ? e.title ?? null : null,
       activityCategory: e.kind === 'activity' ? e.activity_category ?? null : null,
       activityArea: e.kind === 'activity' ? e.activity_area ?? null : null,
+      upvotes: e.upvotes ?? 0,
+      downvotes: e.downvotes ?? 0,
+      commentCount: e.comment_count ?? 0,
       href: e.location ? `/location/${e.location.id}` : `/experience/${e.id}`,
     })),
     ...trips.map(t => ({
@@ -213,6 +225,7 @@ export async function fetchFollowingFeed(
       countries: t.countries || [],
       duration_days: t.duration_days,
       isGuide: t.is_guide,
+      saveCount: t.save_count ?? 0,
       href: `/trip/${t.id}`,
     })),
   ]

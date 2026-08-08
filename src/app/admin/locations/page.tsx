@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair, ImagePlus, Globe } from 'lucide-react'
+import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair, ImagePlus, Globe, Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, statusStyle, type MiniProfile } from '@/lib/admin'
 import { cn, timeAgo } from '@/lib/utils'
@@ -28,9 +28,23 @@ type LocationRow = {
   admin_area_1?: string | null
   admin_area_2?: string | null
   country_code?: string | null
+  featured?: boolean | null
 }
 
 const BASE_COLUMNS = 'id, name, city, country, category, status, added_by, experience_count, cover_image, latitude, longitude, created_at'
+
+/**
+ * Formele posibile ale tabelei, de la cea mai completă la cea mai veche.
+ * Prima care răspunde câștigă, iar steagurile spun ce butoane are voie
+ * pagina să arate. Așa adminul merge și pe o bază pe care migrările n-au
+ * fost încă rulate.
+ */
+const COLUMN_SETS = [
+  { columns: `${BASE_COLUMNS}, google_place_id, locality, admin_area_1, admin_area_2, country_code, featured`, photos: true, geo: true, featured: true },
+  { columns: `${BASE_COLUMNS}, google_place_id, locality, admin_area_1, admin_area_2, country_code`, photos: true, geo: true, featured: false },
+  { columns: `${BASE_COLUMNS}, google_place_id`, photos: true, geo: false, featured: false },
+  { columns: BASE_COLUMNS, photos: false, geo: false, featured: false },
+]
 
 type Filter = 'pending' | 'approved' | 'rejected' | 'all'
 
@@ -55,6 +69,8 @@ export default function AdminLocationsPage() {
   const [photoBulk, setPhotoBulk] = useState<{ done: number; total: number; found: number } | null>(null)
   const [photosSupported, setPhotosSupported] = useState(true)
   const [geoSupported, setGeoSupported] = useState(true)
+  /** migrarea 40; până e rulată, butonul de promovare nu apare */
+  const [featuredSupported, setFeaturedSupported] = useState(true)
   const [geoId, setGeoId] = useState<string | null>(null)
   const [geoBulk, setGeoBulk] = useState<{ done: number; total: number; found: number } | null>(null)
 
@@ -66,21 +82,26 @@ export default function AdminLocationsPage() {
       .order('created_at', { ascending: false })
       .limit(300)
 
-    // google_place_id vine din migrarea 020_20260807_location_photos; până e
-    // rulată, pagina merge mai departe fără butoanele de poză
-    // geografia vine din migrarea 37; până e rulată, pagina cade înapoi
-    // pe forma de dinainte, apoi pe cea fără google_place_id
-    let { data, error: fetchError } = await query(
-      `${BASE_COLUMNS}, google_place_id, locality, admin_area_1, admin_area_2, country_code`
-    )
-    if (fetchError) {
-      setGeoSupported(false)
-      ;({ data, error: fetchError } = await query(`${BASE_COLUMNS}, google_place_id`))
+    // Coloanele vin din migrări diferite (20 pozele, 37 geografia, 40
+    // promovarea). Coborâm din formă în formă până una răspunde.
+    let data: unknown = null
+    let fetchError: { message: string } | null = null
+    let shape = COLUMN_SETS[COLUMN_SETS.length - 1]
+
+    for (const candidate of COLUMN_SETS) {
+      const result = await query(candidate.columns)
+      if (!result.error) {
+        data = result.data
+        fetchError = null
+        shape = candidate
+        break
+      }
+      fetchError = result.error
     }
-    if (fetchError) {
-      setPhotosSupported(false)
-      ;({ data, error: fetchError } = await query(BASE_COLUMNS))
-    }
+
+    setPhotosSupported(shape.photos)
+    setGeoSupported(shape.geo)
+    setFeaturedSupported(shape.featured)
 
     if (fetchError) {
       setError(fetchError.message)
@@ -96,6 +117,19 @@ export default function AdminLocationsPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  /** Aceeași promovare ca la călătorii (migrarea 13), pe locații. */
+  const setFeatured = async (id: string, featured: boolean) => {
+    setBusyId(id)
+    const supabase = createClient()
+    const { error: updateError } = await supabase.from('locations').update({ featured }).eq('id', id)
+    if (updateError) setError(updateError.message)
+    else {
+      setLocations(prev => prev.map(l => (l.id === id ? { ...l, featured } : l)))
+      setError(null)
+    }
+    setBusyId(null)
+  }
 
   const setStatus = async (id: string, status: LocationRow['status']) => {
     setBusyId(id)
@@ -610,6 +644,11 @@ ${detalii}`)) {
                       <span className={`text-[10px] font-outfit font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${style.className}`}>
                         {style.label}
                       </span>
+                      {loc.featured && (
+                        <span className="text-[10px] font-outfit font-bold px-2 py-0.5 rounded-full bg-[#FFFBEB] text-[#D97706] flex items-center gap-0.5 flex-shrink-0">
+                          <Star size={9} className="fill-[#D97706]" /> PROMOVATĂ
+                        </span>
+                      )}
                     </div>
                     <p className="text-[12px] text-[#6B6B6B] truncate">
                       📍 {loc.city || 'Fără oraș'}{loc.country ? `, ${loc.country}` : ''}
@@ -662,6 +701,22 @@ ${detalii}`)) {
                   </div>
 
                   <div className="flex gap-1.5 flex-wrap md:justify-end flex-shrink-0">
+                    {/* se promovează doar ce e deja public: homepage-ul cere
+                        oricum status 'approved' */}
+                    {featuredSupported && loc.status === 'approved' && (
+                      <button
+                        disabled={busy}
+                        onClick={() => setFeatured(loc.id, !loc.featured)}
+                        className={cn(
+                          'text-[11px] px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50',
+                          loc.featured ? 'bg-[#FFFBEB] text-[#D97706]' : 'bg-[#F8F7F5] text-[#6B6B6B]'
+                        )}
+                      >
+                        <Star size={12} className={loc.featured ? 'fill-[#D97706]' : ''} />
+                        {loc.featured ? 'Scoate de pe homepage' : 'Recomandă pe homepage'}
+                      </button>
+                    )}
+
                     {loc.status !== 'approved' && (
                       <button
                         disabled={busy}

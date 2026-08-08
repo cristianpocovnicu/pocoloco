@@ -1,14 +1,10 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { MessageCircle, Eye } from 'lucide-react'
 import { ExperienceCardSkeleton } from '@/components/ui/Skeleton'
 import { createClient } from '@/lib/supabase-client'
-import { formatCount, timeAgo } from '@/lib/utils'
+import FeedCard from '@/components/feed/FeedCard'
 import { fetchMyVotes, netScore, HIDE_THRESHOLD_EXPERIENCE, type VoteType } from '@/lib/votes'
-import { activityLabel } from '@/lib/activities'
-import VoteButtons from '@/components/experience/VoteButtons'
 import HiddenByVotes from '@/components/experience/HiddenByVotes'
 
 type Post = {
@@ -174,9 +170,6 @@ export default function PopularSection() {
       </div>
       <div className="flex flex-col gap-3">
         {posts.map(post => {
-          const initials = post.author?.full_name
-            ?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '??'
-
           if (netScore(post.upvotes, post.downvotes) <= HIDE_THRESHOLD_EXPERIENCE && !revealed.includes(post.id)) {
             return (
               <HiddenByVotes
@@ -188,75 +181,28 @@ export default function PopularSection() {
           }
 
           return (
-            // cardul e link, dar footerul stă în afara lui — butoanele de vot
-            // nu pot fi imbricate într-un <a>
-            <div
+            <FeedCard
               key={post.id}
-              className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(0,0,0,0.15)] transition-colors"
-            >
-              <Link href={post.location ? `/location/${post.location.id}` : `/experience/${post.id}`} className="block">
-                <div className="p-3.5 pb-2.5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0">
-                      {initials}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[13px] font-semibold text-[#0F0F0F]">{post.author?.full_name}</span>
-                        {post.author?.is_guide && (
-                          <span className="text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-medium">Ghid</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-[11px] text-[#9B9B9B] flex-wrap">
-                        {post.kind === 'activity' ? (
-                          <span className="bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
-                            {activityLabel(post.activity_category) || '🪂 Activitate'}
-                          </span>
-                        ) : (
-                          <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">Experiența</span>
-                        )}
-                        {post.kind === 'activity'
-                          ? post.activity_area && <span>📍 {post.activity_area}</span>
-                          : <span>📍 {post.location?.name}{post.location?.city ? `, ${post.location.city}` : ''}</span>}
-                      </div>
-                    </div>
-                    <span className="text-[11px] text-[#9B9B9B]">{timeAgo(post.created_at)}</span>
-                  </div>
-                  {post.kind === 'activity' && post.title && (
-                    <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight mb-1">{post.title}</h3>
-                  )}
-                  <p className="text-[14px] text-[#0F0F0F] leading-relaxed line-clamp-3 whitespace-pre-line">{post.content}</p>
-                </div>
-
-                {post.images && post.images.length > 0 && (
-                  <div className="flex gap-1.5 px-3.5 pb-3">
-                    {post.images.slice(0, 3).map((img, i) => (
-                      <Image key={i} src={img} alt="" width={80} height={80} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
-                    ))}
-                  </div>
-                )}
-              </Link>
-
-              <div className="px-3.5 py-2.5 flex items-center justify-between border-t border-[rgba(0,0,0,0.06)]">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-2.5 py-1 text-[12px] text-[#6B6B6B]">
-                    <MessageCircle size={12} /> {formatCount(post.comment_count)}
-                  </div>
-                  <VoteButtons
-                    target={{ kind: 'experience', id: post.id }}
-                    upvotes={post.upvotes}
-                    downvotes={post.downvotes}
-                    myVote={myVotes[post.id] ?? null}
-                  />
-                </div>
-                <Link
-                  href={post.location ? `/location/${post.location.id}` : `/experience/${post.id}`}
-                  className="flex items-center gap-1 text-[12px] text-[#6B6B6B] hover:text-[#E8440A] transition-colors"
-                >
-                  <Eye size={13} /> Deschide
-                </Link>
-              </div>
-            </div>
+              item={{
+                id: post.id,
+                kind: 'experience',
+                href: post.location ? `/location/${post.location.id}` : `/experience/${post.id}`,
+                createdAt: post.created_at,
+                author: { full_name: post.author?.full_name, is_guide: post.author?.is_guide },
+                isActivity: post.kind === 'activity',
+                activityCategory: post.activity_category,
+                place: post.kind === 'activity'
+                  ? post.activity_area || null
+                  : `${post.location?.name}${post.location?.city ? `, ${post.location.city}` : ''}`,
+                title: post.kind === 'activity' ? post.title : null,
+                text: post.content,
+                images: post.images || [],
+                upvotes: post.upvotes,
+                downvotes: post.downvotes,
+                commentCount: post.comment_count,
+              }}
+              myVote={myVotes[post.id] ?? null}
+            />
           )
         })}
       </div>
