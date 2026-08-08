@@ -7,6 +7,7 @@ import { cn, formatCount } from '@/lib/utils'
 import { createClient } from '@/lib/supabase-client'
 import { getFollowCounts } from '@/lib/follows'
 import { useUnreadNotifications } from '@/lib/useUnreadNotifications'
+import { useModerationQueue } from '@/lib/useModerationQueue'
 import UserMenu from './UserMenu'
 
 const NAV_LINKS = [
@@ -28,6 +29,7 @@ export default function Sidebar() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [counts, setCounts] = useState<{ followers: number; following: number } | null>(null)
   const unread = useUnreadNotifications()
+  const toModerate = useModerationQueue(isAdmin)
 
   useEffect(() => {
     const supabase = createClient()
@@ -121,6 +123,12 @@ export default function Sidebar() {
           >
             <ShieldCheck size={21} strokeWidth={1.8} />
             Admin
+            {/* zero nu se afișează: un badge cu 0 cere atenție pentru nimic */}
+            {toModerate > 0 && (
+              <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#DC2626] text-white text-[11px] font-outfit font-bold flex items-center justify-center">
+                {toModerate > 99 ? '99+' : toModerate}
+              </span>
+            )}
           </Link>
         )}
       </nav>

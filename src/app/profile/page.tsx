@@ -17,6 +17,7 @@ import { fetchSavedLocations, fetchSavedTrips, setLocationSaveStatus, type Saved
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
 import { formatCount, timeAgo } from '@/lib/utils'
 import { activityLabel } from '@/lib/activities'
+import PendingChip from '@/components/location/PendingChip'
 import ShareButton from '@/components/ui/ShareButton'
 import { useToast } from '@/components/ui/Toast'
 import Link from 'next/link'
@@ -262,8 +263,11 @@ export default function ProfilePage() {
                       href={exp.location ? `/location/${exp.location.id}` : `/experience/${exp.id}`}
                       className="min-w-0 hover:text-[#E8440A] transition-colors"
                     >
-                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] truncate">
-                        {exp.kind === 'activity' ? (exp.title || 'Activitate') : exp.location?.name}
+                      <h3 className="font-outfit text-[14px] font-semibold text-[#0F0F0F] truncate flex items-center gap-1.5">
+                        <span className="truncate">
+                          {exp.kind === 'activity' ? (exp.title || 'Activitate') : exp.location?.name}
+                        </span>
+                        <PendingChip locationId={exp.location?.id} />
                       </h3>
                       <p className="text-[11px] text-[#9B9B9B] flex items-center gap-1 flex-wrap">
                         {exp.kind === 'activity' ? (

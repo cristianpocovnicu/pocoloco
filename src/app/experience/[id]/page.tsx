@@ -6,6 +6,7 @@ import PhotoGallery from '@/components/location/PhotoGallery'
 import ExperienceInteractions from '@/components/experience/ExperienceInteractions'
 import FollowButton from '@/components/profile/FollowButton'
 import ShareButton from '@/components/ui/ShareButton'
+import PendingChip from '@/components/location/PendingChip'
 import { supabase } from '@/lib/supabase'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { fetchCommentsFor } from '@/lib/comments'
@@ -87,13 +88,17 @@ export default async function ExperiencePage({ params }: { params: { id: string 
               </p>
             )
           ) : experience.location && (
-            <Link
-              href={`/location/${experience.location.id}`}
-              className="text-[13px] text-[#5B4FCF] flex items-center gap-1"
-            >
-              <MapPin size={12} /> {experience.location.name}
-              {experience.location.city ? `, ${experience.location.city}` : ''}
-            </Link>
+            <p className="text-[13px] flex items-center gap-1.5 flex-wrap">
+              <Link
+                href={`/location/${experience.location.id}`}
+                className="text-[#5B4FCF] flex items-center gap-1"
+              >
+                <MapPin size={12} /> {experience.location.name}
+                {experience.location.city ? `, ${experience.location.city}` : ''}
+              </Link>
+              {/* doar autorul și adminii îl văd — vezi PendingChip */}
+              <PendingChip locationId={experience.location.id} />
+            </p>
           )}
         </div>
 

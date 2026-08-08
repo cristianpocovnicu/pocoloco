@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { CheckCircle, ChevronRight, Loader2, MapPin } from 'lucide-react'
 import CoverImage from '@/components/ui/CoverImage'
 import { CATEGORY_ICONS, experienceCountLabel } from '@/lib/utils'
+import PendingChip from '@/components/location/PendingChip'
 import type { SavedLocation } from '@/lib/saves'
 
 type Props = {
@@ -51,6 +52,7 @@ export default function SavedLocationList({
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight truncate flex items-center gap-1">
                   {location.name}
+                  <PendingChip locationId={location.id} />
                   <ChevronRight size={14} className="text-[#C9C5BD] group-hover:text-[#E8440A] transition-colors flex-shrink-0" />
                 </h3>
                 {(location.score || 0) > 0 && (
