@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import StopCard from '@/components/create/StopCard'
 import SubjectPicker from '@/components/create/SubjectPicker'
 import StoryField from '@/components/create/StoryField'
-import DetailsScreen from '@/components/create/DetailsScreen'
+import OutingCard from '@/components/create/OutingCard'
 import AddToTripDialog from '@/components/trip/AddToTripDialog'
 import {
   deleteDraft,
@@ -20,10 +20,10 @@ import {
   stopHasSubject,
   stopLabel,
   suggestTripCountries,
+  suggestTripTitle,
   type StopDraft,
   type StoryDraft,
   type StoryMode,
-  type StoryStep,
   type TripDraft,
 } from '@/lib/story'
 import { fetchPointsSince, justNowWindow } from '@/lib/points'
@@ -43,7 +43,13 @@ const SAVE_DEBOUNCE_MS = 1500
  *                                       iar locurile se adaugă pe rând.
  *
  * Ramificarea stabilește punctul de plecare, nu închide drumuri: din
- * oricare dintre ele se ajunge la mai multe locuri și la pasul 2.
+ * oricare dintre ele se ajunge la mai multe locuri.
+ *
+ * Tot ce ține de ieșirea întreagă — nume, poveste, zile, transport, țări,
+ * copertă — stă pe acest ecran, deasupra locurilor. A avut o vreme un pas
+ * 2 al lui (iterația 6), dar numele și povestea apăreau pe ambele ecrane
+ * și despărțirea a ajuns să dubleze exact subiectul pe care voia să-l
+ * descarce.
  */
 function CreateScreen() {
   const router = useRouter()
@@ -57,8 +63,6 @@ function CreateScreen() {
   const [mode, setMode] = useState<StoryMode | null>(null)
   /** oprirea folosită de căutarea de la intrare, până se decide ramura */
   const [entryStop, setEntryStop] = useState<StopDraft>(() => newStop())
-  /** ecranul curent: povestea sau detaliile călătoriei */
-  const [step, setStep] = useState<StoryStep>('story')
   /** câte locuri au rămas fără zi după ce a scăzut durata */
   const [clearedDays, setClearedDays] = useState(0)
   /** propunerea de a muta povestea ieșirii din textul primului loc */
@@ -74,6 +78,14 @@ function CreateScreen() {
   const [published, setPublished] = useState<{ id: string; locationId: string | null; title: string } | null>(null)
 
   const dirty = useRef(false)
+  /** țările se deduc singure până pune omul mâna pe câmp */
+  const countriesTouched = useRef(false)
+  /** ca „Publică" să poată duce la câmpurile care mai lipsesc */
+  const nameRef = useRef<HTMLInputElement>(null)
+  const storyRef = useRef<HTMLDivElement>(null)
+  const [nameMissing, setNameMissing] = useState(false)
+  /** propunerea de mutare se face o singură dată, nu la fiecare apăsare */
+  const moveAsked = useRef(false)
 
   // ---- pornire: draftul salvat, sau o oprire goală (poate pre-completată)
   useEffect(() => {
@@ -112,11 +124,11 @@ function CreateScreen() {
     if (!userId || loading || pendingDraft || !dirty.current) return
 
     const timer = setTimeout(() => {
-      void saveDraft(createClient(), userId, { stops, trip, step, mode: mode || 'review' })
+      void saveDraft(createClient(), userId, { stops, trip, mode: mode || 'review' })
     }, SAVE_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
-  }, [stops, trip, step, mode, userId, loading, pendingDraft])
+  }, [stops, trip, mode, userId, loading, pendingDraft])
 
   const patchStop = useCallback((key: string, patch: Partial<StopDraft>) => {
     dirty.current = true
@@ -204,8 +216,9 @@ function CreateScreen() {
     setStops(pendingDraft.stops)
     setTrip(pendingDraft.trip)
     setMode(pendingDraft.mode || 'review')
-    // te întorci unde erai, nu la începutul poveștii
-    setStep(pendingDraft.step === 'details' ? 'details' : 'story')
+    // draftul vechi putea fi salvat pe pasul 2; ecranul e acum unul singur,
+    // deci nu mai există „unde erai"
+    if (pendingDraft.trip.countries.length > 0) countriesTouched.current = true
     setExpandedKey(pendingDraft.stops[pendingDraft.stops.length - 1]?.key || null)
     setPendingDraft(null)
   }
@@ -215,8 +228,8 @@ function CreateScreen() {
     if (userId) await deleteDraft(createClient(), userId)
     setStops([])
     setTrip(emptyTrip())
-    setStep('story')
     setMode(null)
+    countriesTouched.current = false
     setEntryStop(newStop())
     setExpandedKey(null)
     setPendingDraft(null)
@@ -224,7 +237,7 @@ function CreateScreen() {
 
   const saveForLater = async () => {
     if (!userId) return
-    await saveDraft(createClient(), userId, { stops, trip, step, mode: mode || 'review' })
+    await saveDraft(createClient(), userId, { stops, trip, mode: mode || 'review' })
     toast('Salvat. O găsești în profil când vrei să continui.')
     router.push('/profile')
   }
@@ -232,6 +245,8 @@ function CreateScreen() {
   /** Durata a scăzut sub o zi deja aleasă: golim ziua, cu un mesaj. */
   const changeTrip = (patch: Partial<TripDraft>) => {
     dirty.current = true
+    if (patch.countries !== undefined) countriesTouched.current = true
+    if (patch.title !== undefined && patch.title.trim()) setNameMissing(false)
     setTrip(prev => ({ ...prev, ...patch }))
 
     if (patch.durationDays !== undefined) {
@@ -247,13 +262,31 @@ function CreateScreen() {
   }
 
   const usableStops = stops.filter(stopHasSubject)
-  /**
-   * O poveste pornită de la o zonă are deja nume, deci trece prin pasul 2
-   * chiar cu un singur loc. Una pornită de la un obiectiv merge direct la
-   * publicare până apare al doilea loc.
-   */
   const canContinue = usableStops.length > 0
-  const isMulti = mode === 'journey' ? usableStops.length >= 1 : usableStops.length > 1
+
+  /**
+   * Când e vorba de o ieșire, nu de un singur obiectiv.
+   *
+   * Două declanșatoare, nu unul: o poveste pornită de la o zonă are nume
+   * de la început, iar una pornită de la un obiectiv devine ieșire în
+   * momentul în care primește al doilea loc.
+   */
+  const showDetails = mode === 'journey' || usableStops.length > 1
+  const days = Array.from({ length: Math.max(trip.durationDays, 1) }, (_, i) => i + 1)
+  const nameSuggestion = suggestTripTitle(usableStops)
+
+  /**
+   * Țările se completează singure din locurile alese, atâta timp cât n-a
+   * pus nimeni mâna pe câmp. Nu mai există un moment de tranziție în care
+   * să le deducem o dată, deci le ținem la zi — dar prima editare le trece
+   * definitiv în grija omului, inclusiv dacă le golește.
+   */
+  const suggestedCountries = suggestTripCountries(usableStops).join('|')
+  useEffect(() => {
+    if (countriesTouched.current) return
+    const next = suggestedCountries ? suggestedCountries.split('|') : []
+    setTrip(prev => (prev.countries.join('|') === suggestedCountries ? prev : { ...prev, countries: next }))
+  }, [suggestedCountries])
 
   /**
    * Semnul că povestea întregii ieșiri a ajuns în textul primului loc:
@@ -266,11 +299,10 @@ function CreateScreen() {
     && usableStops.slice(1).every(stop => stop.content.trim().length === 0)
 
   /**
-   * Mută textul primului loc în povestea călătoriei.
+   * Mută textul primului loc în povestea ieșirii.
    *
-   * Golirea și trecerea la pasul 2 se fac într-un singur setStops: un
-   * patchStop urmat de continueToDetails ar fi scris lista veche peste
-   * el și textul s-ar fi întors.
+   * Ținta e pe același ecran, deci după mutare ducem omul la ea: altfel
+   * textul ar dispărea dintr-un câmp fără să se vadă unde a apărut.
    */
   const moveStoryToTrip = () => {
     dirty.current = true
@@ -283,44 +315,38 @@ function CreateScreen() {
 
 ${text}` : text,
     }))
-    setStops(usableStops.map(stop => (stop.key === first.key ? { ...stop, content: '' } : stop)))
-    setExpandedKey(usableStops[usableStops.length - 1]?.key || null)
+    setStops(stops.map(stop => (stop.key === first.key ? { ...stop, content: '' } : stop)))
     setOfferMove(false)
-    setStep('details')
-  }
-
-  /**
-   * Trecerea la detalii curăță cardurile goale: acolo lista locurilor se
-   * reordonează după poziție, iar un card fără nimic în el ar fi o poziție
-   * invizibilă în mijlocul listei.
-   */
-  const continueToDetails = () => {
-    dirty.current = true
-    // țările se deduc o singură dată, la intrarea în pasul 2; de acolo
-    // încolo sunt ale userului, inclusiv dacă le golește
-    setTrip(prev => (prev.countries.length > 0
-      ? prev
-      : { ...prev, countries: suggestTripCountries(usableStops) }))
-    setStops(usableStops)
-    setExpandedKey(usableStops[usableStops.length - 1]?.key || null)
-    setStep('details')
-  }
-
-  const goToDetails = () => {
-    // întrebăm o singură dată, chiar înainte de pasul 2
-    if (spilledStory) { setOfferMove(true); return }
-    continueToDetails()
+    storyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
   const handlePublish = async () => {
     if (!userId || !canContinue) return
+
+    // o ieșire fără nume n-are cum să fie publicată: ducem omul la câmp,
+    // nu-l lăsăm în fața unui buton mut
+    if (showDetails && !trip.title.trim()) {
+      setNameMissing(true)
+      nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      nameRef.current?.focus({ preventScroll: true })
+      return
+    }
+
+    // întrebăm o singură dată, chiar înainte de publicare
+    if (spilledStory && !moveAsked.current) {
+      moveAsked.current = true
+      setOfferMove(true)
+      return
+    }
+
     setPublishing(true)
     setError(null)
     const since = justNowWindow()
 
     try {
       const supabase = createClient()
-      const result = await publishStory(supabase, userId, { stops, trip })
+      // cardurile fără subiect n-au ce căuta în itinerar: ar fi poziții goale
+      const result = await publishStory(supabase, userId, { stops: usableStops, trip })
       await deleteDraft(supabase, userId)
 
       const gained = await fetchPointsSince(supabase, userId, since)
@@ -401,20 +427,6 @@ ${text}` : text,
     </div>
   )
 
-  if (step === 'details' && isMulti) return (
-    <DetailsScreen
-      trip={trip}
-      stops={stops}
-      onTripChange={changeTrip}
-      onStopChange={patchStop}
-      onMove={moveStop}
-      onBack={() => { setStep('story'); setClearedDays(0) }}
-      onPublish={handlePublish}
-      publishing={publishing}
-      clearedDays={clearedDays}
-    />
-  )
-
   return (
     <div className="min-h-screen bg-[#F8F7F5]">
       <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 sticky top-0 z-30">
@@ -474,7 +486,7 @@ ${text}` : text,
                 Mută
               </button>
               <button type="button"
-                onClick={() => { setOfferMove(false); continueToDetails() }}
+                onClick={() => { setOfferMove(false); void handlePublish() }}
                 className="text-[13px] text-[#6B6B6B] font-medium px-3"
               >
                 Lasă cum e
@@ -489,24 +501,40 @@ ${text}` : text,
           </div>
         )}
 
-        {!pendingDraft && mode === 'journey' && (
+        {/* ------- ce ține de ieșirea întreagă, deasupra locurilor ------- */}
+        {!pendingDraft && showDetails && (
           <div className="mb-4">
             <label className="text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide block mb-1.5">
               Povestea ta
             </label>
             <input
+              ref={nameRef}
               value={trip.title}
-              onChange={e => setOutingName(e.target.value.slice(0, 120))}
+              onChange={e => { setOutingName(e.target.value.slice(0, 120)); setNameMissing(false) }}
               placeholder="Cum o numim?"
-              className="w-full bg-white border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 font-outfit text-[18px] font-semibold text-[#0F0F0F] outline-none focus:border-[#E8440A] transition-colors placeholder:font-normal placeholder:text-[#9B9B9B]"
+              className={`w-full bg-white border rounded-xl px-4 py-3 font-outfit text-[18px] font-semibold text-[#0F0F0F] outline-none transition-colors placeholder:font-normal placeholder:text-[#9B9B9B] ${
+                nameMissing ? 'border-[#DC2626]' : 'border-[rgba(0,0,0,0.08)] focus:border-[#E8440A]'
+              }`}
             />
+            {nameMissing && (
+              <p className="text-[12px] text-[#DC2626] mt-1.5">
+                Dă-i un nume ca s-o putem publica.
+              </p>
+            )}
+            {/* propunerea din locurile alese, cât timp câmpul e gol */}
+            {!trip.title.trim() && nameSuggestion && (
+              <button type="button"
+                onClick={() => setOutingName(nameSuggestion)}
+                className="text-[12px] text-[#5B4FCF] font-medium mt-1.5"
+              >
+                Folosește „{nameSuggestion}&rdquo;
+              </button>
+            )}
           </div>
         )}
 
-        {/* Aceeași sursă ca la pasul 2 — TripDraft.description. Scrii aici,
-            apare acolo, și invers: nu există al doilea câmp. */}
-        {!pendingDraft && mode === 'journey' && (
-          <div className="mb-4">
+        {!pendingDraft && showDetails && (
+          <div className="mb-4" ref={storyRef}>
             <StoryField
               value={trip.description}
               onChange={value => { dirty.current = true; setTrip(prev => ({ ...prev, description: value })) }}
@@ -516,10 +544,33 @@ ${text}` : text,
           </div>
         )}
 
-        {!pendingDraft && mode === 'journey' && (
-          <p className="text-[12px] font-medium text-[#6B6B6B] mb-2">
-            Adaugă locurile prin care ai trecut
-          </p>
+        {!pendingDraft && showDetails && (
+          <div className="mb-4">
+            <OutingCard trip={trip} stops={stops} onChange={changeTrip} />
+          </div>
+        )}
+
+        {!pendingDraft && showDetails && (
+          <div className="mb-2">
+            <p className="text-[12px] font-medium text-[#6B6B6B]">
+              {mode === 'journey' ? 'Adaugă locurile prin care ai trecut' : 'Locurile'}
+            </p>
+            {days.length > 1 && (
+              <p className="text-[11px] text-[#9B9B9B]">
+                Poți spune în ce zi ai fost la fiecare. Dacă sari peste, rămân toate la un loc.
+              </p>
+            )}
+          </div>
+        )}
+
+        {clearedDays > 0 && (
+          <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.2)] rounded-xl px-3 py-2 mb-2.5">
+            <p className="text-[12px] text-[#6B6B6B]">
+              {clearedDays === 1
+                ? 'Un loc rămăsese pe o zi care nu mai există — l-am lăsat fără zi.'
+                : `${clearedDays} locuri rămăseseră pe zile care nu mai există — le-am lăsat fără zi.`}
+            </p>
+          </div>
         )}
 
         {!pendingDraft && (
@@ -541,6 +592,7 @@ ${text}` : text,
                   placeholder={mode === 'journey' && index === 0
                     ? 'Primul loc de acolo: un vârf, un sat, o plajă...'
                     : undefined}
+                  days={showDetails ? days : undefined}
                 />
               ))}
             </div>
@@ -577,14 +629,14 @@ ${text}` : text,
         >
           <div className="max-w-[680px] mx-auto flex items-center gap-3">
             <button type="button"
-              onClick={() => (isMulti ? goToDetails() : handlePublish())}
+              onClick={handlePublish}
               disabled={!canContinue || publishing}
               className={`flex-1 font-outfit text-[15px] font-semibold py-3 rounded-full flex items-center justify-center gap-2 transition-colors ${
                 canContinue && !publishing ? 'bg-[#E8440A] text-white' : 'bg-[#F1F1F1] text-[#9B9B9B]'
               }`}
             >
               {publishing && <Loader2 size={16} className="animate-spin" />}
-              {isMulti ? 'Continuă' : 'Publică'}
+              Publică
             </button>
             <button type="button"
               onClick={saveForLater}

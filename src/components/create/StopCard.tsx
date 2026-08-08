@@ -18,6 +18,11 @@ type Props = {
   onToggleSection: (section: 'photos' | 'ratings' | 'story') => void
   /** textul din câmpul gol, când cardul cere primul loc dintr-o zonă */
   placeholder?: string
+  /**
+   * Zilele dintre care se poate alege, calculate din durata de mai sus.
+   * Lipsesc când ieșirea are o singură zi: n-ar fi nimic de ales.
+   */
+  days?: number[]
 }
 
 /**
@@ -36,7 +41,26 @@ export default function StopCard({
   open,
   onToggleSection,
   placeholder,
+  days,
 }: Props) {
+  const showDays = !!days && days.length > 1 && stopHasSubject(stop)
+
+  const daySelect = (compact: boolean) => (
+    <select
+      value={stop.day ?? ''}
+      onChange={e => onChange({ day: e.target.value ? Number(e.target.value) : null })}
+      onClick={e => e.stopPropagation()}
+      aria-label={`Ziua pentru ${stopLabel(stop)}`}
+      className={`bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-lg text-[#0F0F0F] outline-none focus:border-[#E8440A] transition-colors flex-shrink-0 ${
+        compact ? 'px-1.5 py-1 text-[11px]' : 'px-2.5 py-1.5 text-[12px]'
+      }`}
+    >
+      <option value="">fără zi</option>
+      {(days || []).map(day => (
+        <option key={day} value={day}>Ziua {day}</option>
+      ))}
+    </select>
+  )
   // la primul loc totul e deschis de la început; la următoarele, doar
   // căutarea și nota, restul la cerere
   const alwaysOpen = index === 0
@@ -78,6 +102,7 @@ export default function StopCard({
       </button>
 
       <div className="flex items-center gap-0.5 flex-shrink-0">
+        {showDays && daySelect(true)}
         {index > 0 && (
           <button type="button" onClick={() => onMove(-1)} aria-label="Mută mai sus" className="w-7 h-7 flex items-center justify-center text-[#9B9B9B] hover:text-[#0F0F0F]">
             <ChevronUp size={15} />
@@ -137,12 +162,16 @@ export default function StopCard({
           {/* Perioada stă lângă „unde", nu în secțiunea de notare: ține de
               vizită, nu de cât de bun a fost locul. Un singur rând, deci
               nu îngreunează nici cardurile de după primul. */}
-          <div className="pb-3 border-b border-[rgba(0,0,0,0.06)] mb-1">
-            <PeriodPicker
-              year={stop.visitedYear}
-              month={stop.visitedMonth}
-              onChange={onChange}
-            />
+          <div className="pb-3 border-b border-[rgba(0,0,0,0.06)] mb-1 flex items-center gap-2 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <PeriodPicker
+                year={stop.visitedYear}
+                month={stop.visitedMonth}
+                onChange={onChange}
+              />
+            </div>
+            {/* ziua din ieșire stă tot aici: e despre când, nu despre cum a fost */}
+            {showDays && daySelect(false)}
           </div>
 
           {/* după primul, ajunge și doar numele cu o notă */}

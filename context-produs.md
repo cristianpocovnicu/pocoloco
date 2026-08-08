@@ -153,7 +153,30 @@ scrie un cuvânt. Aici decizia o ia gestul lui natural: ce scrie în
 căutare. Primul ecran rămâne o singură întrebare.
 
 Ramificarea stabilește punctul de plecare, nu închide drumuri: din ambele
-se ajunge la mai multe locuri și la pasul 2.
+se ajunge la mai multe locuri.
+
+### Iterația 8 — ecran unic pe journey *(implementată, 9 august 2026)*
+
+Pasul 2 dispare. Tot ce ține de ieșirea întreagă — nume, poveste, zile,
+transport, țări, copertă — coboară pe ecranul de povestit, deasupra
+locurilor. Ziua fiecărui loc se alege de pe cardul lui, și doar când
+ieșirea are mai mult de o zi.
+
+*Motivul:* numele și povestea apăreau pe **ambele** ecrane, iar
+despărțirea — cerută la iterația 6 tocmai ca să descarce ecranul —
+ajunsese să dubleze exact subiectul pe care voia să-l descarce. Un singur
+ecran, o singură dată fiecare câmp.
+
+Ordinea de sus în jos: nume → poveste → „Detaliile călătoriei" →
+„Locurile" → „+ Mai adaugă" → bara cu „Publică".
+
+Secțiunea de detalii apare la două declanșatoare, nu unul: o poveste
+pornită de la o zonă are nume de la început, iar una pornită de la un
+obiectiv devine ieșire în momentul în care primește al doilea loc. Ramura
+review cu un singur loc rămâne neatinsă: „Publică" direct.
+
+**Decizie luată pe desktop, înainte de testul cu useri — de validat
+acolo.**
 
 ---
 
@@ -230,6 +253,9 @@ conținut**.
 2. **Seed content.** Un produs de recenzii gol nu convinge pe nimeni și
    n-are ce indexa.
 3. **Testul cu 5–7 oameni.** Pe fluxul real, pe telefoanele lor.
+   Sarcină de observat, adăugată după iterația 8: **„publică o vacanță de
+   5 zile cu 4 locuri — unde se împiedică?"** Ecranul unic n-a fost văzut
+   decât pe desktop; acolo se vede dacă lungimea lui e o problemă.
 
 ---
 

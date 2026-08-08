@@ -3,9 +3,8 @@ import { useRef, useState } from 'react'
 import { Camera, Loader2, Minus, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { TRANSPORT_TYPES } from '@/lib/utils'
-import CharCounter from '@/components/ui/CharCounter'
 import CountryPicker from '@/components/trip/CountryPicker'
-import { suggestTripTitle, type StopDraft, type TripDraft } from '@/lib/story'
+import type { StopDraft, TripDraft } from '@/lib/story'
 
 type Props = {
   trip: TripDraft
@@ -14,14 +13,19 @@ type Props = {
 }
 
 /**
- * Nume, durată, transport, copertă — câmpurile pasului de finalizare.
+ * Durată, transport, țări, copertă — ce ține de ieșire ca întreg.
  *
- * Aici se ajunge doar cu două locuri deja povestite, deci cuvântul
- * „călătorie" are voie să apară: numește rezultatul, nu îl anunță.
+ * Numele și povestea stau deasupra, pe ecran: sunt primele lucruri
+ * scrise, nu detalii. Cardul apare doar când e vorba de o ieșire, deci
+ * cuvântul „călătorie" are voie să apară — numește rezultatul, nu îl
+ * anunță.
+ *
+ * `photos` se recalculează la fiecare randare din `stops`: o poză adăugată
+ * la un loc de mai jos apare în grilă imediat, fără să fie nevoie ca
+ * secțiunea să fie remontată.
  */
 export default function OutingCard({ trip, stops, onChange }: Props) {
   const photos = stops.flatMap(stop => stop.images)
-  const suggestion = suggestTripTitle(stops)
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -68,35 +72,7 @@ export default function OutingCard({ trip, stops, onChange }: Props) {
 
   return (
     <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-4">
-      <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Cum o numim?</label>
-      <input
-        value={trip.title}
-        onChange={e => onChange({ title: e.target.value.slice(0, 120) })}
-        placeholder={suggestion ? `Ex: ${suggestion}` : 'Ex: Weekend în munți'}
-        className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] mb-1"
-      />
-      {!trip.title.trim() && suggestion && (
-        <button type="button"
-          onClick={() => onChange({ title: suggestion })}
-          className="text-[12px] text-[#5B4FCF] font-medium mb-3"
-        >
-          Folosește „{suggestion}&rdquo;
-        </button>
-      )}
-
-      <div className="py-3 border-t border-[rgba(0,0,0,0.06)] mt-3">
-        <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">
-          Povestea călătoriei <span className="text-[#9B9B9B] font-normal">— opțional</span>
-        </label>
-        <textarea
-          value={trip.description}
-          onChange={e => onChange({ description: e.target.value.slice(0, 20000) })}
-          rows={5}
-          placeholder="Cum a fost, per total? Sfaturi despre buget, vreme, transport — tot ce ține de întreaga ieșire, nu de un singur loc."
-          className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed"
-        />
-        <CharCounter value={trip.description} max={20000} />
-      </div>
+      <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-1">Detaliile călătoriei</p>
 
       <div className="flex items-center justify-between py-3 border-t border-[rgba(0,0,0,0.06)]">
         <span className="text-[13px] text-[#6B6B6B]">Câte zile a ținut</span>

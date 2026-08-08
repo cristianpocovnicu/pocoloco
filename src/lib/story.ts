@@ -52,12 +52,9 @@ export type TripDraft = {
   /** mijloacele întregii ieșiri — până acolo și pe loc, nu per segment */
   transportTypes: string[]
   coverImage: string | null
-  /** dedus din locurile alese la intrarea în pasul 2, apoi editabil */
+  /** dedus din locurile alese, până pune omul mâna pe câmp */
   countries: string[]
 }
-
-/** La ce ecran era userul. Draftul vechi n-are câmpul — pornește de la 'story'. */
-export type StoryStep = 'story' | 'details'
 
 /**
  * Ce a ales userul la prima căutare, nu ce fel de conținut a cerut.
@@ -73,7 +70,6 @@ export type StoryMode = 'review' | 'journey'
 export type StoryDraft = {
   stops: StopDraft[]
   trip: TripDraft
-  step?: StoryStep
   mode?: StoryMode
 }
 
@@ -240,7 +236,6 @@ export async function loadDraft(
         durationDays: Number.isFinite(saved.durationDays) ? (saved.durationDays as number) : base.durationDays,
         countries: Array.isArray(saved.countries) ? saved.countries.filter(c => typeof c === 'string') : base.countries,
       },
-      step: payload.step === 'details' ? 'details' : 'story',
       // draft de dinaintea rutării: un titlu completat înseamnă că omul
       // pornise de la o zonă, altfel scria despre un obiectiv
       mode: payload.mode === 'journey' || payload.mode === 'review'
