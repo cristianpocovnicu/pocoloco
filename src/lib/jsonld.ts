@@ -42,19 +42,37 @@ const address = (city?: string | null, country?: string | null) =>
     ? { '@type': 'PostalAddress', addressLocality: city || undefined, addressCountry: country || undefined }
     : undefined
 
-/** Un loc, cu media notelor și primele recenzii. */
+/**
+ * Un loc, cu media notelor și primele recenzii.
+ *
+ * Tipul e dublu — `TouristAttraction` + `LocalBusiness` — și nu din
+ * cochetărie: Google nu acceptă `review` și `aggregateRating` pe
+ * `TouristAttraction`, care nu e în lista tipurilor eligibile pentru
+ * review snippets, iar Rich Results Test răspunde cu „Invalid object type
+ * for field". `LocalBusiness` e eligibil; `TouristAttraction` rămâne
+ * pentru semantică. E practica obișnuită în travel.
+ *
+ * `LocalBusiness` cere `name` și `address`. Numele îl avem întotdeauna,
+ * adresa nu — un loc fără oraș și fără țară primește doar
+ * `TouristAttraction`, ca să nu declarăm un tip pe care nu-l putem
+ * susține. Recenziile lui nu devin eligibile, dar markup-ul rămâne valid.
+ *
+ * `priceRange` e recomandat de Google, dar nu îl inventăm: n-avem de unde
+ * să știm cât costă un loc.
+ */
 export function placeJsonLd(site: string, place: LdPlace, rating: LdRating | null, reviews: LdReview[]) {
   const url = `${site}/location/${place.id}`
+  const postal = address(place.city, place.country)
 
   return {
     '@context': 'https://schema.org',
-    '@type': 'TouristAttraction',
+    '@type': postal ? ['TouristAttraction', 'LocalBusiness'] : 'TouristAttraction',
     '@id': `${url}#place`,
     name: place.name,
     url,
     description: place.description?.trim() || undefined,
     image: place.image || undefined,
-    address: address(place.city, place.country),
+    address: postal,
     geo: place.latitude != null && place.longitude != null
       ? { '@type': 'GeoCoordinates', latitude: place.latitude, longitude: place.longitude }
       : undefined,
