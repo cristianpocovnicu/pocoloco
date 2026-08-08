@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { CheckCircle, Loader2, MapPin } from 'lucide-react'
+import { CheckCircle, ChevronRight, Loader2, MapPin } from 'lucide-react'
 import CoverImage from '@/components/ui/CoverImage'
 import { CATEGORY_ICONS, experienceCountLabel } from '@/lib/utils'
 import type { SavedLocation } from '@/lib/saves'
@@ -39,7 +39,7 @@ export default function SavedLocationList({
   return (
     <div className="flex flex-col gap-2.5">
       {items.map(({ location }) => (
-        <div key={location.id} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex">
+        <div key={location.id} className="group bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex hover:border-[rgba(232,68,10,0.35)] hover:shadow-sm transition-all">
           <Link href={`/location/${location.id}`} className="relative w-24 flex-shrink-0 bg-[#F8F7F5] flex items-center justify-center text-3xl">
             {location.cover_image
               ? <CoverImage src={location.cover_image} sizes="96px" />
@@ -49,8 +49,9 @@ export default function SavedLocationList({
           <div className="flex-1 p-3.5 min-w-0">
             <Link href={`/location/${location.id}`} className="block">
               <div className="flex items-start justify-between gap-2 mb-1">
-                <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight truncate">
+                <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight truncate flex items-center gap-1">
                   {location.name}
+                  <ChevronRight size={14} className="text-[#C9C5BD] group-hover:text-[#E8440A] transition-colors flex-shrink-0" />
                 </h3>
                 {(location.score || 0) > 0 && (
                   <span className="bg-[#E8440A] text-white font-outfit text-[11px] font-bold px-2 py-0.5 rounded-xl flex-shrink-0">

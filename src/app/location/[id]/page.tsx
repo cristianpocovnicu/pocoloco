@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { MapPin, MessageCircle, Pencil, Route } from 'lucide-react'
+import { MapPin, MessageCircle, Pencil, Route, Star } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import BackButton from '@/components/ui/BackButton'
 import ShareButton from '@/components/ui/ShareButton'
@@ -93,6 +93,27 @@ async function fetchNearby(id: string, lat: number | null, lng: number | null) {
   return { places, covers }
 }
 
+/**
+ * Invitația de a scrie. Apare de două ori — înaintea listei și după ea —
+ * pentru că cine a citit poveștile până la capăt e exact omul care are una
+ * a lui. Aceeași componentă, nu două butoane care se pot despărți.
+ *
+ * Vizitatorul nelogat ajunge pe ecranul de creare, care îl trimite la
+ * login cu `?next=`, ca orice altă acțiune care cere cont.
+ */
+function WriteCta({ locationId, locationName }: { locationId: string; locationName: string }) {
+  return (
+    <Link
+      href={`/add-experience?location=${locationId}&name=${encodeURIComponent(locationName)}`}
+      className="mx-5 my-3 bg-[#5B4FCF] rounded-2xl px-4 py-3.5 flex items-center gap-3"
+    >
+      <Pencil size={20} className="text-white/80" />
+      <span className="font-outfit text-sm font-semibold text-white flex-1">Povestește-ne experiența ta</span>
+      <span className="text-white/60">→</span>
+    </Link>
+  )
+}
+
 const average = (rows: LocationExperience[], key: 'rating_experience' | 'rating_access' | 'rating_crowd') => {
   const rated = rows.filter(row => row[key] != null)
   if (rated.length === 0) return null
@@ -128,6 +149,25 @@ export default async function LocationPage({ params }: { params: { id: string } 
   // toate pozele din experiențele locației, în ordinea în care au fost postate
   const galleryImages = experiences.flatMap(experience => experience.images || [])
   const ratedCount = experiences.filter(experience => experience.rating_experience != null).length
+
+  /**
+   * Nota de sus e media notei generale, cu numărul de oameni care au dat-o.
+   * Nu are pragul de două note al datelor structurate: acolo o „medie" din
+   * una singură ar fi o afirmație către Google, aici e chiar ce spune omul
+   * care a fost — și scrie lângă câți sunt.
+   */
+  const headlineAverage = average(experiences, 'rating_experience')
+  const headline = headlineAverage ? { value: parseFloat(headlineAverage), count: ratedCount } : null
+
+  const LEAD = 200
+  const first = experiences.find(experience => experience.content.trim())
+  const lead = first
+    ? (() => {
+        const text = first.content.trim()
+        return { text: text.slice(0, LEAD).trimEnd(), truncated: text.length > LEAD }
+      })()
+    : null
+
   const averages = [
     { label: LABELS.experience, key: 'rating_experience' as const },
     { label: LABELS.access, key: 'rating_access' as const },
@@ -191,6 +231,46 @@ export default async function LocationPage({ params }: { params: { id: string } 
         {location.description && (
           <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
             <p className="text-[14px] text-[#6B6B6B] leading-relaxed whitespace-pre-line">{location.description}</p>
+          </div>
+        )}
+
+        {/*
+          Ce caută omul întâi: cât de bun e locul și ce spune cineva care a
+          fost. Amândouă erau mai jos de hartă, adică sub primul ecran pe
+          telefon. Blocul e server-rendered, ca restul paginii — deci și
+          crawlerul citește textul înaintea hărții.
+        */}
+        {(headline || lead) && (
+          <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
+            {headline && (
+              <a href="#experiente" className="flex items-center gap-2 mb-2">
+                <span className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <Star
+                      key={i}
+                      size={15}
+                      className={i <= Math.round(headline.value) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}
+                    />
+                  ))}
+                </span>
+                <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F]">
+                  {headline.value.toFixed(1)}
+                </span>
+                <span className="text-[12px] text-[#9B9B9B]">
+                  din {headline.count} {headline.count === 1 ? 'notare' : 'notări'}
+                </span>
+              </a>
+            )}
+
+            {lead && (
+              <p className="text-[14px] text-[#0F0F0F] leading-relaxed whitespace-pre-line">
+                {lead.text}
+                {lead.truncated && '…'}{' '}
+                <a href="#experiente" className="text-[13px] text-[#5B4FCF] font-medium whitespace-nowrap">
+                  Citește tot →
+                </a>
+              </p>
+            )}
           </div>
         )}
 
@@ -288,16 +368,9 @@ export default async function LocationPage({ params }: { params: { id: string } 
           </div>
         )}
 
-        <Link
-          href={`/add-experience?location=${location.id}&name=${encodeURIComponent(location.name)}`}
-          className="mx-5 my-3 bg-[#5B4FCF] rounded-2xl px-4 py-3.5 flex items-center gap-3 cursor-pointer"
-        >
-          <Pencil size={20} className="text-white/80" />
-          <span className="font-outfit text-sm font-semibold text-white flex-1">Povestește-ne experiența ta</span>
-          <span className="text-white/60">→</span>
-        </Link>
+        <WriteCta locationId={location.id} locationName={location.name} />
 
-        <div className="px-5 pb-6">
+        <div className="px-5 pb-6" id="experiente">
           <h2 className="font-outfit text-[16px] font-semibold text-[#0F0F0F] py-3">
             Experiențe ({experiences.length})
           </h2>
@@ -316,6 +389,11 @@ export default async function LocationPage({ params }: { params: { id: string } 
             ))
           )}
         </div>
+
+        {/* a doua plasare: cine a citit până aici are și el o poveste */}
+        {experiences.length > 0 && (
+          <WriteCta locationId={location.id} locationName={location.name} />
+        )}
 
         {nearby.places.length > 0 && (
           <div className="px-5 pb-8">

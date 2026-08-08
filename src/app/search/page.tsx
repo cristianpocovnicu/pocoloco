@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, Loader2, Clock, X, LayoutList, Map as MapIcon, Bookmark, Calendar, Globe } from 'lucide-react'
+import { Search, Loader2, Clock, X, LayoutList, Map as MapIcon, Bookmark, Calendar, ChevronRight, Globe } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import NotificationBell from '@/components/layout/NotificationBell'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
@@ -386,7 +386,7 @@ export default function SearchPage() {
               ) : (
                 <div className="flex flex-col gap-2.5">
                   {slice(locations, 'locations').map(loc => (
-                    <Link key={loc.id} href={`/location/${loc.id}`} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex hover:border-[rgba(0,0,0,0.15)] transition-colors">
+                    <Link key={loc.id} href={`/location/${loc.id}`} className="group bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden flex items-center hover:border-[rgba(232,68,10,0.35)] hover:shadow-sm transition-all">
                       <div className="relative w-24 flex-shrink-0 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center text-4xl">
                         {loc.cover_image || covers[loc.id]
                           ? <CoverImage src={(loc.cover_image || covers[loc.id]) as string} alt={loc.name} sizes="96px" />
@@ -397,6 +397,7 @@ export default function SearchPage() {
                         <p className="text-[12px] text-[#9B9B9B] mb-1.5 truncate">📍 {loc.city}{loc.country ? `, ${loc.country}` : ''}</p>
                         <span className="text-[11px] text-[#9B9B9B]">{experienceCountLabel(loc.experience_count)}</span>
                       </div>
+                      <ChevronRight size={16} className="text-[#C9C5BD] group-hover:text-[#E8440A] transition-colors flex-shrink-0 mr-3.5" />
                     </Link>
                   ))}
                 </div>

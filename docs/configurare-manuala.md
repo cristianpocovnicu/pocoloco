@@ -85,6 +85,7 @@ nu schimbă nimic, doar citesc schema.
 | 40 | `supabase/migrations/040_20260810_location_featured.sql` | `locations.featured` — locațiile intră și ele în „Recomandate" |
 | 41 | `supabase/migrations/041_20260810_experience_count_fix.sql` | `locations.experience_count` recalculat de un trigger `security definer`, cu backfill |
 | 42 | `supabase/migrations/042_20260810_visited_on_publish.sql` | o experiență publicată marchează locul ca „am fost" pentru autor + backfill |
+| 43 | `supabase/migrations/043_20260810_tips_reset.sql` | remapează ponturile vechi din `experiences.tips` pe setul nou; scoate evaluările |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).

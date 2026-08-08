@@ -7,10 +7,22 @@ import { ratingLabels, ratingScales } from '@/lib/activities'
 import { MONTHS_RO, currentYear, selectableYears } from '@/lib/period'
 import type { StopDraft } from '@/lib/story'
 
+/**
+ * Ponturile rapide — set interimar, august 2026.
+ *
+ * Cel dinainte amesteca două lucruri care n-au ce căuta împreună: fapte
+ * verificabile („Parcare ușoară") și evaluări deghizate în fapte („Merită
+ * prețul", „Peisaj spectaculos") — părerea are deja unde să stea, în text
+ * și în stele.
+ *
+ * Toate cele de mai jos răspund la „ce trebuie să știu înainte să plec",
+ * nu la „cât de frumos a fost". Setul final se extrage din ponturile care
+ * se repetă în textele oamenilor, după seed — vezi §5 din context-produs.
+ */
 const TIPS_OPTIONS = [
-  'Merită prețul', 'Bun pentru familie', 'Parcare ușoară',
-  'Aglomerat weekend', 'Mergi dimineața', 'Rezervă online',
-  'Accesibil cu copii', 'Gratuit', 'Peisaj spectaculos',
+  'Mergi dimineața', 'Evită weekendul', 'Rezervă din timp',
+  'Parcare ușoară', 'Ajungi ușor fără mașină', 'Bun cu copii',
+  'Acces fără trepte', 'Gratuit', 'Mergi la apus',
 ]
 
 /**

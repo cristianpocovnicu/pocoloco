@@ -258,6 +258,7 @@ Lucruri decise, dar nefăcute — niciunul nu blochează altceva.
 | Ce | De ce e amânat |
 |---|---|
 | Ponturi salvabile individual | azi sunt un `text[]` pe experiență; ca să fie salvate și recompensate separat (1/5 în economia de puncte) au nevoie de tabel propriu |
+| Setul final de ponturi rapide | **set interimar instalat pe 10 august 2026** (Mergi dimineața · Evită weekendul · Rezervă din timp · Parcare ușoară · Ajungi ușor fără mașină · Bun cu copii · Acces fără trepte · Gratuit · Mergi la apus), cu remaparea datelor vechi în migrarea 43. E igienă, nu decizia finală: cel dinainte amesteca fapte cu evaluări deghizate („Merită prețul", „Peisaj spectaculos"). **Regula rămâne în vigoare:** setul final se extrage din ponturile care se repetă în textele oamenilor, după seed |
 | Salvarea unei experiențe (1/7 puncte) | `saves` acceptă doar locații și călătorii |
 | Vot pe călătorie (1/3 puncte) | `votes` n-are `trip_id`; triggerul de puncte e deja scris să-l accepte în ziua în care coloana apare |
 | Județe pe locații | pentru „X județe din 40" pe harta din profil; nu există coloana, vezi `supabase/checks/inspect_locations.sql` |

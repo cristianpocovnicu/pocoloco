@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { ChevronRight, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { CATEGORY_ICONS, experienceCountLabel } from '@/lib/utils'
 import { fetchLocationCovers } from '@/lib/covers'
@@ -69,7 +69,7 @@ export default function PopularLocationsSection() {
           <Link
             key={loc.id}
             href={`/location/${loc.id}`}
-            className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(0,0,0,0.15)] transition-colors"
+            className="group bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(232,68,10,0.35)] hover:shadow-sm transition-all"
           >
             <div className="h-24 bg-gradient-to-br from-amber-200 to-amber-500 flex items-center justify-center relative">
               {loc.cover_image || covers[loc.id]
@@ -86,8 +86,10 @@ export default function PopularLocationsSection() {
               <p className="text-[11px] text-[#9B9B9B] truncate">
                 {loc.city || loc.country || 'Locație'}
               </p>
-              <p className="text-[11px] text-[#6B6B6B] mt-0.5">
+              {/* săgeata spune „se deschide", fără să ceară un rând în plus */}
+              <p className="text-[11px] text-[#6B6B6B] mt-0.5 flex items-center justify-between gap-1">
                 {experienceCountLabel(loc.experience_count)}
+                <ChevronRight size={13} className="text-[#C9C5BD] group-hover:text-[#E8440A] transition-colors flex-shrink-0" />
               </p>
             </div>
           </Link>
