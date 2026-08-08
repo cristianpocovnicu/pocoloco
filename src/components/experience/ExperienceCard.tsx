@@ -153,22 +153,32 @@ export default function ExperienceCard({ experience, comments }: Props) {
           )}
         </div>
 
-        {ratings.map(rating => (
-          <div key={rating.label} className="flex items-center justify-between mb-1.5">
-            <span className="text-[12px] text-[#6B6B6B]">{rating.label}</span>
-            <div className="flex gap-0.5">
-              {[1, 2, 3, 4, 5].map(i => (
-                <Star
-                  key={i}
-                  size={11}
-                  className={i <= (rating.value || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}
-                />
-              ))}
-            </div>
+        {/* Notele stau grupate pe fundal propriu: sunt metadate, nu
+            povestea. Fără delimitare, primul paragraf părea al patrulea
+            rând de stele. */}
+        {ratings.length > 0 && (
+          <div className="bg-[#F8F7F5] rounded-xl px-3 py-2 mb-5">
+            {ratings.map((rating, index) => (
+              <div
+                key={rating.label}
+                className={`flex items-center justify-between ${index < ratings.length - 1 ? 'mb-1.5' : ''}`}
+              >
+                <span className="text-[12px] text-[#6B6B6B]">{rating.label}</span>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <Star
+                      key={i}
+                      size={11}
+                      className={i <= (rating.value || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
 
-        <p className="text-[13px] text-[#6B6B6B] leading-relaxed mt-2 whitespace-pre-line">{shown}</p>
+        <p className="text-[13px] text-[#6B6B6B] leading-relaxed whitespace-pre-line">{shown}</p>
         {long && (
           <Link href={`/experience/${row.id}`} className="text-[12px] text-[#5B4FCF] font-medium mt-1 inline-block">
             Citește tot →

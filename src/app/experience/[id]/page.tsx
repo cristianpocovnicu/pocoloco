@@ -133,22 +133,29 @@ export default async function ExperiencePage({ params }: { params: { id: string 
           </div>
         )}
 
+        {/* aceeași grupare ca pe cardul din pagina locului: notele sunt
+            metadate, iar ochiul trebuie să vadă unde se termină ele */}
         {ratings.length > 0 && (
           <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-            {ratings.map(rating => (
-              <div key={rating.label} className="flex items-center justify-between py-1.5">
-                <span className="text-[13px] text-[#6B6B6B]">{rating.label}</span>
-                <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <Star
-                      key={i}
-                      size={14}
-                      className={i <= (rating.value || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}
-                    />
-                  ))}
+            <div className="bg-[#F8F7F5] rounded-xl px-3.5 py-2.5">
+              {ratings.map((rating, index) => (
+                <div
+                  key={rating.label}
+                  className={`flex items-center justify-between ${index < ratings.length - 1 ? 'mb-2' : ''}`}
+                >
+                  <span className="text-[13px] text-[#6B6B6B]">{rating.label}</span>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <Star
+                        key={i}
+                        size={14}
+                        className={i <= (rating.value || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 

@@ -94,9 +94,10 @@ async function fetchNearby(id: string, lat: number | null, lng: number | null) {
 }
 
 /**
- * Invitația de a scrie. Apare de două ori — înaintea listei și după ea —
- * pentru că cine a citit poveștile până la capăt e exact omul care are una
- * a lui. Aceeași componentă, nu două butoane care se pot despărți.
+ * Invitația de a scrie, o singură dată: după povești.
+ *
+ * Cine a citit până la capăt e omul care are și el una — înainte de lista
+ * de povești, același buton întrerupea citirea cu o cerere.
  *
  * Vizitatorul nelogat ajunge pe ecranul de creare, care îl trimite la
  * login cu `?next=`, ca orice altă acțiune care cere cont.
@@ -352,8 +353,6 @@ export default async function LocationPage({ params }: { params: { id: string } 
           </div>
         )}
 
-        <WriteCta locationId={location.id} locationName={location.name} />
-
         <div className="px-5 pb-6" id="experiente">
           <h2 className="font-outfit text-[16px] font-semibold text-[#0F0F0F] py-3">
             Experiențe ({experiences.length})
@@ -374,10 +373,10 @@ export default async function LocationPage({ params }: { params: { id: string } 
           )}
         </div>
 
-        {/* a doua plasare: cine a citit până aici are și el o poveste */}
-        {experiences.length > 0 && (
-          <WriteCta locationId={location.id} locationName={location.name} />
-        )}
+        {/* după povești: cine a citit până aici are și el una. Singura
+            plasare — deasupra listei arăta ca un buton de bară de unelte,
+            înainte ca cineva să fi citit ceva. */}
+        <WriteCta locationId={location.id} locationName={location.name} />
 
         {nearby.places.length > 0 && (
           <div className="px-5 pb-8">
