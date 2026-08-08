@@ -5,9 +5,12 @@ import { createClient } from '@/lib/supabase-client'
 import CharCounter from '@/components/ui/CharCounter'
 import { useToast } from '@/components/ui/Toast'
 import { PeriodPicker } from '@/components/create/StopSections'
+import { ratingLabels, ratingScales, type ExperienceKind } from '@/lib/activities'
 
 export type EditableExperience = {
   id: string
+  /** decide întrebările: la o activitate se notează altceva */
+  kind?: ExperienceKind | null
   content: string
   visited_year?: number | null
   visited_month?: number | null
@@ -22,22 +25,36 @@ type Props = {
   onSaved: (updated: EditableExperience) => void
 }
 
-function StarRow({ label, value, onChange, required }: {
+function StarRow({ label, legend, value, onChange, required }: {
   label: string
+  /** ce înseamnă fiecare stea, de la 1 la 5 */
+  legend: string[]
   value: number
   onChange: (v: number) => void
   required?: boolean
 }) {
+  const [hover, setHover] = useState(0)
+  // ce se arată: steaua peste care e degetul, altfel cea aleasă
+  const shown = hover || value
+
   return (
     <div className="flex items-center justify-between py-2.5 border-b border-[rgba(0,0,0,0.06)] last:border-0">
       <div>
         <div className="text-[13px] font-medium text-[#0F0F0F]">{label}</div>
-        <div className="text-[11px] text-[#9B9B9B]">{required ? 'Obligatoriu' : 'Opțional'}</div>
+        <div className="text-[11px] text-[#9B9B9B]">
+          {shown > 0 ? legend[shown - 1] : required ? 'Obligatoriu' : 'Opțional'}
+        </div>
       </div>
-      <div className="flex gap-1">
+      <div className="flex gap-1" onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map(i => (
-          <button key={i} onClick={() => onChange(i === value ? 0 : i)} aria-label={`${label}: ${i} stele`}>
-            <Star size={22} className={i <= value ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
+          <button
+            key={i}
+            onClick={() => onChange(i === value ? 0 : i)}
+            onMouseEnter={() => setHover(i)}
+            aria-label={`${label}: ${i} stele — ${legend[i - 1]}`}
+            title={legend[i - 1]}
+          >
+            <Star size={22} className={i <= shown ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
           </button>
         ))}
       </div>
@@ -52,6 +69,8 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
   const [ratingExp, setRatingExp] = useState(experience.rating_experience || 0)
   const [ratingAccess, setRatingAccess] = useState(experience.rating_access || 0)
   const [ratingCrowd, setRatingCrowd] = useState(experience.rating_crowd || 0)
+  const labels = ratingLabels(experience.kind || 'place_visit')
+  const scales = ratingScales(experience.kind || 'place_visit')
   const [saving, setSaving] = useState(false)
   const toast = useToast()
   const [error, setError] = useState<string | null>(null)
@@ -134,9 +153,9 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
           </div>
 
           <div className="bg-[#F8F7F5] rounded-2xl border border-[rgba(0,0,0,0.08)] px-4 py-1 mb-5">
-            <StarRow label="Experiență generală" value={ratingExp} onChange={setRatingExp} />
-            <StarRow label="Acces și organizare" value={ratingAccess} onChange={setRatingAccess} />
-            <StarRow label="Aglomerație și așteptare" value={ratingCrowd} onChange={setRatingCrowd} />
+            <StarRow label={labels.experience} legend={scales.experience} value={ratingExp} onChange={setRatingExp} />
+            <StarRow label={labels.access} legend={scales.access} value={ratingAccess} onChange={setRatingAccess} />
+            <StarRow label={labels.crowd} legend={scales.crowd} value={ratingCrowd} onChange={setRatingCrowd} />
           </div>
 
           <div className="bg-[#F8F7F5] rounded-2xl border border-[rgba(0,0,0,0.08)] px-4 py-3 mb-5">

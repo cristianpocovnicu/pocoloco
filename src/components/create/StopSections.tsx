@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { CalendarDays, Camera, ChevronDown, Loader2, Plus, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import CharCounter from '@/components/ui/CharCounter'
-import { ratingLabels } from '@/lib/activities'
+import { ratingLabels, ratingScales } from '@/lib/activities'
 import { MONTHS_RO, currentYear, selectableYears } from '@/lib/period'
 import type { StopDraft } from '@/lib/story'
 
@@ -214,17 +214,43 @@ export function PhotoEditor({
   )
 }
 
-function Stars({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+function Stars({
+  value,
+  onChange,
+  label,
+  legend,
+}: {
+  value: number
+  onChange: (v: number) => void
+  label: string
+  /** ce înseamnă fiecare stea, de la 1 la 5 */
+  legend: string[]
+}) {
+  const [hover, setHover] = useState(0)
+  // ce se arată: steaua peste care e degetul, altfel cea aleasă
+  const shown = hover || value
+
   return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-[13px] text-[#6B6B6B]">{label}</span>
-      <div className="flex gap-1.5">
-        {[1, 2, 3, 4, 5].map(i => (
-          <button type="button" key={i} onClick={() => onChange(i === value ? 0 : i)} aria-label={`${label}: ${i}`}>
-            <Star size={22} className={i <= value ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-          </button>
-        ))}
+    <div className="py-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[13px] text-[#6B6B6B]">{label}</span>
+        <div className="flex gap-1.5" onMouseLeave={() => setHover(0)}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <button type="button"
+              key={i}
+              onClick={() => onChange(i === value ? 0 : i)}
+              onMouseEnter={() => setHover(i)}
+              aria-label={`${label}: ${i} — ${legend[i - 1]}`}
+              title={legend[i - 1]}
+            >
+              <Star size={22} className={i <= shown ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
+            </button>
+          ))}
+        </div>
       </div>
+      {shown > 0 && (
+        <p className="text-[11px] text-[#9B9B9B] text-right mt-0.5">{legend[shown - 1]}</p>
+      )}
     </div>
   )
 }
@@ -237,11 +263,13 @@ export function RatingEditor({
   onChange: (patch: Partial<StopDraft>) => void
 }) {
   const labels = ratingLabels(stop.kind)
+  const scales = ratingScales(stop.kind)
   return (
     <div>
-      <Stars value={stop.ratingExperience} onChange={v => onChange({ ratingExperience: v })} label={labels.experience} />
-      <Stars value={stop.ratingAccess} onChange={v => onChange({ ratingAccess: v })} label={labels.access} />
-      <Stars value={stop.ratingCrowd} onChange={v => onChange({ ratingCrowd: v })} label={labels.crowd} />
+      <p className="text-[11px] text-[#9B9B9B] mb-1">Notează ce ai trăit, nu ce ai așteptat.</p>
+      <Stars value={stop.ratingExperience} onChange={v => onChange({ ratingExperience: v })} label={labels.experience} legend={scales.experience} />
+      <Stars value={stop.ratingAccess} onChange={v => onChange({ ratingAccess: v })} label={labels.access} legend={scales.access} />
+      <Stars value={stop.ratingCrowd} onChange={v => onChange({ ratingCrowd: v })} label={labels.crowd} legend={scales.crowd} />
     </div>
   )
 }

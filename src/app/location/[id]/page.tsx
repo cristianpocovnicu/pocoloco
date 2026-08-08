@@ -6,6 +6,7 @@ import { ArrowLeft, Bookmark, CheckCircle, MapPin, Route, Star, MessageCircle, P
 import { createClient } from '@/lib/supabase-client'
 import { formatCount, timeAgo, formatDistance, CATEGORY_ICONS } from '@/lib/utils'
 import { formatVisitedPeriod } from '@/lib/period'
+import { ratingLabels } from '@/lib/activities'
 import ShareButton from '@/components/ui/ShareButton'
 import { fetchMyVotes, netScore, HIDE_THRESHOLD_EXPERIENCE, type VoteType } from '@/lib/votes'
 import { fetchCommentsFor, type CommentWithAuthor } from '@/lib/comments'
@@ -19,6 +20,9 @@ import PhotoGallery from '@/components/location/PhotoGallery'
 import VisitPrompt from '@/components/location/VisitPrompt'
 import DynamicMap from '@/components/map/DynamicMap'
 import { getLocationSaveStatus, setLocationSaveStatus, type SaveStatus } from '@/lib/saves'
+
+// pagina unui loc arată doar recenzii de loc: activitățile n-au pin
+const PLACE_RATINGS = ratingLabels('place_visit')
 import { fetchLocationCovers } from '@/lib/covers'
 import { useToast } from '@/components/ui/Toast'
 import { useAuthGate } from '@/components/auth/AuthGate'
@@ -449,9 +453,9 @@ export default function LocationPage() {
               </span>
             </h2>
             {[
-              { label: 'Experiență generală', key: 'rating_experience' as const },
-              { label: 'Acces și organizare', key: 'rating_access' as const },
-              { label: 'Aglomerație', key: 'rating_crowd' as const },
+              { label: PLACE_RATINGS.experience, key: 'rating_experience' as const },
+              { label: PLACE_RATINGS.access, key: 'rating_access' as const },
+              { label: PLACE_RATINGS.crowd, key: 'rating_crowd' as const },
             ].map(({ label, key }) => {
               const avg = avgRating(key)
               const rated = experiences.filter(e => e[key] != null).length
@@ -596,9 +600,9 @@ export default function LocationPage() {
 
                   {/* Stars */}
                   {[
-                    { label: 'Experiență', val: exp.rating_experience },
-                    { label: 'Aglomerație', val: exp.rating_crowd },
-                    { label: 'Acces', val: exp.rating_access },
+                    { label: PLACE_RATINGS.experience, val: exp.rating_experience },
+                    { label: PLACE_RATINGS.access, val: exp.rating_access },
+                    { label: PLACE_RATINGS.crowd, val: exp.rating_crowd },
                   ].filter(r => r.val).map(r => (
                     <div key={r.label} className="flex items-center justify-between mb-1.5">
                       <span className="text-[12px] text-[#6B6B6B]">{r.label}</span>

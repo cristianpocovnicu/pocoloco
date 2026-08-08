@@ -210,6 +210,17 @@ acolo.**
   categorie (`locations.category` nu se completează nicăieri) și pragurile
   de notă 7+/8+/9+ (`locations.score` nu se calculează nicăieri). Toggle-ul
   Listă/Hartă a rămas, pe secțiunea de locuri, unde are sens.
+- **Stelele pe dimensiuni sunt infrastructura distincțiilor viitoare.**
+  Cele trei coloane (`rating_experience`, `rating_access`, `rating_crowd`)
+  nu sunt trei întrebări puse din politețe: sunt materia primă pentru
+  distincții agregate pe care Pocoloco le va acorda locurilor, în spiritul
+  Travelers' Choice sau Michelin — **„Pocoloco Top"** din *Per total*,
+  **„acces excelent"** din *Cât de ușor ajungi*, **„liniștit"** din *Cât
+  de liber a fost*.
+  Direcția scalei la a treia: **5 = liber**, decisă august 2026 — de aceea
+  eticheta întreabă „cât de liber a fost", nu „cât de aglomerat".
+  Dimensiunile nu se elimină și direcția nu se inversează fără această
+  decizie pe masă.
 - **Ștergerea unei locații din admin** e posibilă doar cât timp nu are
   experiențe scrise: acelea o cer prin schemă
   (`experiences_kind_target_check`), iar alternativa e respingerea, care o
@@ -235,6 +246,8 @@ Lucruri decise, dar nefăcute — niciunul nu blochează altceva.
 | Transport per segment (de la X la Y cu...) | granularitate pe care userii n-o completează; transportul rămâne la nivel de călătorie — mai multe mijloace, o singură dată, în metadate (migrarea 39) |
 | Categorii pe locații (castele/natură/muzee...) | cere taxonomie + completare la creare + backfill; se decide după seed, când vedem ce categorii emerg real |
 | Filtru pe notă în search | cere agregarea stelelor per loc; după volum |
+| A patra dimensiune „A meritat banii" (Value) | după seed, condiționată de tipul locului: jumătate din conținut e gratuit (trasee, plaje, sate), iar dimensiunea cere să știm care locuri au cost |
+| Agregarea notelor pe loc | la implementare (după seed): medii pe dimensiuni de la 3 review-uri, scor headline de la 5, Bayesian shrinkage spre media platformei până la ~20 de review-uri, rotunjire la 0,1. Decis aug. 2026. Coloana-fantomă `locations.score` („X / 10" din scaffold, nescrisă de nimic) se înlocuiește atunci cu acest sistem |
 
 ---
 

@@ -41,13 +41,39 @@ export function activityLabel(id: string | null | undefined): string | null {
 export function ratingLabels(kind: ExperienceKind) {
   return kind === 'activity'
     ? {
-        experience: 'Experiență generală',
+        experience: 'Per total',
         access: 'Organizare',
         crowd: 'Raport calitate-preț',
       }
     : {
-        experience: 'Experiență generală',
-        access: 'Acces și organizare',
-        crowd: 'Aglomerație și așteptare',
+        experience: 'Per total',
+        access: 'Cât de ușor ajungi',
+        // eticheta poartă direcția scalei: mai multe stele = mai liber.
+        // Fără ea, „Aglomerație" cu 5 stele se citea invers față de
+        // convenția universală, deși datele n-au fost niciodată inversate.
+        crowd: 'Cât de liber a fost',
+      }
+}
+
+/**
+ * Ce înseamnă fiecare stea, pe fiecare dimensiune.
+ *
+ * Se arată doar la introducere — sub steaua atinsă sau aleasă. Pe paginile
+ * publicate rămâne doar numele dimensiunii: cine citește vede stelele, nu
+ * are nevoie de legendă.
+ */
+export function ratingScales(kind: ExperienceKind) {
+  const experience = ['dezamăgitor', 'slab', 'ok', 'foarte bun', 'excepțional']
+
+  return kind === 'activity'
+    ? {
+        experience,
+        access: ['dezorganizat', 'cam haotic', 'ok', 'bine organizat', 'impecabil'],
+        crowd: ['prea scump', 'cam scump', 'corect', 'bun', 'excelent'],
+      }
+    : {
+        experience,
+        access: ['greu de ajuns', 'complicat', 'rezonabil', 'ușor', 'foarte ușor'],
+        crowd: ['foarte aglomerat', 'aglomerat', 'suportabil', 'destul de liber', 'liber, fără cozi'],
       }
 }
