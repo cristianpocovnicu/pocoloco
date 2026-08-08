@@ -7,7 +7,12 @@ import PopularTripsSection from '@/components/home/PopularTripsSection'
 import GuidesSection from '@/components/home/GuidesSection'
 import PopularSection from '@/components/home/PopularSection'
 import SearchBar from '@/components/home/SearchBar'
+import type { Metadata } from 'next'
 import { FeedScopeProvider } from '@/components/feed/FeedScope'
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+}
 
 export default function HomePage() {
   return (

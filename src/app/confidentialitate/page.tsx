@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 export const metadata: Metadata = {
   title: 'Politica de confidențialitate — Pocoloco',
   description: 'Ce date colectăm, de ce, cât le păstrăm și ce drepturi ai.',
+  alternates: { canonical: '/confidentialitate' },
 }
 
 const UPDATED = '6 august 2026'

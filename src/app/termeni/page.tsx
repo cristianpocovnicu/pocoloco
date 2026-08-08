@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 export const metadata: Metadata = {
   title: 'Termeni și condiții — Pocoloco',
   description: 'Regulile de folosire a platformei Pocoloco.',
+  alternates: { canonical: '/termeni' },
 }
 
 const UPDATED = '6 august 2026'

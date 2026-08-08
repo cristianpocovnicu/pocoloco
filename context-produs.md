@@ -210,6 +210,13 @@ acolo.**
   categorie (`locations.category` nu se completează nicăieri) și pragurile
   de notă 7+/8+/9+ (`locations.score` nu se calculează nicăieri). Toggle-ul
   Listă/Hartă a rămas, pe secțiunea de locuri, unde are sens.
+- **Crawlerele AI sunt permise explicit** (august 2026): `GPTBot`,
+  `ClaudeBot`, `PerplexityBot` și `Google-Extended` sunt trecute pe nume în
+  [`robots.ts`](src/app/robots.ts), cu `Allow: /`, nu lăsate să treacă prin
+  tăcere. *Motivul:* citările din răspunsurile AI sunt un canal de creștere
+  pentru o nișă în română, unde volumul de căutare clasică e mic — și e
+  aceeași logică ca la vizitatorul nelogat, conținutul e marketingul.
+  Interdicțiile sunt aceleași pentru toți: rutele private și `/search`.
 - **Stelele pe dimensiuni sunt infrastructura distincțiilor viitoare.**
   Cele trei coloane (`rating_experience`, `rating_access`, `rating_crowd`)
   nu sunt trei întrebări puse din politețe: sunt materia primă pentru
@@ -257,12 +264,28 @@ Features, UX și cod sunt declarate **finalizate în august 2026**.
 Capitolul următor nu mai e despre produs, ci despre **vizibilitate și
 conținut**.
 
-1. **SEO tehnic.** Paginile publice sunt client-side: `/location/[id]`,
-   `/trip/[id]`, `/experience/[id]` și homepage-ul își aduc conținutul din
-   browser, deci un crawler vede aproape nimic. Există `generateMetadata`
-   pe `/location`, `/trip` și `/profile` (prin `layout.tsx`), dar
-   `/experience/[id]` n-are nici măcar atât. Lipsesc cu totul: `sitemap`,
-   `robots`, JSON-LD și Search Console.
+1. **SEO tehnic**, în tranșe (auditul din 9 august 2026).
+
+   **Tranșa A — făcută (9 august 2026).** `robots.ts` (crawlerele AI
+   permise pe nume), `sitemap.ts` (locații aprobate, călătorii și
+   experiențe active, profiluri, pagini statice — `lastModified` din
+   `created_at`, pentru că tabelele de conținut n-au `updated_at`),
+   `generateMetadata` pe `/experience/[id]` — ultima entitate publică fără
+   titlu propriu —, canonical peste tot și `noindex` pe rutele private și
+   pe `/search`. JSON-LD devansat aici, din layout-urile server care fac
+   deja query-ul: `TouristAttraction` cu `aggregateRating` (media notei
+   generale, doar de la 2 note în sus, rotunjită la 0,1) și `review[]` pe
+   locuri, `TouristTrip` cu `itinerary` pe călătorii, `BreadcrumbList` pe
+   ambele, `Organization` + `WebSite` în rădăcină.
+
+   **Tranșa B — de făcut.** SSR pe paginile de conținut, în ordinea
+   valorii: `/location/[id]`, `/experience/[id]`, `/trip/[id]`, `/trips`,
+   homepage la urmă. Tot acolo: trunchierea recenziilor pe pagina locului,
+   ca aceleași texte să nu concureze cu paginile lor proprii, și politica
+   de cache (`revalidate`) — care cere ca paginile publice să citească cu
+   clientul anon, fără cookies.
+
+   **Rămâne oricum:** Search Console și verificarea domeniului.
 2. **Seed content.** Un produs de recenzii gol nu convinge pe nimeni și
    n-are ce indexa.
 3. **Testul cu 5–7 oameni.** Pe fluxul real, pe telefoanele lor.

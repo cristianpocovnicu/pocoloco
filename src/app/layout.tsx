@@ -4,6 +4,9 @@ import AppShell from '@/components/layout/AppShell'
 import { Suspense } from 'react'
 import { ToastProvider } from '@/components/ui/Toast'
 import { AuthGateProvider } from '@/components/auth/AuthGate'
+import JsonLd from '@/components/seo/JsonLd'
+import { SITE_URL } from '@/lib/seo'
+import { organizationJsonLd } from '@/lib/jsonld'
 
 export const metadata: Metadata = {
   // fără metadataBase, imaginile OG relative nu se rezolvă în absolut
@@ -48,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ro">
       <body>
+        <JsonLd data={organizationJsonLd(SITE_URL)} />
         <ToastProvider>
           <Suspense fallback={null}>
             <AuthGateProvider>
