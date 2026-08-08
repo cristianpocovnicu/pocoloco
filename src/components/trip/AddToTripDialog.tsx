@@ -20,26 +20,35 @@ type Props = {
 }
 
 /**
- * Ecranul de după publicare: „o adaugi într-o călătorie?"
+ * Ecranul de după publicare.
  *
- * O călătorie e un album, iar o experiență proaspăt scrisă e cel mai
- * probabil dintr-o vacanță pe care userul deja o povestește. Aici o
- * leagă, fără să treacă prin editorul de itinerar.
+ * Întâi confirmarea și drumul spre ce tocmai a scris omul — asta e
+ * întrebarea lui, „unde e munca mea". Abia sub ea stă oferta: o
+ * experiență proaspăt scrisă e adesea dintr-o ieșire mai lungă, pe care
+ * o poate lega aici, fără să treacă prin editorul de itinerar.
  *
- * Călătoria nouă cere un singur lucru: numele. Restul (copertă, descriere,
+ * A fost invers o vreme, iar oferta arăta ca un pas obligatoriu dintr-un
+ * flux care, de fapt, se terminase.
+ *
+ * Ieșirea nouă cere un singur lucru: numele. Restul (copertă, descriere,
  * zile) se completează oricând din editare.
  */
 export default function AddToTripDialog({ experienceId, locationId, title, onDone }: Props) {
   const toast = useToast()
   const [trips, setTrips] = useState<TripOption[]>([])
-  const [loading, setLoading] = useState(true)
+  /** oferta e strânsă până o cere cineva — atunci se și încarcă lista */
+  const [linking, setLinking] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!linking) return
+
     const load = async () => {
+      setLoading(true)
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
@@ -70,7 +79,7 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
       setLoading(false)
     }
     load()
-  }, [])
+  }, [linking])
 
   /** Oprirea se pune la coada ultimei zile din itinerar. */
   const addStop = async (tripId: string) => {
@@ -146,26 +155,54 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
   return (
     <div className="min-h-screen bg-[#F8F7F5]">
       <div className="max-w-[680px] mx-auto px-5 pt-10 pb-24">
-        <div className="text-center mb-7">
+        <div className="text-center mb-6">
           <div className="text-4xl mb-2">🎉</div>
           <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1">Publicat!</h1>
           <p className="text-[14px] text-[#6B6B6B] leading-relaxed">
-            „{title}&rdquo; face parte dintr-o ieșire mai lungă?
+            Povestea ta despre „{title}&rdquo; e acum {locationId ? 'pe hartă' : 'publicată'}.
           </p>
         </div>
 
+        {/* întâi ieșirea: omul vrea să vadă ce a scris */}
+        <button type="button"
+          onClick={onDone}
+          disabled={!!busyId}
+          className="w-full bg-[#E8440A] text-white font-outfit text-[15px] font-semibold py-3.5 rounded-full disabled:opacity-60"
+        >
+          Vezi ce ai publicat
+        </button>
+
         {error && (
-          <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3 mb-4">
+          <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-xl px-4 py-3 mt-4">
             <p className="text-[13px] text-[#DC2626]">{error}</p>
           </div>
         )}
 
-        {loading ? (
+        {/* abia apoi oferta, strânsă într-un rând */}
+        {!linking && (
+          <button type="button"
+            onClick={() => setLinking(true)}
+            className="w-full mt-5 text-left"
+          >
+            <p className="text-[13px] text-[#6B6B6B] leading-relaxed">
+              „{title}&rdquo; a fost parte dintr-o ieșire mai lungă?{' '}
+              <span className="text-[#5B4FCF] font-medium">Leagă-l de o poveste</span>
+            </p>
+          </button>
+        )}
+
+        {linking && loading && (
           <div className="py-10 flex justify-center">
             <Loader2 size={22} className="animate-spin text-[#E8440A]" />
           </div>
-        ) : (
-          <div className="flex flex-col gap-2.5 mb-5">
+        )}
+
+        {linking && !loading && (
+          <div className="flex flex-col gap-2.5 mt-5">
+            <p className="text-[13px] text-[#6B6B6B]">
+              Alege ieșirea din care a făcut parte „{title}&rdquo;:
+            </p>
+
             {trips.map(trip => (
               <button type="button"
                 key={trip.id}
@@ -236,14 +273,6 @@ export default function AddToTripDialog({ experienceId, locationId, title, onDon
             )}
           </div>
         )}
-
-        <button type="button"
-          onClick={onDone}
-          disabled={!!busyId}
-          className="w-full text-[13px] text-[#6B6B6B] font-outfit font-medium py-3 disabled:opacity-50"
-        >
-          Poate mai târziu
-        </button>
       </div>
     </div>
   )
