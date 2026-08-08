@@ -38,7 +38,9 @@ export async function generateMetadata(
   const description = (
     data.description?.trim() ||
     (lead ? excerpt(lead.content, 150) : '') ||
-    `${data.name}${place ? `, ${place}` : ''} — vezi ce au trăit călătorii acolo și scrie ce ai trăit tu.`
+    // fără număr: „0 experiențe" anunță golul în loc să cheme pe cineva
+    // în el. Numărul e oricum nesigur — vezi migrarea 41.
+    `Descoperă ${data.name}${place ? ` din ${place}` : ''} — adaugă prima poveste.`
   ).slice(0, 160)
 
   const images = data.cover_image ? [{ url: data.cover_image }] : undefined

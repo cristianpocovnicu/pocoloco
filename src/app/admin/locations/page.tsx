@@ -1,12 +1,13 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair, ImagePlus, Globe, Star } from 'lucide-react'
+import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair, ImagePlus, Globe, Star, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, statusStyle, type MiniProfile } from '@/lib/admin'
 import { cn, timeAgo } from '@/lib/utils'
 import AdminHeader from '@/components/admin/AdminHeader'
 import CoordinatesRow from '@/components/admin/CoordinatesRow'
 import CoverImage from '@/components/ui/CoverImage'
+import LocationEditModal, { type EditableLocation } from '@/components/admin/LocationEditModal'
 import { attachGoogleCover } from '@/lib/location-cover'
 import { PLACES_ENABLED, fetchPlaceGeography, geocodePlace, type PlaceGeography } from '@/lib/places'
 
@@ -71,6 +72,7 @@ export default function AdminLocationsPage() {
   const [geoSupported, setGeoSupported] = useState(true)
   /** migrarea 40; până e rulată, butonul de promovare nu apare */
   const [featuredSupported, setFeaturedSupported] = useState(true)
+  const [editing, setEditing] = useState<EditableLocation | null>(null)
   const [geoId, setGeoId] = useState<string | null>(null)
   const [geoBulk, setGeoBulk] = useState<{ done: number; total: number; found: number } | null>(null)
 
@@ -247,20 +249,32 @@ ${detalii}`)) {
     setLocations(prev => prev.map(l => (l.id === id ? { ...l, google_place_id: placeId } : l)))
   }
 
-  /** Scrie nivelurile administrative, dacă migrarea 37 e rulată. */
+  /**
+   * Scrie geografia unui loc — și coloanele noi, și cele vechi.
+   *
+   * `city` și `country` au fost multă vreme completate de flux cu un
+   * fallback: dacă Google nu dădea o țară, se scria „România". Așa au
+   * rămas rânduri care spun „Egipt, România". Cererea de față aduce
+   * oricum numele real al țării, deci le corectăm din același răspuns,
+   * fără niciun apel în plus.
+   *
+   * Ce e gol în răspuns nu suprascrie ce e scris: mai bine o valoare
+   * veche decât una ștearsă.
+   */
   const saveGeography = async (id: string, geo: PlaceGeography): Promise<boolean> => {
     if (!geoSupported) return false
 
     const supabase = createClient()
-    const { error: updateError } = await supabase
-      .from('locations')
-      .update({
-        locality: geo.locality,
-        admin_area_1: geo.adminArea1,
-        admin_area_2: geo.adminArea2,
-        country_code: geo.countryCode,
-      })
-      .eq('id', id)
+    const patch: Record<string, string | null> = {
+      locality: geo.locality,
+      admin_area_1: geo.adminArea1,
+      admin_area_2: geo.adminArea2,
+      country_code: geo.countryCode,
+    }
+    if (geo.city) patch.city = geo.city
+    if (geo.country) patch.country = geo.country
+
+    const { error: updateError } = await supabase.from('locations').update(patch).eq('id', id)
 
     if (updateError) {
       // coloanele lipsesc => migrarea nu e rulată; ascundem restul funcției
@@ -268,13 +282,7 @@ ${detalii}`)) {
       return false
     }
 
-    setLocations(prev => prev.map(l => (l.id === id ? {
-      ...l,
-      locality: geo.locality,
-      admin_area_1: geo.adminArea1,
-      admin_area_2: geo.adminArea2,
-      country_code: geo.countryCode,
-    } : l)))
+    setLocations(prev => prev.map(l => (l.id === id ? { ...l, ...patch } as LocationRow : l)))
     return true
   }
 
@@ -670,7 +678,9 @@ ${detalii}`)) {
                         onSave={(lat, lng) => saveCoords(loc.id, lat, lng)}
                       />
 
-                      {PLACES_ENABLED && geoSupported && !loc.admin_area_1 && (
+                      {/* butonul rămâne și după ce regiunea există: aceeași cerere
+                          corectează acum și orașul și țara, care puteau fi murdare */}
+                      {PLACES_ENABLED && geoSupported && (
                         <button
                           onClick={() => handleGeographyOne(loc)}
                           disabled={geoId === loc.id || !!geoBulk}
@@ -701,6 +711,24 @@ ${detalii}`)) {
                   </div>
 
                   <div className="flex gap-1.5 flex-wrap md:justify-end flex-shrink-0">
+                    <button
+                      disabled={busy}
+                      onClick={() => setEditing({
+                        id: loc.id,
+                        name: loc.name,
+                        city: loc.city,
+                        country: loc.country,
+                        category: loc.category,
+                        locality: loc.locality,
+                        admin_area_1: loc.admin_area_1,
+                        admin_area_2: loc.admin_area_2,
+                        country_code: loc.country_code,
+                      })}
+                      className="text-[11px] bg-[#EEEDFB] text-[#5B4FCF] px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <Pencil size={12} /> Editează
+                    </button>
+
                     {/* se promovează doar ce e deja public: homepage-ul cere
                         oricum status 'approved' */}
                     {featuredSupported && loc.status === 'approved' && (
@@ -758,6 +786,18 @@ ${detalii}`)) {
           </div>
         )}
       </div>
+
+      {editing && (
+        <LocationEditModal
+          location={editing}
+          geoSupported={geoSupported}
+          onClose={() => setEditing(null)}
+          onSaved={updated => {
+            setLocations(prev => prev.map(l => (l.id === updated.id ? { ...l, ...updated } : l)))
+            setEditing(null)
+          }}
+        />
+      )}
     </div>
   )
 }
