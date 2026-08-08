@@ -103,8 +103,11 @@ export default function StopCard({
           câmpul, așa că nu-l repetăm deasupra. */}
       {!stopHasSubject(stop) && (
         <div className="flex items-start justify-between gap-3 mb-2.5">
+          {/* „Unde ai fost?" e întrebarea ecranului de intrare; aici, unde
+              se adaugă locurile unei destinații deja numite, întrebarea e
+              mai fină — altfel ar suna ca și cum n-am ascultat prima dată */}
           <h2 className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">
-            {index === 0 ? 'Unde ai fost?' : 'Ce ai mai făcut?'}
+            {index === 0 ? 'Unde anume?' : 'Ce ai mai făcut?'}
           </h2>
           {total > 1 && (
             <button type="button" onClick={onRemove} aria-label="Șterge" className="text-[#9B9B9B] hover:text-[#DC2626] flex-shrink-0">

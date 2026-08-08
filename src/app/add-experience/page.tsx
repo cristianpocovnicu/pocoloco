@@ -379,10 +379,10 @@ ${text}` : text,
 
       <div className="max-w-[560px] mx-auto px-5 pt-12">
         <h1 className="font-outfit text-[22px] font-bold text-[#0F0F0F] mb-1.5 text-center">
-          De unde începe povestea?
+          Unde ai fost?
         </h1>
         <p className="text-[13px] text-[#9B9B9B] leading-relaxed mb-6 text-center">
-          Scrie ce-ți vine primul în minte. Restul vine după.
+          Un loc anume sau o destinație întreagă — scrie numele și pornim de acolo.
         </p>
 
         <SubjectPicker
@@ -393,7 +393,8 @@ ${text}` : text,
             if (patch.locationName || patch.activityTitle) startReview(patch)
           }}
           onRegionPicked={startJourney}
-          placeholder="Un loc, o activitate sau o zonă întreagă — de unde începe povestea?"
+          // fără placeholder propriu: întrebarea e deja în titlu, iar cel
+          // implicit spune ce se poate tasta, cu exemple
           autoFocus
         />
       </div>
