@@ -159,15 +159,6 @@ export default async function LocationPage({ params }: { params: { id: string } 
   const headlineAverage = average(experiences, 'rating_experience')
   const headline = headlineAverage ? { value: parseFloat(headlineAverage), count: ratedCount } : null
 
-  const LEAD = 200
-  const first = experiences.find(experience => experience.content.trim())
-  const lead = first
-    ? (() => {
-        const text = first.content.trim()
-        return { text: text.slice(0, LEAD).trimEnd(), truncated: text.length > LEAD }
-      })()
-    : null
-
   const averages = [
     { label: LABELS.experience, key: 'rating_experience' as const },
     { label: LABELS.access, key: 'rating_access' as const },
@@ -235,43 +226,36 @@ export default async function LocationPage({ params }: { params: { id: string } 
         )}
 
         {/*
-          Ce caută omul întâi: cât de bun e locul și ce spune cineva care a
-          fost. Amândouă erau mai jos de hartă, adică sub primul ecran pe
-          telefon. Blocul e server-rendered, ca restul paginii — deci și
-          crawlerul citește textul înaintea hărții.
-        */}
-        {(headline || lead) && (
-          <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-            {headline && (
-              <a href="#experiente" className="flex items-center gap-2 mb-2">
-                <span className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <Star
-                      key={i}
-                      size={15}
-                      className={i <= Math.round(headline.value) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}
-                    />
-                  ))}
-                </span>
-                <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F]">
-                  {headline.value.toFixed(1)}
-                </span>
-                <span className="text-[12px] text-[#9B9B9B]">
-                  din {headline.count} {headline.count === 1 ? 'notare' : 'notări'}
-                </span>
-              </a>
-            )}
+          Cât de bun e locul, deasupra hărții — asta caută omul întâi, iar
+          până acum stătea sub primul ecran de telefon.
 
-            {lead && (
-              <p className="text-[14px] text-[#0F0F0F] leading-relaxed whitespace-pre-line">
-                {lead.text}
-                {lead.truncated && '…'}{' '}
-                <a href="#experiente" className="text-[13px] text-[#5B4FCF] font-medium whitespace-nowrap">
-                  Citește tot →
-                </a>
-              </p>
-            )}
-          </div>
+          A avut o vreme și începutul celei mai votate povești. A ieșit:
+          aceleași cuvinte apăreau la câteva sute de pixeli mai jos, în
+          lista de experiențe, iar la două-trei povești pe un loc citatul
+          arăta a greșeală, nu a rezumat. Locul lui îl va lua un rezumat
+          adevărat — vezi §5 din context-produs.
+        */}
+        {headline && (
+          <a
+            href="#experiente"
+            className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)] flex items-center gap-2"
+          >
+            <span className="flex gap-0.5">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Star
+                  key={i}
+                  size={15}
+                  className={i <= Math.round(headline.value) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}
+                />
+              ))}
+            </span>
+            <span className="font-outfit text-[15px] font-semibold text-[#0F0F0F]">
+              {headline.value.toFixed(1)}
+            </span>
+            <span className="text-[12px] text-[#9B9B9B]">
+              din {headline.count} {headline.count === 1 ? 'notare' : 'notări'}
+            </span>
+          </a>
         )}
 
         {location.latitude != null && location.longitude != null && (
