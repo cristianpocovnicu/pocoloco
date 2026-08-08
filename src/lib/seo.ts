@@ -66,59 +66,134 @@ export const getTripSeo = cache(async (id: string) => {
   return data && data.status === 'active' ? data : null
 })
 
+/**
+ * Experiența, cu tot ce randează pagina ei.
+ *
+ * Se oprește la `status = 'active'`: fără cookies pe server nu putem ști
+ * dacă cel care cere e autorul, iar o citire cu sesiune ar face ruta
+ * dinamică și ar arunca cache-ul. Ce nu e activ nu se randează.
+ */
 export const getExperienceSeo = cache(async (id: string) => {
   const { data } = await supabase
     .from('experiences')
     .select(`
-      id, kind, title, content, images, activity_area, created_at, status,
-      rating_experience, visited_year,
-      author:profiles!author_id(username, full_name),
+      id, kind, title, activity_category, activity_area, content, images, tips,
+      rating_experience, rating_access, rating_crowd, visited_year, visited_month,
+      upvotes, downvotes, comment_count, created_at, status, author_id, location_id,
+      author:profiles!author_id(id, username, full_name, is_guide),
       location:locations!location_id(id, name, city, country, status)
     `)
     .eq('id', id)
+    .eq('status', 'active')
     .maybeSingle()
 
-  if (!data || data.status !== 'active') return null
-
-  const row = data as unknown as ExperienceSeo
-  // o experiență legată de un loc neaprobat nu se arată nicăieri altundeva:
-  // nici aici n-are ce căuta
-  if (row.location && row.location.status !== 'approved') return null
-  return row
+  if (!data) return null
+  return data as unknown as ExperienceSeo
 })
+
+/**
+ * O experiență la un loc neaprobat rămâne vizibilă omului care are linkul —
+ * e a lui —, dar n-are ce căuta într-un index: locul din spatele ei încă nu
+ * e public. Diferența se rezolvă cu `noindex`, nu ascunzând pagina.
+ */
+export function isIndexable(experience: ExperienceSeo) {
+  return !experience.location || experience.location.status === 'approved'
+}
 
 export type ExperienceSeo = {
   id: string
-  kind: string | null
+  kind: 'place_visit' | 'activity'
   title: string | null
-  content: string | null
-  images: string[] | null
+  activity_category: string | null
   activity_area: string | null
+  content: string
+  images: string[] | null
+  tips: string[] | null
+  rating_experience: number | null
+  rating_access: number | null
+  rating_crowd: number | null
+  visited_year: number | null
+  visited_month: number | null
+  upvotes: number
+  downvotes: number
+  comment_count: number
   created_at: string
   status: string
-  rating_experience: number | null
-  visited_year: number | null
-  author: { username: string | null; full_name: string | null } | null
+  author_id: string
+  location_id: string | null
+  author: { id: string; username: string | null; full_name: string | null; is_guide: boolean | null } | null
   location: { id: string; name: string; city: string | null; country: string | null; status: string } | null
 }
 
-/** Recenziile unui loc, pentru `review[]` și media din JSON-LD. */
-export const getLocationReviews = cache(async (locationId: string) => {
+export type LocationExperience = {
+  id: string
+  content: string
+  images: string[] | null
+  tips: string[] | null
+  visited_year: number | null
+  visited_month: number | null
+  rating_experience: number | null
+  rating_access: number | null
+  rating_crowd: number | null
+  upvotes: number
+  downvotes: number
+  comment_count: number
+  created_at: string
+  author: { id: string; username: string | null; full_name: string | null; is_guide: boolean | null } | null
+}
+
+/**
+ * Locul, cu cine l-a adăugat. Doar aprobate: restul n-au pagină publică.
+ */
+export const getLocationPage = cache(async (id: string) => {
+  const { data } = await supabase
+    .from('locations')
+    .select('*, adder:profiles!added_by(full_name, is_guide)')
+    .eq('id', id)
+    .eq('status', 'approved')
+    .maybeSingle()
+
+  return (data as unknown as LocationPage | null) || null
+})
+
+export type LocationPage = {
+  id: string
+  name: string
+  city: string
+  country: string
+  description: string | null
+  cover_image: string | null
+  cover_source?: string | null
+  latitude: number | null
+  longitude: number | null
+  score: number
+  experience_count: number
+  trip_count: number
+  status: string
+  added_by: string
+  adder?: { full_name: string; is_guide: boolean } | null
+}
+
+/** Experiențele locului, votate bine sus — aceeași ordine ca înainte. */
+export const getLocationExperiences = cache(async (locationId: string) => {
   const { data } = await supabase
     .from('experiences')
-    .select('id, content, rating_experience, created_at, author:profiles!author_id(full_name, username)')
+    .select('*, author:profiles!author_id(id, username, full_name, is_guide)')
     .eq('location_id', locationId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
-    .limit(20)
 
-  return (data || []) as unknown as {
-    id: string
-    content: string | null
-    rating_experience: number | null
-    created_at: string
-    author: { full_name: string | null; username: string | null } | null
-  }[]
+  const rows = (data || []) as unknown as LocationExperience[]
+  return rows.sort((a, b) => {
+    const diff = (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes)
+    return diff !== 0 ? diff : b.created_at.localeCompare(a.created_at)
+  })
+})
+
+/** Recenziile unui loc, pentru datele structurate: aceeași listă, scurtată. */
+export const getLocationReviews = cache(async (locationId: string) => {
+  const rows = await getLocationExperiences(locationId)
+  return rows.slice(0, 20)
 })
 
 /**

@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
-import { excerpt, getExperienceSeo } from '@/lib/seo'
+import { excerpt, getExperienceSeo, isIndexable, noIndex } from '@/lib/seo'
 
 /**
- * Pagina experienței e client component (voturi, comentarii), deci
- * metadata stă aici — ca la locație și la călătorie. Până acum era
- * singura entitate publică fără niciun titlu propriu.
+ * Titlul și descrierea unei experiențe.
+ *
+ * Pagina e server component de la tranșa B, dar metadata rămâne aici: tot
+ * layout-ul e locul unde Next o citește, iar loaderul e același, cache-uit
+ * pe cerere — deci pagina și metadata nu întreabă baza de două ori.
  */
 export async function generateMetadata(
   { params }: { params: { id: string } }
@@ -31,6 +33,8 @@ export async function generateMetadata(
   return {
     title,
     description,
+    // locul din spate încă nu e public: pagina se citește, dar nu se indexează
+    ...(isIndexable(data) ? {} : noIndex),
     alternates: { canonical: `/experience/${params.id}` },
     openGraph: {
       title,

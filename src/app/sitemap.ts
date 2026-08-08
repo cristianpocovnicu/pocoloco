@@ -61,7 +61,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ),
   ])
 
-  const stamp = (value: string) => new Date(value)
+  /**
+   * O dată lipsă sau stricată nu are voie să dărâme tot sitemap-ul:
+   * `toISOString()` pe un `Invalid Date` aruncă, iar ruta ar întoarce 500
+   * pentru toate URL-urile din cauza unui singur rând. Atunci intrarea
+   * merge fără `lastModified` — e un câmp opțional.
+   */
+  const stamp = (value?: string | null) => {
+    if (!value) return undefined
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? undefined : date
+  }
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: SITE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },

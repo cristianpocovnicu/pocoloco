@@ -10,10 +10,12 @@ import {
 } from '@/lib/seo'
 
 /**
- * Pagina locației e client component (voturi, comentarii), deci metadata
- * dinamică și datele structurate stau aici, în layout-ul rutei. Citim cu
- * clientul anon: dacă locația nu e aprobată, RLS nu o întoarce și nu
- * scăpăm nimic în share.
+ * Metadata și datele structurate ale unui loc.
+ *
+ * Pagina e server component de la tranșa B; aici rămân titlul, descrierea
+ * și JSON-LD-ul, cu aceleași loadere cache-uite pe cerere ca pagina — deci
+ * baza nu e întrebată de două ori. Citim cu clientul anon: o locație
+ * neaprobată nu se întoarce, deci nu scapă nici în share, nici în index.
  */
 export async function generateMetadata(
   { params }: { params: { id: string } }
@@ -24,9 +26,19 @@ export async function generateMetadata(
   const place = [data.city, data.country].filter(Boolean).join(', ')
   const title = `${data.name}${place ? ` — ${place}` : ''} | Pocoloco`
 
-  const description = (data.description?.trim() ||
-    `${data.experience_count || 0} experiențe reale despre ${data.name}${place ? ` din ${place}` : ''}. ` +
-    'Citește ce au trăit alți călători înainte să pleci la drum.'
+  /*
+   * Descrierea vine din conținut real: începutul celei mai bine votate
+   * experiențe. Un rând scris de om spune mai mult în rezultate decât o
+   * numărătoare — iar când nu există nicio experiență nu anunțăm golul,
+   * ci invităm.
+   */
+  const reviews = await getLocationReviews(params.id)
+  const lead = reviews.find(review => review.content?.trim())
+
+  const description = (
+    data.description?.trim() ||
+    (lead ? excerpt(lead.content, 150) : '') ||
+    `${data.name}${place ? `, ${place}` : ''} — vezi ce au trăit călătorii acolo și scrie ce ai trăit tu.`
   ).slice(0, 160)
 
   const images = data.cover_image ? [{ url: data.cover_image }] : undefined
