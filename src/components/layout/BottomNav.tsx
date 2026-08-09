@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import { Home, Search, BookOpen, Plus, User } from 'lucide-react'
 import { cn, getInitials } from '@/lib/utils'
 import { useCurrentProfile } from '@/lib/useCurrentProfile'
+import { useModerationQueue } from '@/lib/useModerationQueue'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Acasă', Icon: Home },
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
 export default function BottomNav() {
   const pathname = usePathname()
   const { profile } = useCurrentProfile()
+  const toModerate = useModerationQueue(profile?.role === 'admin')
 
   const profileActive = pathname === '/profile'
 
@@ -50,10 +52,17 @@ export default function BottomNav() {
         <Link
           href={profile ? '/profile' : '/login'}
           className={cn(
-            'flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-colors',
+            'relative flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-colors',
             profileActive ? 'text-[#E8440A]' : 'text-[#9B9B9B]'
           )}
         >
+          {/* Ecoul cozii de moderare: doar punctul, fără număr — numărul îl
+              vezi pe rândul „Admin" din profil. Iconița de profil n-are alt
+              badge (notificările stau în clopoțelul din headere), deci nu se
+              bate cu nimic. */}
+          {toModerate > 0 && (
+            <span className="absolute top-0 right-2 w-2.5 h-2.5 bg-[#DC2626] rounded-full border-2 border-white" />
+          )}
           <span
             className={cn(
               'w-6 h-6 rounded-full overflow-hidden flex items-center justify-center',

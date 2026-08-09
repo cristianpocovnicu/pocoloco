@@ -7,6 +7,8 @@ export type CurrentProfile = {
   fullName: string | null
   username: string | null
   avatarUrl: string | null
+  /** rolul: de el atârnă intrarea spre admin, pe mobil și pe desktop */
+  role: string | null
 }
 
 /**
@@ -24,17 +26,18 @@ async function load(userId: string): Promise<CurrentProfile | null> {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, avatar_url')
+      .select('id, full_name, username, avatar_url, role')
       .eq('id', userId)
       .maybeSingle()
 
     if (error || !data) return null
-    const row = data as { id: string; full_name: string | null; username: string | null; avatar_url: string | null }
+    const row = data as { id: string; full_name: string | null; username: string | null; avatar_url: string | null; role: string | null }
     const profile: CurrentProfile = {
       id: row.id,
       fullName: row.full_name,
       username: row.username,
       avatarUrl: row.avatar_url,
+      role: row.role,
     }
     cache = { id: userId, profile }
     return profile

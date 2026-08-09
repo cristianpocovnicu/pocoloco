@@ -18,6 +18,7 @@ import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
 import { formatCount, timeAgo } from '@/lib/utils'
 import { activityLabel } from '@/lib/activities'
 import PendingChip from '@/components/location/PendingChip'
+import AdminEntry from '@/components/admin/AdminEntry'
 import ShareButton from '@/components/ui/ShareButton'
 import { useToast } from '@/components/ui/Toast'
 import Link from 'next/link'
@@ -176,6 +177,10 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-[780px] mx-auto">
+        {/* Pe mobil sidebar-ul e ascuns, deci ăsta e singurul drum spre
+            dashboard. Se ascunde singur pentru conturile fără rol. */}
+        <AdminEntry />
+
         {/* Hero */}
         <div className="bg-white px-5 pt-6 pb-5 border-b border-[rgba(0,0,0,0.08)]">
           <div className="flex items-start justify-between mb-4">

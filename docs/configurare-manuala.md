@@ -267,7 +267,81 @@ Configuration.
 
 ---
 
-## 6. Ce nu e implementat
+## 6. Email la fiecare loc nou de aprobat
+
+Fără el, un loc propus de cineva așteaptă până când intri din proprie
+inițiativă în `/admin`. Badge-urile din interfață se văd doar cu aplicația
+deschisă; emailul e singurul semnal care ajunge la tine când n-o ai.
+
+**Ce e deja scris:** funcția
+[`supabase/functions/notify-new-location/index.ts`](../supabase/functions/notify-new-location/index.ts).
+**Ce trebuie făcut manual** — nu există migrare pentru asta, webhookul se
+configurează din dashboard:
+
+### a. Cont Resend și cheie
+
+1. Cont pe [resend.com](https://resend.com) — planul gratuit acoperă
+   3.000 de emailuri pe lună, mult peste ce ne trebuie.
+2. **Domains → Add Domain** → `pocoloco.travel`. Resend îți dă 3 înregistrări
+   DNS (SPF, DKIM, și una de return-path). Le pui la registrar și aștepți
+   verificarea.
+   *Alternativă pentru probe:* fără domeniu verificat poți trimite doar de pe
+   `onboarding@resend.dev`, și doar către adresa cu care ai făcut contul.
+3. **API Keys → Create** → permisiune „Sending access". Copiază cheia; se
+   arată o singură dată.
+
+### b. Secretele funcției
+
+Supabase → **Edge Functions → Secrets** (sau `supabase secrets set`):
+
+```
+RESEND_API_KEY=re_...
+ADMIN_EMAIL=cristian.pocovnicu@gmail.com      # mai multe, separate prin virgulă
+MAIL_FROM=Pocoloco <alerte@pocoloco.travel>   # expeditor de pe domeniul verificat
+WEBHOOK_SECRET=<un șir inventat de tine, lung>
+SITE_URL=https://pocoloco.travel
+```
+
+Adresa nu e în cod nicăieri — dacă vrei să adaugi un al doilea moderator,
+schimbi variabila, nu fișierul.
+
+### c. Publicarea funcției
+
+```bash
+supabase functions deploy notify-new-location --project-ref <project-ref>
+```
+
+### d. Webhookul
+
+Supabase → **Database → Webhooks → Create a new hook**:
+
+| Câmp | Valoare |
+|---|---|
+| Name | `notify_new_location` |
+| Table | `public.locations` |
+| Events | **doar `Insert`** |
+| Type | HTTP Request → POST |
+| URL | `https://<project-ref>.supabase.co/functions/v1/notify-new-location` |
+| HTTP Headers | `x-webhook-secret: <WEBHOOK_SECRET>` și `Content-Type: application/json` |
+
+**Doar `Insert`**, intenționat: un rând nou înseamnă exact un email. Pe
+`Update` ar pleca un mesaj la fiecare aprobare, respingere sau corectură.
+
+Funcția mai verifică o dată `status = 'pending'` și iese tăcut altfel, deci
+un loc adăugat direct ca aprobat nu declanșează nimic.
+
+### e. Verificare
+
+Adaugă un loc nou din aplicație, cu un cont care nu e admin. În câteva
+secunde ar trebui să primești „Pocoloco: loc nou de aprobat — {nume}", cu
+link spre `/admin/locations` și spre pagina de previzualizare a locului.
+Dacă nu vine nimic: Supabase → Edge Functions → `notify-new-location` →
+Logs. Un `neconfigurat` acolo înseamnă că lipsește un secret; o eroare de la
+Resend se vede cu tot cu răspunsul lor.
+
+---
+
+## 7. Ce nu e implementat
 
 - **Apple Sign In** — butonul e dezactivat în interfață; necesită cont Apple
   Developer plătit.
