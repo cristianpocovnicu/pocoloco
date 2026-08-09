@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowUp, UserPlus, MessageCircle, CornerDownRight, Bell, Loader2, CheckCheck } from 'lucide-react'
+import { ArrowUp, UserPlus, MessageCircle, CornerDownRight, Bell, Loader2, CheckCheck, MapPin } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import EmptyState from '@/components/ui/EmptyState'
 import { createClient } from '@/lib/supabase-client'
@@ -14,6 +14,8 @@ const ICONS: Record<NotificationType, { Icon: typeof ArrowUp; bg: string; color:
   follow: { Icon: UserPlus, bg: '#FFF0EB', color: '#E8440A' },
   comment: { Icon: MessageCircle, bg: '#ECFDF5', color: '#059669' },
   reply: { Icon: CornerDownRight, bg: '#FFFBEB', color: '#D97706' },
+  // chihlimbariu, ca peste tot unde ceva așteaptă aprobare
+  location_pending: { Icon: MapPin, bg: '#FFFBEB', color: '#D97706' },
 }
 
 export default function NotificationsPage() {
@@ -126,8 +128,14 @@ export default function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] text-[#0F0F0F] leading-snug">
-                      <span className="font-semibold">{name}</span>{' '}
-                      <span className="text-[#6B6B6B]">{n.text}</span>
+                      {n.standalone ? (
+                        <span className="font-semibold">{n.text}</span>
+                      ) : (
+                        <>
+                          <span className="font-semibold">{name}</span>{' '}
+                          <span className="text-[#6B6B6B]">{n.text}</span>
+                        </>
+                      )}
                     </p>
                     <p className="text-[11px] text-[#9B9B9B] mt-0.5">{timeAgo(n.created_at)}</p>
                   </div>

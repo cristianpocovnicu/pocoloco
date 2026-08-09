@@ -86,6 +86,7 @@ nu schimbă nimic, doar citesc schema.
 | 41 | `supabase/migrations/041_20260810_experience_count_fix.sql` | `locations.experience_count` recalculat de un trigger `security definer`, cu backfill |
 | 42 | `supabase/migrations/042_20260810_visited_on_publish.sql` | o experiență publicată marchează locul ca „am fost" pentru autor + backfill |
 | 43 | `supabase/migrations/043_20260810_tips_reset.sql` | remapează ponturile vechi din `experiences.tips` pe setul nou; scoate evaluările |
+| 44 | `supabase/migrations/044_20260811_admin_location_notifications.sql` | clopoțelul anunță adminii la fiecare loc intrat în așteptare + backfill |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).
@@ -211,6 +212,10 @@ primești un `notice` că publicația nu există:
 
 Fără Realtime aplicația funcționează în continuare: contorul se recitește la
 fiecare navigare, doar că nu se mai actualizează instantaneu.
+
+Notificările de moderare (migrarea 44) merg pe **același** canal: sunt rânduri
+în `public.notifications`, filtrate pe `user_id`. Nu e nimic de configurat în
+plus pentru ele.
 
 ---
 

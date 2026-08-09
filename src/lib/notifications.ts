@@ -1,14 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fetchProfilesMap, type MiniProfile } from './profiles'
 
-export type NotificationType = 'upvote' | 'follow' | 'comment' | 'reply'
+export type NotificationType = 'upvote' | 'follow' | 'comment' | 'reply' | 'location_pending'
 
 export type NotificationRow = {
   id: string
   user_id: string
   actor_id: string | null
   type: NotificationType
-  entity_type: 'experience' | 'comment' | 'user' | null
+  entity_type: 'experience' | 'comment' | 'user' | 'location' | null
   entity_id: string | null
   read: boolean
   created_at: string
@@ -19,6 +19,14 @@ export type NotificationItem = NotificationRow & {
   /** unde duce notificarea, sau null dacă entitatea nu mai există */
   href: string | null
   text: string
+  /**
+   * Textul se citește singur, fără numele actorului în față.
+   *
+   * Celelalte notificări sunt propoziții despre cineva („Ana ți-a apreciat
+   * experiența"); cea de moderare e o treabă de făcut, iar subiectul ei e
+   * locul, nu omul.
+   */
+  standalone?: boolean
 }
 
 const NOTIFICATION_TEXT: Record<NotificationType, string> = {
@@ -26,6 +34,8 @@ const NOTIFICATION_TEXT: Record<NotificationType, string> = {
   follow: 'a început să te urmărească',
   comment: 'a comentat la experiența ta',
   reply: 'ți-a răspuns la comentariu',
+  // completat cu numele locului în fetchNotifications
+  location_pending: 'Locație nouă de aprobat',
 }
 
 /** Notificări necitite. Dacă tabelul lipsește sau query-ul eșuează, întoarce 0. */
@@ -67,6 +77,21 @@ export async function fetchNotifications(
 
   const actors = await fetchProfilesMap(supabase, rows.map(r => r.actor_id))
 
+  // numele locurilor propuse, pentru textul notificării de moderare
+  const locationIds = Array.from(new Set(
+    rows.filter(r => r.type === 'location_pending' && r.entity_id).map(r => r.entity_id as string)
+  ))
+  const locationNames: Record<string, string> = {}
+  if (locationIds.length > 0) {
+    const { data: places } = await supabase
+      .from('locations')
+      .select('id, name')
+      .in('id', locationIds)
+    for (const place of (places || []) as { id: string; name: string }[]) {
+      locationNames[place.id] = place.name
+    }
+  }
+
   // experiență -> locația în care se află, ca să avem unde trimite userul
   const experienceIds = Array.from(new Set(
     rows.filter(r => r.entity_type === 'experience' && r.entity_id).map(r => r.entity_id as string)
@@ -86,11 +111,26 @@ export async function fetchNotifications(
     const actor = row.actor_id ? actors[row.actor_id] || null : null
 
     let href: string | null = null
-    if (row.type === 'follow') {
+    if (row.type === 'location_pending') {
+      // lista de moderare, nu pagina locului: de acolo se aprobă
+      href = '/admin/locations'
+    } else if (row.type === 'follow') {
       href = actor?.username ? `/profile/${actor.username}` : null
     } else if (row.entity_type === 'experience' && row.entity_id) {
       const locationId = locationByExperience[row.entity_id]
       href = locationId ? `/location/${locationId}` : null
+    }
+
+    if (row.type === 'location_pending') {
+      const name = (row.entity_id && locationNames[row.entity_id]) || null
+      return {
+        ...row,
+        actor,
+        href,
+        standalone: true,
+        // locul șters între timp: rămâne anunțul, fără nume inventat
+        text: name ? `Locație nouă de aprobat: ${name}` : 'Locație nouă de aprobat',
+      }
     }
 
     return { ...row, actor, href, text: NOTIFICATION_TEXT[row.type] }
