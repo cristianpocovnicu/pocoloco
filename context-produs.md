@@ -196,8 +196,18 @@ acolo.**
 
 ## 4. Alte decizii
 
-- **Moderarea locurilor.** Orice loc adăugat de un user intră `pending`.
-  Fluxul nu așteaptă aprobarea: ce ai scris se salvează imediat.
+- **Moderarea locurilor, doar unde chiar decide ceva** (11 august 2026).
+  Un loc ales din Google intră direct `approved`; doar cele scrise de mână,
+  fără `google_place_id`, așteaptă un administrator (migrarea 45).
+  *Motivul:* moderarea a fost pusă ca să nu intre în bază locuri inventate,
+  scrise greșit sau duplicate — verificare pe care Places o face deja.
+  Adminul care se uita după Google nu confirma decât ce spusese Google, iar
+  fiecare loc nou îi cerea o decizie fără miză.
+  **Reversibil** dacă apare abuz: se rescrie funcția și locurile aprobate
+  se pot trece la loc printr-un update.
+  Neschimbat: fluxul nu așteaptă aprobarea, ce ai scris se salvează imediat,
+  iar clopoțelul și emailul de moderare rămân legate de `pending` — deci nu
+  mai sună pentru ce nu cere o decizie.
 - **Punctele nu se ating din UI.** Economia e descrisă în
   [`docs/economia-de-puncte.md`](./docs/economia-de-puncte.md) și se
   schimbă doar cu o migrare, niciodată ca efect secundar al unui ecran.

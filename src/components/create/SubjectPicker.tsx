@@ -243,9 +243,13 @@ export default function SubjectPicker({
             placeholder="Prin ce oraș sau zonă? (opțional)"
             className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
           />
+          {/* Un loc ales din Google intră direct: numele și coordonatele
+              lui sunt deja verificate acolo (migrarea 45). Aprobarea
+              rămâne pentru ce scrie omul de mână. */}
           <p className="text-[11px] text-[#9B9B9B] leading-relaxed">
-            Locul ăsta e nou pentru noi. Îl adăugăm, dar apare în căutare abia după ce
-            trece pe la un administrator. Ce scrii tu rămâne salvat.
+            {stop.placeId
+              ? 'Locul e nou pe Pocoloco — îl adăugăm acum.'
+              : 'Locul ăsta e nou pentru noi. Îl adăugăm, dar apare în căutare abia după ce trece pe la un administrator. Ce scrii tu rămâne salvat.'}
           </p>
         </>
       )}
