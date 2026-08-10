@@ -156,6 +156,9 @@ function CreateScreen() {
   const persist = useCallback(async (): Promise<string | null> => {
     if (!userId) return null
     const payload = { stops, trip, mode: mode || 'review' }
+    // marcăm curat înainte de scriere: o tastă apăsată în timpul ei
+    // rearmează steagul și declanșează următoarea salvare
+    dirty.current = false
     const supabase = createClient()
 
     if (draftId) {
@@ -187,6 +190,18 @@ function CreateScreen() {
     const timer = setTimeout(() => { void persist() }, SAVE_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [stops, trip, mode, userId, loading, choosing, persist])
+
+  /**
+   * Plecarea din pagină prin altă cale decât săgeata — o atingere pe bara
+   * de jos, un link din antet — nu trebuie să piardă ce era în debounce.
+   *
+   * Referința ține ultima versiune a funcției; efectul de mai jos rulează
+   * o singură dată, la demontare, altfel curățenia lui ar salva la fiecare
+   * tastă apăsată.
+   */
+  const persistRef = useRef(persist)
+  useEffect(() => { persistRef.current = persist }, [persist])
+  useEffect(() => () => { if (dirty.current) void persistRef.current() }, [])
 
   const patchStop = useCallback((key: string, patch: Partial<StopDraft>) => {
     dirty.current = true
@@ -329,6 +344,27 @@ function CreateScreen() {
     setDraftError(null)
   }
 
+  /**
+   * Săgeata de back, din interiorul unei povești: urcă un nivel, nu iese.
+   *
+   * Fluxul are două niveluri de când există selectorul de ciorne — ecranul
+   * de intrare și povestea deschisă. Back-ul care sărea direct pe acasă
+   * evacua omul din ambele deodată.
+   *
+   * Salvarea se face **înainte** de navigare, nu prin debounce: ultimele
+   * secunde de tastare se pierdeau exact în gestul care pare cel mai
+   * sigur. `dirty` spune dacă e ceva netrimis.
+   */
+  const backToEntry = async () => {
+    if (dirty.current) await persist()
+
+    const rows = userId ? await listDrafts(createClient(), userId) : []
+    setDrafts(rows)
+    startFresh()
+    // ciorna tocmai salvată e în listă: o vezi acolo, cu contorul
+    setChoosing(rows.length > 0)
+  }
+
   const saveForLater = async () => {
     if (!userId) return
     await persist()
@@ -462,6 +498,9 @@ ${text}` : text,
       const result = await publishStory(supabase, userId, { stops: usableStops, trip })
       // doar ciorna asta: celelalte două sloturi rămân ale lor
       if (draftId) await deleteDraft(supabase, draftId)
+      // publicat: nu mai e nimic de salvat, iar flush-ul de la demontare
+      // ar recrea ciorna tocmai ștearsă
+      dirty.current = false
 
       const gained = await fetchPointsSince(supabase, userId, since)
       toast(gained > 0 ? `Publicat! +${gained} puncte 🎉` : 'Publicat! 🎉')
@@ -545,13 +584,26 @@ ${text}` : text,
     <div className="min-h-screen bg-[#F8F7F5]">
       <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 sticky top-0 z-30">
         <div className="max-w-[680px] mx-auto flex items-center gap-3">
-          <Link
-            href="/"
-            aria-label="Înapoi"
-            className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0"
-          >
-            <ArrowLeft size={16} className="text-[#6B6B6B]" />
-          </Link>
+          {/* din selectorul de ciorne ieșim din flux; dintr-o poveste
+              deschisă urcăm doar un nivel, salvând întâi */}
+          {choosing ? (
+            <Link
+              href="/"
+              aria-label="Înapoi"
+              className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0"
+            >
+              <ArrowLeft size={16} className="text-[#6B6B6B]" />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={backToEntry}
+              aria-label="Înapoi"
+              className="w-8 h-8 rounded-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] flex items-center justify-center flex-shrink-0"
+            >
+              <ArrowLeft size={16} className="text-[#6B6B6B]" />
+            </button>
+          )}
           <div className="min-w-0">
             <div className="font-outfit text-[16px] font-semibold text-[#0F0F0F]">Povestește</div>
             <div className="text-[11px] text-[#9B9B9B]">Începe cu un loc. Restul e opțional.</div>
