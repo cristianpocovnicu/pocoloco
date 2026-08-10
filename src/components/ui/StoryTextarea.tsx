@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Maximize2 } from 'lucide-react'
 import CharCounter from '@/components/ui/CharCounter'
 import EmojiButton from '@/components/ui/EmojiButton'
 import FocusComposer from '@/components/ui/FocusComposer'
+import { useAutosize } from '@/components/ui/useAutosize'
 
 /** Cât de înalt pornește câmpul. Douăsprezece rânduri sunt un ecran de scris. */
 const DEFAULT_ROWS = 12
@@ -40,12 +41,7 @@ export default function StoryTextarea({
   const [caret, setCaret] = useState<number | null>(null)
 
   // și la montare, nu doar la tastare: un draft reluat vine cu text gata scris
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [value, focusMode])
+  useAutosize(ref, value, focusMode)
 
   const openFocus = () => {
     setCaret(ref.current?.selectionStart ?? null)
@@ -78,8 +74,10 @@ export default function StoryTextarea({
           onChange={e => onChange(e.target.value.slice(0, max))}
           rows={minRows}
           placeholder={placeholder}
+          // `--rows` ține locul lui `rows` acolo unde field-sizing îl ignoră
+          style={{ '--rows': minRows } as React.CSSProperties}
           // dreapta lăsată liberă pentru cele două butoane din colț
-          className={`w-full border border-[rgba(0,0,0,0.08)] rounded-xl pl-4 pr-[76px] py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed overflow-hidden ${
+          className={`autosize w-full border border-[rgba(0,0,0,0.08)] rounded-xl pl-4 pr-[76px] py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed overflow-hidden ${
             tone === 'muted' ? 'bg-[#F8F7F5] focus:bg-white' : 'bg-white'
           }`}
         />

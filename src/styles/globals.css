@@ -166,3 +166,20 @@ html, body {
     max-width: 68ch;
   }
 }
+
+/*
+ * Câmpurile de scris care cresc odată cu textul.
+ *
+ * Chrome și Edge (123+) o fac în motorul de aranjare, fără JavaScript: nici
+ * o măsurătoare, nici un reset de înălțime, deci nici un salt de pagină în
+ * timp ce omul scrie. `rows` nu mai contează când `field-sizing` e activ,
+ * de aceea înălțimea de pornire se dă din `--rows`.
+ *
+ * Unde nu există (Safari, Firefox), rămâne măsurătoarea din useAutosize.
+ */
+@supports (field-sizing: content) {
+  .autosize {
+    field-sizing: content;
+    min-height: calc(var(--rows, 12) * 1lh + 1.5rem + 2px);
+  }
+}

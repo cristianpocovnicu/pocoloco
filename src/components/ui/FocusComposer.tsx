@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import CharCounter from '@/components/ui/CharCounter'
+import { useAutosize } from '@/components/ui/useAutosize'
 import EmojiButton from '@/components/ui/EmojiButton'
 
 /** Sub atâția pixeli lipsă din fereastră, diferența nu e o tastatură. */
@@ -77,12 +78,7 @@ export default function FocusComposer({
   const ref = useRef<HTMLTextAreaElement>(null)
 
   // crește odată cu textul; scrollul îl face containerul, nu câmpul
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [value])
+  useAutosize(ref, value)
 
   // deschis din mijlocul unei fraze: cursorul rămâne unde era
   useEffect(() => {
@@ -151,7 +147,8 @@ export default function FocusComposer({
           // aceeași măsură și aceeași înălțime de rând ca la citit (.story-text),
           // dar fără `pre-line`: într-o textarea ar înghiți spațiile duble
           // chiar în timp ce omul le scrie
-          className="block w-full max-w-[68ch] mx-auto bg-transparent border-0 outline-none resize-none text-[15px] leading-[1.75] text-[#0F0F0F] placeholder:text-[#9B9B9B] overflow-hidden"
+          style={{ '--rows': 6 } as React.CSSProperties}
+          className="autosize block w-full max-w-[68ch] mx-auto bg-transparent border-0 outline-none resize-none text-[15px] leading-[1.75] text-[#0F0F0F] placeholder:text-[#9B9B9B] overflow-hidden"
         />
       </div>
 
