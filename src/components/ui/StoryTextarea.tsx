@@ -16,6 +16,8 @@ type Props = {
   /** titlul din modul concentrat — acolo nu mai e nimic altceva pe ecran */
   title: string
   label?: string
+  /** un rând de lămurire sub etichetă */
+  hint?: string
   max?: number
   minRows?: number
   /** fundalul câmpului: alb pe fundal colorat, gri pe card alb */
@@ -33,7 +35,7 @@ type Props = {
  * nu observă că s-a schimbat ecranul.
  */
 export default function StoryTextarea({
-  value, onChange, placeholder, title, label,
+  value, onChange, placeholder, title, label, hint,
   max = 20000, minRows = DEFAULT_ROWS, tone = 'white',
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -64,8 +66,10 @@ export default function StoryTextarea({
   return (
     <div>
       {label && (
-        <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">{label}</label>
+        <label className="text-[12px] font-medium text-[#6B6B6B] block mb-0.5">{label}</label>
       )}
+      {hint && <p className="text-[11px] text-[#9B9B9B] leading-relaxed mb-1.5">{hint}</p>}
+      {label && !hint && <div className="mb-1" />}
 
       <div className="relative">
         <textarea

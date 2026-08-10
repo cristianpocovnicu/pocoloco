@@ -95,6 +95,8 @@ function CreateScreen() {
   const creating = useRef(false)
   /** țările se deduc singure până pune omul mâna pe câmp */
   const countriesTouched = useRef(false)
+  /** la fel și numele: sugestia stă în câmp până o schimbă cineva */
+  const titleTouched = useRef(false)
   /** ca „Publică" să poată duce la câmpurile care mai lipsesc */
   const nameRef = useRef<HTMLInputElement>(null)
   const storyRef = useRef<HTMLDivElement>(null)
@@ -211,6 +213,7 @@ function CreateScreen() {
   /** Numele poveștii, editabil direct din antet. */
   const setOutingName = (name: string) => {
     dirty.current = true
+    titleTouched.current = true
     setTrip(prev => ({ ...prev, title: name }))
   }
 
@@ -430,6 +433,24 @@ function CreateScreen() {
    * să le deducem o dată, deci le ținem la zi — dar prima editare le trece
    * definitiv în grija omului, inclusiv dacă le golește.
    */
+  /**
+   * Numele nu se cere, se propune.
+   *
+   * În momentul în care al doilea loc transformă povestea într-o ieșire,
+   * câmpul de nume apărea gol, cu un buton „Folosește «X»" alături — un
+   * pas în plus pentru ceva ce știam deja din geografia locurilor. Acum
+   * sugestia intră direct în câmp, editabilă. Prima atingere a omului o
+   * trece definitiv în grija lui, ca la țări.
+   *
+   * Ramura journey vine deja cu titlul pus de rutare, deci n-o atinge:
+   * condiția e „câmpul e gol".
+   */
+  useEffect(() => {
+    if (!showDetails || titleTouched.current || trip.title.trim() || !nameSuggestion) return
+    setTrip(prev => ({ ...prev, title: nameSuggestion }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDetails, nameSuggestion])
+
   const suggestedCountries = suggestTripCountries(usableStops).join('|')
   useEffect(() => {
     if (countriesTouched.current) return
@@ -669,7 +690,7 @@ ${text}` : text,
         {!choosing && showDetails && (
           <div className="mb-4">
             <label className="text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide block mb-1.5">
-              Povestea ta
+              Numele poveștii
             </label>
             <input
               ref={nameRef}
@@ -715,7 +736,8 @@ ${text}` : text,
             <StoryField
               value={trip.description}
               onChange={value => { dirty.current = true; setTrip(prev => ({ ...prev, description: value })) }}
-              label="Povestea ta (opțional)"
+              label="Povestea întregii ieșiri (opțional)"
+              hint="Poveștile locurilor rămân la fiecare loc."
               placeholder="Cum a fost, per total? Buget, vreme, transport, ce ai face diferit — tot ce ține de întreaga ieșire."
             />
           </div>

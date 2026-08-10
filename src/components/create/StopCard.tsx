@@ -109,6 +109,13 @@ export default function StopCard({
               {stop.content.trim() && <MessageSquare size={11} />}
             </span>
           </div>
+
+          {/* Când cardul se strânge — la adăugarea locului următor —
+              iconița singură nu liniștește pe nimeni că textul mai e
+              acolo. Începutul poveștii, da. */}
+          {storySummary && (
+            <p className="text-[11px] text-[#6B6B6B] truncate mt-0.5">{storySummary}</p>
+          )}
         </div>
       </button>
 
@@ -161,10 +168,13 @@ export default function StopCard({
         </div>
       )}
 
+      {/* Fără autofocus. Primul card îl avea de pe vremea când el era
+          intrarea în flux; de la rutare (iterația 7) intrarea are câmpul ei,
+          iar aici focusul programatic doar sare ecranul și scoate tastatura
+          peste o pagină pe care omul n-a apucat s-o vadă. */}
       <SubjectPicker
         stop={stop}
         onChange={onChange}
-        autoFocus={index === 0 && !stopHasSubject(stop)}
         placeholder={placeholder}
       />
 
