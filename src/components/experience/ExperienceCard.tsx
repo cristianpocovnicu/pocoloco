@@ -25,6 +25,8 @@ const initials = (name: string) =>
 
 type Props = {
   experience: LocationExperience
+  /** locul de pe care se citește cardul — pentru recalcularea copertelor */
+  locationId: string
   /** aduse de pe server: firul e complet încă din primul HTML */
   comments: CommentWithAuthor[]
 }
@@ -39,7 +41,7 @@ type Props = {
  * Textul apare trunchiat, cu link spre pagina proprie a experienței. Așa
  * aceleași cuvinte nu concurează în index cu pagina lor.
  */
-export default function ExperienceCard({ experience, comments }: Props) {
+export default function ExperienceCard({ experience, comments, locationId }: Props) {
   const [revealed, setRevealed] = useState(false)
   const [viewer, setViewer] = useState<CommentViewer>(null)
   const [myVote, setMyVote] = useState<VoteType | null>(null)
@@ -128,6 +130,8 @@ export default function ExperienceCard({ experience, comments }: Props) {
                 onClick={() => setEditing({
                   id: row.id,
                   kind: 'place_visit',
+                  images: row.images || [],
+                  location_id: locationId,
                   content: row.content,
                   visited_year: row.visited_year,
                   visited_month: row.visited_month,

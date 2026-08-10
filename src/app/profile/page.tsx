@@ -337,6 +337,8 @@ export default function ProfilePage() {
                       onClick={() => setEditing({
                         id: exp.id,
                         kind: exp.kind === 'activity' ? 'activity' : 'place_visit',
+                        images: exp.images || [],
+                        location_id: exp.location?.id ?? null,
                         content: exp.content,
                         visited_year: exp.visited_year,
                         visited_month: exp.visited_month,

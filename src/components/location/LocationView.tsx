@@ -358,6 +358,7 @@ export default async function LocationView({
                 key={experience.id}
                 experience={experience}
                 comments={comments[experience.id] || []}
+                locationId={location.id}
               />
             ))
           )}

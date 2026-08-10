@@ -190,6 +190,19 @@ export function PhotoEditor({
     if (fileRef.current) fileRef.current.value = ''
   }
 
+  /**
+   * Scoaterea unei poze din listă.
+   *
+   * Confirmăm doar la ultima: o experiență fără poze e legitimă, dar
+   * „rămâne fără nicio poză" e o schimbare de altă natură decât „mai scot
+   * una din patru". Fișierul rămâne în bucket, ca peste tot — curățenia
+   * lui e o treabă separată.
+   */
+  const remove = (index: number) => {
+    if (images.length === 1 && !window.confirm('Scoți și ultima poză? Experiența rămâne fără imagini.')) return
+    onChange(images.filter((_, idx) => idx !== index))
+  }
+
   return (
     <div>
       <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={add} />
@@ -197,13 +210,29 @@ export function PhotoEditor({
         {images.map((url, i) => (
           <div key={url} className="relative w-[calc(33%-7px)] aspect-square rounded-xl overflow-hidden">
             <img src={url} alt="" className="w-full h-full object-cover" />
+
             <button type="button"
-              onClick={() => onChange(images.filter((_, idx) => idx !== i))}
+              onClick={() => remove(i)}
               aria-label="Scoate poza"
               className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center"
             >
               <X size={12} className="text-white" />
             </button>
+
+            {/* prima poză e coperta: în feed apare mare, iar călătoria își
+                ia auto-coperta de la ea. De aceea se poate schimba. */}
+            {i === 0 ? (
+              <span className="absolute bottom-1.5 left-1.5 text-[9px] font-outfit font-bold uppercase tracking-wide bg-black/55 text-white px-1.5 py-0.5 rounded-full">
+                Prima
+              </span>
+            ) : (
+              <button type="button"
+                onClick={() => onChange([url, ...images.filter((_, idx) => idx !== i)])}
+                className="absolute bottom-1.5 left-1.5 text-[9px] font-outfit font-semibold bg-black/55 text-white px-1.5 py-0.5 rounded-full"
+              >
+                Fă-o prima
+              </button>
+            )}
           </div>
         ))}
 

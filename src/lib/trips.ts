@@ -163,3 +163,59 @@ export async function setTripSaved(
     .eq('trip_id', tripId)
   return error?.message ?? null
 }
+
+/**
+ * Recalculează copertele automate după ce dispar poze dintr-o experiență.
+ *
+ * `apply_trip_auto_cover` (migrarea 33) se oprește dacă ieșirea are deja o
+ * copertă — și pe bună dreptate: n-are voie să calce peste una aleasă de
+ * om. Dar când coperta *automată* arată exact spre o poză tocmai scoasă,
+ * rămâne un URL mort. Atunci o golim întâi și lăsăm funcția să aleagă din
+ * nou; `cover_source = 'user'` nu se atinge niciodată, chiar dacă poza
+ * dispare din experiență — fișierul rămâne în storage, iar alegerea a fost
+ * a autorului.
+ */
+export async function refreshAutoCovers(
+  supabase: SupabaseClient,
+  { experienceId, locationId, removed }: {
+    experienceId: string
+    locationId: string | null
+    removed: string[]
+  }
+): Promise<void> {
+  if (removed.length === 0) return
+
+  try {
+    // opririle care trimit spre experiența asta: fie direct (activitate),
+    // fie prin locul ei
+    const filter = locationId
+      ? `experience_id.eq.${experienceId},location_id.eq.${locationId}`
+      : `experience_id.eq.${experienceId}`
+
+    const { data: stops } = await supabase
+      .from('trip_locations')
+      .select('trip_id')
+      .or(filter)
+
+    const tripIds = Array.from(new Set((stops || []).map((s: { trip_id: string }) => s.trip_id)))
+    if (tripIds.length === 0) return
+
+    const { data: trips } = await supabase
+      .from('trips')
+      .select('id, cover_image, cover_source')
+      .in('id', tripIds)
+
+    for (const trip of (trips || []) as { id: string; cover_image: string | null; cover_source: string | null }[]) {
+      const orphan = trip.cover_source === 'auto'
+        && !!trip.cover_image
+        && removed.includes(trip.cover_image)
+
+      if (!orphan) continue
+
+      await supabase.from('trips').update({ cover_image: null }).eq('id', trip.id)
+      await supabase.rpc('apply_trip_auto_cover', { p_trip_id: trip.id })
+    }
+  } catch {
+    // coperta e cosmetică: n-are voie să strice salvarea experienței
+  }
+}

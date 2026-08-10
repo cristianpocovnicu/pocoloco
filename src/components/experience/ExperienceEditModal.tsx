@@ -4,13 +4,17 @@ import { Loader2, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import CharCounter from '@/components/ui/CharCounter'
 import { useToast } from '@/components/ui/Toast'
-import { PeriodPicker } from '@/components/create/StopSections'
+import { PeriodPicker, PhotoEditor } from '@/components/create/StopSections'
+import { refreshAutoCovers } from '@/lib/trips'
 import { ratingLabels, ratingScales, type ExperienceKind } from '@/lib/activities'
 
 export type EditableExperience = {
   id: string
   /** decide întrebările: la o activitate se notează altceva */
   kind?: ExperienceKind | null
+  images?: string[]
+  /** de el atârnă recalcularea copertei automate a călătoriilor */
+  location_id?: string | null
   content: string
   visited_year?: number | null
   visited_month?: number | null
@@ -69,6 +73,7 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
   const [ratingExp, setRatingExp] = useState(experience.rating_experience || 0)
   const [ratingAccess, setRatingAccess] = useState(experience.rating_access || 0)
   const [ratingCrowd, setRatingCrowd] = useState(experience.rating_crowd || 0)
+  const [images, setImages] = useState<string[]>(experience.images || [])
   const labels = ratingLabels(experience.kind || 'place_visit')
   const scales = ratingScales(experience.kind || 'place_visit')
   const [saving, setSaving] = useState(false)
@@ -93,6 +98,7 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
 
     const patch = {
       content: content.trim(),
+      images,
       visited_year: visitedYear,
       visited_month: visitedYear ? visitedMonth : null,
       // notarea e opțională peste tot; 0 în ecran înseamnă NULL în bază
@@ -112,6 +118,21 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
       setSaving(false)
       return
     }
+
+    /*
+     * Pozele scoase pot fi chiar coperta automată a unei călătorii. Le
+     * dăm mai departe ca să se recalculeze; coperta aleasă de om rămâne
+     * neatinsă, iar fișierele rămân în bucket (curățenia lor e separată).
+     *
+     * Punctele nu se ating: bonusul pentru imagini s-a acordat la
+     * publicare, iar triggerul de puncte ascultă doar `update of status`.
+     */
+    const removed = (experience.images || []).filter(url => !images.includes(url))
+    await refreshAutoCovers(supabase, {
+      experienceId: experience.id,
+      locationId: experience.location_id ?? null,
+      removed,
+    })
 
     toast('Experiență actualizată')
     onSaved({ ...experience, ...patch })
@@ -150,6 +171,14 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
           />
           <div className="mb-4">
             <CharCounter value={content} max={20000} />
+          </div>
+
+          {/* Aceeași componentă ca la scris: același bucket, aceeași cale,
+              aceeași limită de 5. Cazul principal e „am publicat și am
+              uitat pozele" — până acum nu exista drum înapoi. */}
+          <div className="mb-5">
+            <p className="text-[12px] font-medium text-[#6B6B6B] mb-2">Poze</p>
+            <PhotoEditor images={images} onChange={setImages} />
           </div>
 
           <div className="bg-[#F8F7F5] rounded-2xl border border-[rgba(0,0,0,0.08)] px-4 py-1 mb-5">
