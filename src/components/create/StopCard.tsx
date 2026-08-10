@@ -79,6 +79,11 @@ export default function StopCard({
     ? '★'.repeat(stop.ratingExperience) + '☆'.repeat(5 - stop.ratingExperience)
     : null
 
+  // aceeași întrebare și pe secțiune, și în capul modului concentrat
+  const storyLabel = stopHasSubject(stop)
+    ? `Cum a fost la ${stopLabel(stop)}?`
+    : 'Povestea și ponturile'
+
   const storySummary = stop.content.trim()
     ? `${stop.content.trim().slice(0, 60)}${stop.content.trim().length > 60 ? '…' : ''}`
     : stop.tips.length > 0 ? `${stop.tips.length} ponturi` : null
@@ -207,14 +212,14 @@ export default function StopCard({
           </Section>
 
           <Section
-            label={stopHasSubject(stop) ? `Cum a fost la ${stopLabel(stop)}?` : 'Povestea și ponturile'}
+            label={storyLabel}
             hint="Ce ar fi bine să știe altcineva"
             summary={storySummary}
             open={open.story}
             onToggle={() => onToggleSection('story')}
             alwaysOpen={alwaysOpen}
           >
-            <StoryEditor stop={stop} onChange={onChange} />
+            <StoryEditor stop={stop} onChange={onChange} title={storyLabel} />
           </Section>
         </div>
       )}

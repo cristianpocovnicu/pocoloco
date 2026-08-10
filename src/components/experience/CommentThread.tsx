@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CornerDownRight, Loader2, Pencil, Send, Trash2 } from 'lucide-react'
@@ -18,6 +18,7 @@ import VoteButtons from './VoteButtons'
 import HiddenByVotes from './HiddenByVotes'
 import { fetchMyCommentVotes, netScore, HIDE_THRESHOLD_COMMENT, type VoteType } from '@/lib/votes'
 import { useToast } from '@/components/ui/Toast'
+import EmojiButton from '@/components/ui/EmojiButton'
 import { useAuthGate } from '@/components/auth/AuthGate'
 
 export type CommentViewer = { id: string; isAdmin: boolean } | null
@@ -44,6 +45,8 @@ export default function CommentThread({
   const [viewer, setViewer] = useState<CommentViewer>(viewerProp ?? null)
   const [loading, setLoading] = useState(initialComments === undefined)
   const [draft, setDraft] = useState('')
+  const draftRef = useRef<HTMLInputElement>(null)
+  const replyRef = useRef<HTMLInputElement>(null)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [replyDraft, setReplyDraft] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -291,6 +294,7 @@ export default function CommentThread({
       <CornerDownRight size={14} className="text-[#9B9B9B] mt-2 flex-shrink-0" />
       <div className="flex-1 flex items-center gap-2">
         <input
+          ref={replyRef}
           value={replyDraft}
           onChange={e => setReplyDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submit(replyDraft, parentId) }}
@@ -298,6 +302,7 @@ export default function CommentThread({
           placeholder="Scrie un răspuns..."
           className="flex-1 bg-white border border-[rgba(0,0,0,0.08)] rounded-full px-3 py-2 text-[13px] outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B]"
         />
+        <EmojiButton value={replyDraft} onChange={setReplyDraft} target={replyRef} max={10000} />
         <button
           onClick={() => submit(replyDraft, parentId)}
           disabled={sending || !replyDraft.trim()}
@@ -346,12 +351,14 @@ export default function CommentThread({
       {/* Comentariu nou */}
       <div className="flex items-center gap-2">
         <input
+          ref={draftRef}
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submit(draft, null) }}
           placeholder={viewer ? 'Scrie un comentariu...' : 'Intră în cont ca să comentezi'}
-          className="flex-1 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-3.5 py-2 text-[13px] outline-none focus:border-[#E8440A] focus:bg-white transition-colors placeholder:text-[#9B9B9B]"
+          className="flex-1 min-w-0 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-full px-3.5 py-2 text-[13px] outline-none focus:border-[#E8440A] focus:bg-white transition-colors placeholder:text-[#9B9B9B]"
         />
+        <EmojiButton value={draft} onChange={setDraft} target={draftRef} max={10000} />
         <button
           onClick={() => submit(draft, null)}
           disabled={sending || !draft.trim()}

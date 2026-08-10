@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react'
 import { CalendarDays, Camera, ChevronDown, Loader2, Plus, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
-import CharCounter from '@/components/ui/CharCounter'
+import StoryTextarea from '@/components/ui/StoryTextarea'
 import { ratingLabels, ratingScales } from '@/lib/activities'
 import { MONTHS_RO, currentYear, selectableYears } from '@/lib/period'
 import type { StopDraft } from '@/lib/story'
@@ -318,24 +318,26 @@ export function RatingEditor({
 export function StoryEditor({
   stop,
   onChange,
+  title,
 }: {
   stop: StopDraft
   onChange: (patch: Partial<StopDraft>) => void
+  /** ce scrie în capul modului concentrat — aceeași întrebare ca pe secțiune */
+  title: string
 }) {
   const toggleTip = (tip: string) =>
     onChange({ tips: stop.tips.includes(tip) ? stop.tips.filter(t => t !== tip) : [...stop.tips, tip] })
 
   return (
     <div>
-      <textarea
-        value={stop.content}
-        onChange={e => onChange({ content: e.target.value.slice(0, 20000) })}
-        rows={5}
-        placeholder="Ce ai văzut, ce ai mâncat, ce ai fi vrut să știi dinainte — despre locul ăsta."
-        className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] transition-colors placeholder:text-[#9B9B9B] resize-none leading-relaxed"
-      />
       <div className="mb-3">
-        <CharCounter value={stop.content} max={20000} />
+        <StoryTextarea
+          value={stop.content}
+          onChange={content => onChange({ content })}
+          title={title}
+          tone="muted"
+          placeholder="Ce ai văzut, ce ai mâncat, ce ai fi vrut să știi dinainte — despre locul ăsta."
+        />
       </div>
 
       <div className="text-[12px] font-medium text-[#6B6B6B] mb-2">Ponturi rapide — opțional</div>

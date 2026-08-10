@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
-import CharCounter from '@/components/ui/CharCounter'
+import StoryTextarea from '@/components/ui/StoryTextarea'
 import { useToast } from '@/components/ui/Toast'
 import { PeriodPicker, PhotoEditor } from '@/components/create/StopSections'
 import { refreshAutoCovers } from '@/lib/trips'
@@ -162,15 +162,15 @@ export default function ExperienceEditModal({ experience, onClose, onSaved }: Pr
             </div>
           )}
 
-          <label className="text-[12px] font-medium text-[#6B6B6B] block mb-1.5">Povestea ta</label>
-          <textarea
-            value={content}
-            onChange={e => setContent(e.target.value.slice(0, 20000))}
-            rows={6}
-            className="w-full bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#E8440A] focus:bg-white transition-colors resize-none leading-relaxed"
-          />
           <div className="mb-4">
-            <CharCounter value={content} max={20000} />
+            <StoryTextarea
+              value={content}
+              onChange={setContent}
+              label="Povestea ta"
+              title="Povestea ta"
+              tone="muted"
+              placeholder="Ce ai văzut, ce ai mâncat, ce ai fi vrut să știi dinainte."
+            />
           </div>
 
           {/* Aceeași componentă ca la scris: același bucket, aceeași cale,
