@@ -7,7 +7,8 @@ import BottomNav from '@/components/layout/BottomNav'
 import FollowButton from '@/components/profile/FollowButton'
 import { createClient } from '@/lib/supabase-client'
 import { colorFor, initialsOf } from '@/lib/profiles'
-import { getFollowCounts, isFollowing } from '@/lib/follows'
+import { getFollowCounts, isFollowing, type FollowListKind } from '@/lib/follows'
+import FollowListSheet from '@/components/profile/FollowListSheet'
 import { fetchBadges, type EarnedBadge } from '@/lib/badges'
 import BadgeGrid from '@/components/profile/BadgeGrid'
 import SavedLocationList from '@/components/profile/SavedLocationList'
@@ -52,6 +53,8 @@ export default function PublicProfilePage() {
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [counts, setCounts] = useState({ followers: 0, following: 0 })
+  /** ce listă de oameni e deschisă, dacă vreuna */
+  const [list, setList] = useState<FollowListKind | null>(null)
   const [badges, setBadges] = useState<EarnedBadge[]>([])
   const [visited, setVisited] = useState<SavedLocation[]>([])
   const [followsThem, setFollowsThem] = useState<boolean | undefined>(undefined)
@@ -196,14 +199,31 @@ export default function PublicProfilePage() {
             {[
               { value: experiences.length, label: 'experiențe' },
               { value: visited.length, label: 'locuri vizitate' },
-              { value: counts.followers, label: 'urmăritori' },
-              { value: counts.following, label: 'urmărește' },
-            ].map((s, i, arr) => (
-              <div key={s.label} className={`flex-1 text-center ${i < arr.length - 1 ? 'border-r border-[rgba(0,0,0,0.08)]' : ''}`}>
-                <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{formatCount(s.value)}</div>
-                <div className="text-[11px] text-[#9B9B9B] leading-tight">{s.label}</div>
-              </div>
-            ))}
+              { value: counts.followers, label: 'urmăritori', list: 'followers' as const },
+              { value: counts.following, label: 'urmărește', list: 'following' as const },
+            ].map((s, i, arr) => {
+              const inner = (
+                <>
+                  <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{formatCount(s.value)}</div>
+                  <div className="text-[11px] text-[#9B9B9B] leading-tight">{s.label}</div>
+                </>
+              )
+              const className = `flex-1 text-center ${i < arr.length - 1 ? 'border-r border-[rgba(0,0,0,0.08)]' : ''}`
+
+              // cifrele de follow duc în listă; celelalte două n-au unde
+              return s.list ? (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => setList(s.list)}
+                  className={`${className} hover:bg-[#F8F7F5] transition-colors`}
+                >
+                  {inner}
+                </button>
+              ) : (
+                <div key={s.label} className={className}>{inner}</div>
+              )
+            })}
           </div>
         </div>
 
@@ -301,6 +321,15 @@ export default function PublicProfilePage() {
           )}
         </div>
       </div>
+      {list && (
+        <FollowListSheet
+          userId={profile.id}
+          kind={list}
+          title={list === 'followers' ? 'Urmăritori' : 'Urmărește'}
+          onClose={() => setList(null)}
+        />
+      )}
+
       <BottomNav />
     </main>
   )

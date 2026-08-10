@@ -46,6 +46,59 @@ export async function fetchFollowingIds(
   }
 }
 
+export type FollowListKind = 'followers' | 'following'
+
+export type FollowListUser = MiniProfile & {
+  is_guide: boolean | null
+  bio: string | null
+}
+
+/**
+ * Cine urmărește pe cine, ca listă de oameni.
+ *
+ * Publică pentru oricine, inclusiv nelogat: politica `follows_select_all`
+ * (migrarea 4) e `using (true)`, iar profilurile sunt oricum publice.
+ *
+ * Două cereri, nu un join: `follows` n-are cheie străină declarată spre
+ * `profiles`, deci PostgREST n-ar putea atașa relația — aceeași soluție
+ * ca peste tot unde apare perechea asta.
+ */
+export async function fetchFollowList(
+  supabase: SupabaseClient,
+  userId: string,
+  kind: FollowListKind,
+  limit = 200
+): Promise<FollowListUser[]> {
+  try {
+    // urmăritori: cine mă are pe mine ca țintă; urmăriți: invers
+    const [column, target] = kind === 'followers'
+      ? ['following_id', 'follower_id']
+      : ['follower_id', 'following_id']
+
+    const { data, error } = await supabase
+      .from('follows')
+      .select(target)
+      .eq(column, userId)
+      .limit(limit)
+
+    if (error || !data) return []
+
+    const ids = (data as unknown as Record<string, string>[])
+      .map(row => row[target])
+      .filter(Boolean)
+    if (ids.length === 0) return []
+
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username, full_name, avatar_url, is_guide, bio')
+      .in('id', ids)
+
+    return (profiles || []) as FollowListUser[]
+  } catch {
+    return []
+  }
+}
+
 export async function isFollowing(
   supabase: SupabaseClient,
   followerId: string,

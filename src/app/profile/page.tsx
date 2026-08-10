@@ -12,6 +12,8 @@ import SavedLocationList from '@/components/profile/SavedLocationList'
 import TravelMap from '@/components/profile/TravelMap'
 import PointsProgress from '@/components/profile/PointsProgress'
 import UnfinishedStory from '@/components/profile/UnfinishedStory'
+import FollowListSheet from '@/components/profile/FollowListSheet'
+import type { FollowListKind } from '@/lib/follows'
 import SavedTripList from '@/components/profile/SavedTripList'
 import { fetchSavedLocations, fetchSavedTrips, setLocationSaveStatus, type SavedLocation, type SavedTrip } from '@/lib/saves'
 import { fetchBadges, type Badge, type EarnedBadge } from '@/lib/badges'
@@ -60,6 +62,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [counts, setCounts] = useState({ followers: 0, following: 0 })
+  /** ce listă de oameni e deschisă, dacă vreuna */
+  const [list, setList] = useState<FollowListKind | null>(null)
   const [badges, setBadges] = useState<{ earned: EarnedBadge[]; locked: Badge[] }>({ earned: [], locked: [] })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState(0)
@@ -218,16 +222,33 @@ export default function ProfilePage() {
 
           <div className="flex pt-4 border-t border-[rgba(0,0,0,0.08)]">
             {[
-              { value: formatCount(experiences.length), label: 'experiențe' },
-              { value: formatCount(visited.length), label: 'locuri vizitate' },
-              { value: formatCount(counts.followers), label: 'urmăritori' },
-              { value: formatCount(counts.following), label: 'urmăresc' },
-            ].map((s, i, arr) => (
-              <div key={s.label} className={`flex-1 text-center ${i < arr.length - 1 ? 'border-r border-[rgba(0,0,0,0.08)]' : ''}`}>
-                <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{s.value}</div>
-                <div className="text-[11px] text-[#9B9B9B] leading-tight">{s.label}</div>
-              </div>
-            ))}
+              { value: experiences.length, label: 'experiențe' },
+              { value: visited.length, label: 'locuri vizitate' },
+              { value: counts.followers, label: 'urmăritori', list: 'followers' as const },
+              { value: counts.following, label: 'urmăresc', list: 'following' as const },
+            ].map((s, i, arr) => {
+              const inner = (
+                <>
+                  <div className="font-outfit text-[18px] font-bold text-[#0F0F0F]">{formatCount(s.value)}</div>
+                  <div className="text-[11px] text-[#9B9B9B] leading-tight">{s.label}</div>
+                </>
+              )
+              const className = `flex-1 text-center ${i < arr.length - 1 ? 'border-r border-[rgba(0,0,0,0.08)]' : ''}`
+
+              // cifrele de follow duc în listă; celelalte două n-au unde
+              return s.list ? (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => setList(s.list)}
+                  className={`${className} hover:bg-[#F8F7F5] transition-colors`}
+                >
+                  {inner}
+                </button>
+              ) : (
+                <div key={s.label} className={className}>{inner}</div>
+              )
+            })}
           </div>
         </div>
 
@@ -397,6 +418,15 @@ export default function ProfilePage() {
             setExperiences(prev => prev.map(e => (e.id === updated.id ? { ...e, ...updated } : e)))
             setEditing(null)
           }}
+        />
+      )}
+
+      {list && (
+        <FollowListSheet
+          userId={profile.id}
+          kind={list}
+          title={list === 'followers' ? 'Urmăritori' : 'Urmărește'}
+          onClose={() => setList(null)}
         />
       )}
 

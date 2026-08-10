@@ -332,8 +332,10 @@ function CreateScreen() {
   const saveForLater = async () => {
     if (!userId) return
     await persist()
-    toast('Salvat. O găsești în profil când vrei să continui.')
-    router.push('/profile')
+    // acasă, nu în profil: cine se oprește din scris se întoarce la citit.
+    // Ciorna se găsește din „Povestește" și, ca a doua cale, din profil.
+    toast('Salvat! Îl găsești oricând în Povestește.')
+    router.push('/')
   }
 
   /** Durata a scăzut sub o zi deja aleasă: golim ziua, cu un mesaj. */

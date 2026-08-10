@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react'
 import { Home, Search, Users, Plus, Bell, Settings, ShieldCheck, BookOpen } from 'lucide-react'
 import { cn, formatCount } from '@/lib/utils'
 import { createClient } from '@/lib/supabase-client'
-import { getFollowCounts } from '@/lib/follows'
+import { getFollowCounts, type FollowListKind } from '@/lib/follows'
+import FollowListSheet from '@/components/profile/FollowListSheet'
 import { useUnreadNotifications } from '@/lib/useUnreadNotifications'
 import { useModerationQueue } from '@/lib/useModerationQueue'
 import UserMenu from './UserMenu'
@@ -28,6 +29,9 @@ export default function Sidebar() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   const [counts, setCounts] = useState<{ followers: number; following: number } | null>(null)
+  const [meId, setMeId] = useState<string | null>(null)
+  /** ce listă de oameni e deschisă, dacă vreuna */
+  const [list, setList] = useState<FollowListKind | null>(null)
   const unread = useUnreadNotifications()
   const toModerate = useModerationQueue(isAdmin)
 
@@ -37,12 +41,14 @@ export default function Sidebar() {
       setLoggedIn(!!id)
       if (!id) {
         setIsAdmin(false)
+        setMeId(null)
         setCounts(null)
         return
       }
       // linkul spre dashboard apare doar pentru conturile cu rol de admin
       const { data } = await supabase.from('profiles').select('role').eq('id', id).maybeSingle()
       setIsAdmin(data?.role === 'admin')
+      setMeId(id)
       setCounts(await getFollowCounts(supabase, id))
     }
     supabase.auth.getUser().then(({ data }) => loadUser(data.user?.id))
@@ -135,17 +141,34 @@ export default function Sidebar() {
 
       <div className="px-6 py-5 border-t border-[rgba(0,0,0,0.08)]">
         {counts && (
-          <Link href="/profile" className="flex items-center gap-3 mb-3 px-1.5">
-            <span className="text-[12px] text-[#6B6B6B]">
+          <div className="flex items-center gap-3 mb-3 px-1.5">
+            <button
+              type="button"
+              onClick={() => setList('followers')}
+              className="text-[12px] text-[#6B6B6B] hover:text-[#0F0F0F] transition-colors"
+            >
               <strong className="font-outfit font-semibold text-[#0F0F0F]">{formatCount(counts.followers)}</strong> urmăritori
-            </span>
-            <span className="text-[12px] text-[#6B6B6B]">
+            </button>
+            <button
+              type="button"
+              onClick={() => setList('following')}
+              className="text-[12px] text-[#6B6B6B] hover:text-[#0F0F0F] transition-colors"
+            >
               <strong className="font-outfit font-semibold text-[#0F0F0F]">{formatCount(counts.following)}</strong> urmăresc
-            </span>
-          </Link>
+            </button>
+          </div>
         )}
         <UserMenu sidebar />
       </div>
+
+      {list && meId && (
+        <FollowListSheet
+          userId={meId}
+          kind={list}
+          title={list === 'followers' ? 'Urmăritori' : 'Urmărești'}
+          onClose={() => setList(null)}
+        />
+      )}
     </aside>
   )
 }
