@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MessageCircle, Pencil, Star, Trash2 } from 'lucide-react'
@@ -38,8 +38,12 @@ type Props = {
  * editare —, dar primește tot conținutul ca props: textul, notele și
  * pozele sunt în HTML-ul servit, nu aduse după hidratare.
  *
- * Textul apare trunchiat, cu link spre pagina proprie a experienței. Așa
- * aceleași cuvinte nu concurează în index cu pagina lor.
+ * Textul e întreg în HTML și tăiat doar din CSS: „Citește tot" îl
+ * dezvăluie pe loc, fără să te scoată din pagină. A fost o vreme trunchiat
+ * pe server, cu link spre pagina experienței, ca aceleași cuvinte să nu
+ * concureze în index cu pagina lor — dar lectura comparativă (trei păreri
+ * despre același loc, una sub alta) valorează mai mult decât riscul mic de
+ * duplicare hub/sursă, iar canonical-urile rămân corecte pe ambele pagini.
  */
 export default function ExperienceCard({ experience, comments, locationId }: Props) {
   const [revealed, setRevealed] = useState(false)
@@ -49,6 +53,21 @@ export default function ExperienceCard({ experience, comments, locationId }: Pro
   const [row, setRow] = useState(experience)
   const [deleted, setDeleted] = useState(false)
   const [commentCount, setCommentCount] = useState(experience.comment_count)
+  const [expanded, setExpanded] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  /**
+   * La restrângere, un text lung dispare de sub degete și rămâi în mijlocul
+   * paginii, fără reper. Dacă începutul cardului a ieșit din ecran, îl
+   * aducem înapoi.
+   */
+  const toggle = () => {
+    const next = !expanded
+    setExpanded(next)
+    if (!next && cardRef.current && cardRef.current.getBoundingClientRect().top < 0) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
 
   // cine se uită se află abia în browser: pagina e aceeași pentru toți
   useEffect(() => {
@@ -92,8 +111,8 @@ export default function ExperienceCard({ experience, comments, locationId }: Pro
 
   const period = formatVisitedPeriod(row.visited_year, row.visited_month)
   const text = row.content.trim()
+  // sub prag n-are ce fi expandat: butonul nici nu apare
   const long = text.length > PREVIEW
-  const shown = long ? `${text.slice(0, PREVIEW).trimEnd()}…` : text
 
   const ratings = [
     { label: LABELS.experience, value: row.rating_experience },
@@ -102,7 +121,7 @@ export default function ExperienceCard({ experience, comments, locationId }: Pro
   ].filter(rating => rating.value)
 
   return (
-    <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden mb-3">
+    <div ref={cardRef} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden mb-3 scroll-mt-16">
       <div className="p-3.5">
         <div className="flex items-center gap-2 mb-3">
           <Link
@@ -182,10 +201,35 @@ export default function ExperienceCard({ experience, comments, locationId }: Pro
           </div>
         )}
 
-        <p className="text-[13px] text-[#6B6B6B] leading-relaxed whitespace-pre-line">{shown}</p>
+        {/* Textul e întreg în DOM, tăiat doar vizual: expandarea comută o
+            clasă, nu aduce nimic de pe server. Așa lectura comparativă se
+            face aici, fără drum dus-întors. */}
+        <p
+          className={`text-[13px] text-[#6B6B6B] leading-relaxed whitespace-pre-line ${
+            long && !expanded ? 'line-clamp-[7]' : ''
+          }`}
+        >
+          {text}
+        </p>
+
         {long && (
-          <Link href={`/experience/${row.id}`} className="text-[12px] text-[#5B4FCF] font-medium mt-1 inline-block">
-            Citește tot →
+          <button
+            type="button"
+            onClick={toggle}
+            className="text-[12px] text-[#5B4FCF] font-medium mt-1 inline-block"
+          >
+            {expanded ? 'Restrânge' : 'Citește tot'}
+          </button>
+        )}
+
+        {/* pagina proprie rămâne destinația pentru vot și comentarii în
+            contextul lor, nu pentru citit */}
+        {expanded && (
+          <Link
+            href={`/experience/${row.id}`}
+            className="text-[12px] text-[#9B9B9B] font-medium mt-1 ml-3 inline-block"
+          >
+            Vezi experiența →
           </Link>
         )}
 
