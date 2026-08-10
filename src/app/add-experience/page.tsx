@@ -9,11 +9,13 @@ import StopCard from '@/components/create/StopCard'
 import SubjectPicker from '@/components/create/SubjectPicker'
 import StoryField from '@/components/create/StoryField'
 import OutingCard from '@/components/create/OutingCard'
+import DraftPicker from '@/components/create/DraftPicker'
 import AddToTripDialog from '@/components/trip/AddToTripDialog'
 import {
+  createDraft,
   deleteDraft,
   emptyTrip,
-  loadDraft,
+  listDrafts,
   newStop,
   publishStory,
   saveDraft,
@@ -21,8 +23,9 @@ import {
   stopLabel,
   suggestTripCountries,
   suggestTripTitle,
+  MAX_DRAFTS,
+  type DraftRow,
   type StopDraft,
-  type StoryDraft,
   type StoryMode,
   type TripDraft,
 } from '@/lib/story'
@@ -74,12 +77,22 @@ function CreateScreen() {
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  /** draftul găsit la intrare, cât timp userul nu s-a hotărât */
-  const [pendingDraft, setPendingDraft] = useState<StoryDraft | null>(null)
+  /**
+   * Poveștile neterminate găsite la intrare. Cât timp lista e afișată,
+   * userul n-a ales încă pe care lucrează — restul ecranului nu se
+   * randează, iar autosave-ul stă.
+   */
+  const [drafts, setDrafts] = useState<DraftRow[]>([])
+  const [choosing, setChoosing] = useState(false)
+  /** pe ce draft scriem acum; null = încă nu s-a deschis niciun slot */
+  const [draftId, setDraftId] = useState<string | null>(null)
+  const [draftError, setDraftError] = useState<string | null>(null)
   /** publicat singur — atunci întrebăm dacă face parte dintr-o ieșire veche */
   const [published, setPublished] = useState<{ id: string; locationId: string | null; title: string } | null>(null)
 
   const dirty = useRef(false)
+  /** un singur insert per poveste nouă, oricâte salvări s-ar suprapune */
+  const creating = useRef(false)
   /** țările se deduc singure până pune omul mâna pe câmp */
   const countriesTouched = useRef(false)
   /** ca „Publică" să poată duce la câmpurile care mai lipsesc */
@@ -100,10 +113,21 @@ function CreateScreen() {
       const preLocationId = searchParams.get('location')
       const preName = searchParams.get('name')
 
-      const saved = await loadDraft(supabase, user.id)
-      // venit de pe pagina unui loc: pornim direct cu locul ăla
-      if (saved && !preLocationId) {
-        setPendingDraft(saved)
+      const saved = await listDrafts(supabase, user.id)
+      setDrafts(saved)
+
+      // venit din profil, pe o ciornă anume: n-are rost s-o mai alegem o dată
+      const wanted = searchParams.get('draft')
+      const picked = wanted ? saved.find(row => row.id === wanted) : undefined
+      if (picked) {
+        resume(picked)
+        setLoading(false)
+        return
+      }
+
+      // venit de pe pagina unui loc: locul ales bate lista de ciorne
+      if (saved.length > 0 && !preLocationId) {
+        setChoosing(true)
         setLoading(false)
         return
       }
@@ -121,16 +145,48 @@ function CreateScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  /**
+   * Salvarea, pe slotul curent.
+   *
+   * Primul apel dintr-o poveste nouă deschide slotul și îi ține minte
+   * id-ul; restul scriu peste el. `creating` oprește două inserturi când
+   * debounce-ul apucă să pornească de două ori înainte ca primul să
+   * răspundă — altfel o poveste ar ocupa două sloturi din trei.
+   */
+  const persist = useCallback(async (): Promise<string | null> => {
+    if (!userId) return null
+    const payload = { stops, trip, mode: mode || 'review' }
+    const supabase = createClient()
+
+    if (draftId) {
+      await saveDraft(supabase, draftId, payload)
+      return draftId
+    }
+
+    if (creating.current) return null
+    creating.current = true
+    const id = await createDraft(supabase, userId, payload)
+    creating.current = false
+
+    if (id) {
+      setDraftId(id)
+      setDraftError(null)
+      // contorul din bară numără sloturi ocupate; ăsta tocmai s-a ocupat
+      setDrafts(prev => [{ id, updatedAt: new Date().toISOString(), draft: payload }, ...prev])
+    } else {
+      // limita din migrarea 46, sau o eroare de rețea: nu inventăm succesul
+      setDraftError('Nu am putut salva ciorna. Ai deja ' + MAX_DRAFTS + ' povești neterminate?')
+    }
+    return id
+  }, [userId, stops, trip, mode, draftId])
+
   // ---- salvare automată, la 1,5s după ultima atingere
   useEffect(() => {
-    if (!userId || loading || pendingDraft || !dirty.current) return
+    if (!userId || loading || choosing || !dirty.current) return
 
-    const timer = setTimeout(() => {
-      void saveDraft(createClient(), userId, { stops, trip, mode: mode || 'review' })
-    }, SAVE_DEBOUNCE_MS)
-
+    const timer = setTimeout(() => { void persist() }, SAVE_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [stops, trip, mode, userId, loading, pendingDraft])
+  }, [stops, trip, mode, userId, loading, choosing, persist])
 
   const patchStop = useCallback((key: string, patch: Partial<StopDraft>) => {
     dirty.current = true
@@ -224,8 +280,9 @@ function CreateScreen() {
     })
   }
 
-  const resume = () => {
-    if (!pendingDraft) return
+  const resume = (row: DraftRow) => {
+    const pendingDraft = row.draft
+    setDraftId(row.id)
     setStops(pendingDraft.stops)
     setTrip(pendingDraft.trip)
     // draftul nu ține selecția Google; plasa de siguranță e pentru
@@ -236,25 +293,45 @@ function CreateScreen() {
     // deci nu mai există „unde erai"
     if (pendingDraft.trip.countries.length > 0) countriesTouched.current = true
     setExpandedKey(pendingDraft.stops[pendingDraft.stops.length - 1]?.key || null)
-    setPendingDraft(null)
+    setChoosing(false)
   }
 
-  const discard = async () => {
-    if (!window.confirm('Ștergi ce ai început? Nu se mai poate recupera.')) return
-    if (userId) await deleteDraft(createClient(), userId)
+  /**
+   * Șterge o poveste neterminată.
+   *
+   * Ce se pierde e strict ciorna: experiențele deja publicate din ea nu
+   * există — draftul se șterge la publicare, deci un draft rămas n-a
+   * produs încă nimic public. Pozele urcate rămân în bucket (curățenia lor
+   * e o treabă separată, vezi §5).
+   */
+  const removeDraft = async (row: DraftRow) => {
+    const label = row.draft.trip.title.trim() || stopLabel(row.draft.stops[0])
+    if (!window.confirm(`Ștergi „${label}"? Ciorna dispare definitiv; nimic publicat nu se atinge.`)) return
+
+    await deleteDraft(createClient(), row.id)
+    const rest = drafts.filter(d => d.id !== row.id)
+    setDrafts(rest)
+    if (rest.length === 0) startFresh()
+  }
+
+  /** Ecran gol, fără slot deschis: primul autosave îl va crea. */
+  const startFresh = () => {
+    setDraftId(null)
     setStops([])
     setTrip(emptyTrip())
     setMode(null)
     setRegionAsPlace(null)
     countriesTouched.current = false
+    dirty.current = false
     setEntryStop(newStop())
     setExpandedKey(null)
-    setPendingDraft(null)
+    setChoosing(false)
+    setDraftError(null)
   }
 
   const saveForLater = async () => {
     if (!userId) return
-    await saveDraft(createClient(), userId, { stops, trip, mode: mode || 'review' })
+    await persist()
     toast('Salvat. O găsești în profil când vrei să continui.')
     router.push('/profile')
   }
@@ -381,7 +458,8 @@ ${text}` : text,
       const supabase = createClient()
       // cardurile fără subiect n-au ce căuta în itinerar: ar fi poziții goale
       const result = await publishStory(supabase, userId, { stops: usableStops, trip })
-      await deleteDraft(supabase, userId)
+      // doar ciorna asta: celelalte două sloturi rămân ale lor
+      if (draftId) await deleteDraft(supabase, draftId)
 
       const gained = await fetchPointsSince(supabase, userId, since)
       toast(gained > 0 ? `Publicat! +${gained} puncte 🎉` : 'Publicat! 🎉')
@@ -422,7 +500,7 @@ ${text}` : text,
   )
 
   // nimic ales încă: o singură întrebare pe ecran
-  if (!pendingDraft && mode === null) return (
+  if (!choosing && mode === null) return (
     <div className="min-h-screen bg-[#F8F7F5]">
       <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 sticky top-0 z-30">
         <div className="max-w-[680px] mx-auto flex items-center gap-3">
@@ -480,26 +558,18 @@ ${text}` : text,
       </div>
 
       <div className="max-w-[680px] mx-auto px-5 pt-4 pb-40">
-        {pendingDraft && (
-          <div className="bg-white border border-[rgba(232,68,10,0.25)] rounded-2xl p-4 mb-4">
-            <p className="font-outfit text-[14px] font-semibold text-[#0F0F0F] mb-0.5">
-              Ai o poveste neterminată
-            </p>
-            <p className="text-[13px] text-[#6B6B6B] mb-3">
-              „{stopLabel(pendingDraft.stops[0])}&rdquo;
-              {pendingDraft.stops.length > 1 && ` + încă ${pendingDraft.stops.length - 1}`}
-            </p>
-            <div className="flex gap-2">
-              <button type="button"
-                onClick={resume}
-                className="bg-[#E8440A] text-white font-outfit text-[13px] font-semibold px-4 py-2 rounded-full"
-              >
-                Continuă
-              </button>
-              <button type="button" onClick={discard} className="text-[13px] text-[#6B6B6B] font-medium px-3">
-                Începe altceva
-              </button>
-            </div>
+        {choosing && (
+          <DraftPicker
+            drafts={drafts}
+            onResume={resume}
+            onDelete={removeDraft}
+            onNew={startFresh}
+          />
+        )}
+
+        {draftError && (
+          <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.25)] rounded-xl px-4 py-3 mb-4">
+            <p className="text-[13px] text-[#6B6B6B]">{draftError}</p>
           </div>
         )}
 
@@ -536,7 +606,7 @@ ${text}` : text,
         )}
 
         {/* ------- ce ține de ieșirea întreagă, deasupra locurilor ------- */}
-        {!pendingDraft && showDetails && (
+        {!choosing && showDetails && (
           <div className="mb-4">
             <label className="text-[11px] font-outfit font-semibold text-[#9B9B9B] uppercase tracking-wide block mb-1.5">
               Povestea ta
@@ -580,7 +650,7 @@ ${text}` : text,
           </div>
         )}
 
-        {!pendingDraft && showDetails && (
+        {!choosing && showDetails && (
           <div className="mb-4" ref={storyRef}>
             <StoryField
               value={trip.description}
@@ -591,13 +661,13 @@ ${text}` : text,
           </div>
         )}
 
-        {!pendingDraft && showDetails && (
+        {!choosing && showDetails && (
           <div className="mb-4">
             <OutingCard trip={trip} stops={stops} onChange={changeTrip} />
           </div>
         )}
 
-        {!pendingDraft && showDetails && (
+        {!choosing && showDetails && (
           <div className="mb-2">
             <p className="text-[12px] font-medium text-[#6B6B6B]">
               {mode === 'journey' ? 'Adaugă locurile prin care ai trecut' : 'Locurile'}
@@ -620,7 +690,7 @@ ${text}` : text,
           </div>
         )}
 
-        {!pendingDraft && (
+        {!choosing && (
           <>
             <div className="flex flex-col gap-2.5">
               {stops.map((stop, index) => (
@@ -670,7 +740,7 @@ ${text}` : text,
         )}
       </div>
 
-      {!pendingDraft && (
+      {!choosing && (
         <div
           className="fixed bottom-0 left-0 right-0 bg-white border-t border-[rgba(0,0,0,0.08)] px-5 pt-3 z-40"
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
@@ -695,6 +765,13 @@ ${text}` : text,
             </button>
           </div>
 
+          {/* câte sloturi sunt ocupate — apare doar când mai e cel puțin
+              unul luat, ca să nu numere singurătatea */}
+          {drafts.length > 1 && (
+            <p className="max-w-[680px] mx-auto text-[11px] text-[#9B9B9B] mt-1.5">
+              {drafts.length} din {MAX_DRAFTS} povești neterminate
+            </p>
+          )}
         </div>
       )}
     </div>

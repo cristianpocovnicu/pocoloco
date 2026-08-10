@@ -88,6 +88,7 @@ nu schimbă nimic, doar citesc schema.
 | 43 | `supabase/migrations/043_20260810_tips_reset.sql` | remapează ponturile vechi din `experiences.tips` pe setul nou; scoate evaluările |
 | 44 | `supabase/migrations/044_20260811_admin_location_notifications.sql` | clopoțelul anunță adminii la fiecare loc intrat în așteptare + backfill |
 | 45 | `supabase/migrations/045_20260811_auto_approve_google_places.sql` | locurile cu `google_place_id` se aprobă automat; moderarea rămâne pentru cele scrise de mână |
+| 46 | `supabase/migrations/046_20260811_three_drafts.sql` | până la 3 povești neterminate per user: indexul unic iese, limita o ține un trigger |
 
 Migrările 21–26 formează o serie: rulează-le în ordinea numerelor. Detalii
 în [`economia-de-puncte.md`](./economia-de-puncte.md).

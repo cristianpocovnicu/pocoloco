@@ -208,25 +208,60 @@ export function suggestTripCountries(stops: StopDraft[]): string[] {
  * iar utilizatorul poate reveni pe draft. Curățenia e o problemă separată,
  * de rezolvat cu un job periodic peste storage.objects.
  */
-export async function loadDraft(
+/** Câte povești neterminate poate ține un user deodată (migrarea 46). */
+export const MAX_DRAFTS = 3
+
+export type DraftRow = {
+  id: string
+  updatedAt: string
+  draft: StoryDraft
+}
+
+/**
+ * Toate poveștile neterminate ale userului, cea atinsă ultima prima.
+ *
+ * Până la migrarea 46 exista un singur draft per user și un index unic
+ * care garanta asta. Acum sunt până la trei, iar fiecare sesiune de scris
+ * lucrează pe un id anume — de aceea lista întoarce id-urile, nu doar
+ * conținutul.
+ */
+export async function listDrafts(
   supabase: SupabaseClient,
   userId: string
-): Promise<StoryDraft | null> {
+): Promise<DraftRow[]> {
   try {
     const { data, error } = await supabase
       .from('creation_drafts')
-      .select('payload')
+      .select('id, payload, updated_at')
       .eq('user_id', userId)
-      .maybeSingle()
+      .order('updated_at', { ascending: false })
+      .limit(MAX_DRAFTS)
 
     // tabelul vine din migrarea 29; fără el fluxul merge, doar că nu ține minte
-    if (error || !data) return null
+    if (error || !data) return []
 
-    const payload = (data as { payload: unknown }).payload as StoryDraft | null
+    return (data as { id: string; payload: unknown; updated_at: string }[])
+      .map(row => {
+        const draft = normalizeDraft(row.payload)
+        return draft ? { id: row.id, updatedAt: row.updated_at, draft } : null
+      })
+      .filter((row): row is DraftRow => row !== null)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Un payload din bază, adus la forma pe care o așteaptă ecranul.
+ *
+ * Un draft vechi sau stricat poate avea null unde codul așteaptă string;
+ * normalizăm la intrare, nu la fiecare folosire.
+ */
+export function normalizeDraft(raw: unknown): StoryDraft | null {
+  try {
+    const payload = raw as StoryDraft | null
     if (!payload || !Array.isArray(payload.stops) || payload.stops.length === 0) return null
 
-    // un payload vechi sau stricat poate avea null unde codul așteaptă
-    // string; normalizăm la intrare, nu la fiecare folosire
     const base = emptyTrip()
     // transportType: cheia dinaintea listei, poate exista în drafturi vechi
     const saved = (payload.trip || {}) as Partial<TripDraft> & { transportType?: unknown }
@@ -262,26 +297,56 @@ export async function loadDraft(
   }
 }
 
+/**
+ * Salvează peste un draft anume.
+ *
+ * Nu mai e upsert pe user: cu trei sloturi, „draftul userului" nu mai
+ * identifică nimic — o sesiune de scris știe pe care lucrează.
+ */
 export async function saveDraft(
   supabase: SupabaseClient,
-  userId: string,
+  draftId: string,
   draft: StoryDraft
 ): Promise<void> {
   try {
     await supabase
       .from('creation_drafts')
-      .upsert(
-        { user_id: userId, payload: draft as unknown as Record<string, unknown> },
-        { onConflict: 'user_id' }
-      )
+      .update({ payload: draft as unknown as Record<string, unknown> })
+      .eq('id', draftId)
   } catch {
     // salvarea automată nu are voie să deranjeze pe nimeni
   }
 }
 
-export async function deleteDraft(supabase: SupabaseClient, userId: string): Promise<void> {
+/**
+ * Deschide un slot nou și întoarce id-ul lui.
+ *
+ * `null` înseamnă că baza a refuzat — cel mai probabil limita din
+ * migrarea 46, verificată acolo ca să nu se poată ocoli din client.
+ */
+export async function createDraft(
+  supabase: SupabaseClient,
+  userId: string,
+  draft: StoryDraft
+): Promise<string | null> {
   try {
-    await supabase.from('creation_drafts').delete().eq('user_id', userId)
+    const { data, error } = await supabase
+      .from('creation_drafts')
+      .insert({ user_id: userId, payload: draft as unknown as Record<string, unknown> })
+      .select('id')
+      .single()
+
+    if (error || !data) return null
+    return (data as { id: string }).id
+  } catch {
+    return null
+  }
+}
+
+/** Șterge un draft anume — niciodată „toate ale userului". */
+export async function deleteDraft(supabase: SupabaseClient, draftId: string): Promise<void> {
+  try {
+    await supabase.from('creation_drafts').delete().eq('id', draftId)
   } catch {
     // idem
   }
