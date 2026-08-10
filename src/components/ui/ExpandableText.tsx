@@ -1,5 +1,6 @@
 'use client'
 import { useRef, useState, type ReactNode, type RefObject } from 'react'
+import RichText from '@/components/ui/RichText'
 
 /**
  * Clasele de trunchiere, scrise întregi.
@@ -70,8 +71,11 @@ export default function ExpandableText({
 
   return (
     <div ref={own}>
+      {/* formatarea pe care o scriu oamenii din reflex: **îngroșat**,
+          *înclinat*, titluri cu diez. Textul rămâne text — nu se
+          construiește HTML nicăieri pe drum. */}
       <p className={`whitespace-pre-line ${className} ${long && !expanded ? CLAMP[lines] : ''}`}>
-        {body}
+        <RichText text={body} />
       </p>
 
       {long && (

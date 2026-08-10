@@ -14,10 +14,11 @@ import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, tripTransports } from '@/lib/utils'
 import { linkifyPlaces } from '@/lib/linkify'
 import ExpandableText from '@/components/ui/ExpandableText'
+import PhotoStack from '@/components/ui/PhotoStack'
+import RichText from '@/components/ui/RichText'
 import { activityLabel } from '@/lib/activities'
 import CoverImage from '@/components/ui/CoverImage'
 import TripKindBadge from '@/components/trip/TripKindBadge'
-import Image from 'next/image'
 import { useToast } from '@/components/ui/Toast'
 import {
   fetchItinerary, groupByDay, isTripSaved, setTripSaved,
@@ -177,6 +178,14 @@ export default function TripPage() {
     .map(place => ({ id: place.id, name: place.name }))
   const days = groupByDay(itinerary)
 
+  /** Recenzia autorului la oprirea asta, dacă a scris una. */
+  const stopReview = (item: ItineraryItem) =>
+    (item.location ? stopExperiences[item.location.id] : null) || null
+
+  /** Pozele opririi: ale recenziei la un loc, ale activității altfel. */
+  const stopPhotos = (item: ItineraryItem): string[] =>
+    stopReview(item)?.images || item.experience?.images || []
+
   return (
     <main className="pb-nav bg-[#F0EDE8] min-h-screen">
       <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 py-3.5 flex items-center gap-3 sticky top-0 z-30">
@@ -309,7 +318,9 @@ export default function TripPage() {
                     {segment.text}
                   </Link>
                 ) : (
-                  <span key={i}>{segment.text}</span>
+                  // formatarea se aplică peste bucățile rămase: numele
+                  // legate sunt deja evidențiate, n-au nevoie de îngroșare
+                  <RichText key={i} text={segment.text} />
                 )
               )}
             </p>
@@ -342,66 +353,74 @@ export default function TripPage() {
                       // ref-ul e pe oprirea întreagă: la restrângere ne
                       // întoarcem la numele ei, nu la mijlocul textului
                       <div key={item.id} ref={stopRef(item.id)} className="scroll-mt-16">
-                        <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5 flex items-start gap-3">
-                          <div className="relative w-11 h-11 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {item.location?.cover_image
-                              ? <CoverImage src={item.location.cover_image} sizes="44px" />
-                              : item.experience?.images?.[0]
-                                ? <CoverImage src={item.experience.images[0]} sizes="44px" />
-                                : item.experience
-                                  ? <span className="text-lg">🪂</span>
-                                  : <MapPin size={17} className="text-[#9B9B9B]" />}
+                        <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden">
+                          <div className="p-3.5 pb-3 flex items-start gap-3">
+                            <div className="relative w-11 h-11 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {item.location?.cover_image
+                                ? <CoverImage src={item.location.cover_image} sizes="44px" />
+                                : item.experience?.images?.[0]
+                                  ? <CoverImage src={item.experience.images[0]} sizes="44px" />
+                                  : item.experience
+                                    ? <span className="text-lg">🪂</span>
+                                    : <MapPin size={17} className="text-[#9B9B9B]" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {/* numele opririi e capul de afiș al cardului:
+                                  cu zece opriri una sub alta, el e ce se
+                                  scanează, nu textul de dedesubt */}
+                              {item.location ? (
+                                <Link href={`/location/${item.location.id}`} className="font-outfit text-[16px] font-semibold text-[#0F0F0F] hover:text-[#E8440A] transition-colors">
+                                  {item.location.name}
+                                </Link>
+                              ) : item.experience ? (
+                                /* oprire de tip activitate: titlul ei ține loc de nume */
+                                <Link href={`/experience/${item.experience.id}`} className="font-outfit text-[16px] font-semibold text-[#0F0F0F] hover:text-[#E8440A] transition-colors">
+                                  {item.experience.title || 'Activitate'}
+                                </Link>
+                              ) : (
+                                <span className="font-outfit text-[16px] font-semibold text-[#9B9B9B]">Oprire ștearsă</span>
+                              )}
+                              <p className="text-[11px] text-[#9B9B9B] mt-0.5">
+                                {item.experience
+                                  ? [activityLabel(item.experience.activity_category), item.experience.activity_area]
+                                      .filter(Boolean).join(' · ') || 'Activitate'
+                                  : `${item.location?.city || 'Fără oraș'}${item.location?.country ? `, ${item.location.country}` : ''}`}
+                              </p>
+                              {item.note && (
+                                <div className="mt-2 bg-[#F8F7F5] rounded-lg px-2.5 py-1.5">
+                                  <ExpandableText
+                                    text={item.note}
+                                    threshold={STOP_PREVIEW}
+                                    lines={3}
+                                    className="text-[12px] text-[#6B6B6B] leading-relaxed"
+                                    actionClassName="text-[11px] text-[#5B4FCF]"
+                                    scrollTo={stopRef(item.id)}
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            {item.location ? (
-                              <Link href={`/location/${item.location.id}`} className="font-outfit text-[14px] font-semibold text-[#0F0F0F] hover:text-[#E8440A] transition-colors">
-                                {item.location.name}
-                              </Link>
-                            ) : item.experience ? (
-                              /* oprire de tip activitate: titlul ei ține loc de nume */
-                              <Link href={`/experience/${item.experience.id}`} className="font-outfit text-[14px] font-semibold text-[#0F0F0F] hover:text-[#E8440A] transition-colors">
-                                {item.experience.title || 'Activitate'}
-                              </Link>
-                            ) : (
-                              <span className="font-outfit text-[14px] font-semibold text-[#9B9B9B]">Oprire ștearsă</span>
-                            )}
-                            <p className="text-[11px] text-[#9B9B9B]">
-                              {item.experience
-                                ? [activityLabel(item.experience.activity_category), item.experience.activity_area]
-                                    .filter(Boolean).join(' · ') || 'Activitate'
-                                : `${item.location?.city || 'Fără oraș'}${item.location?.country ? `, ${item.location.country}` : ''}`}
-                            </p>
-                            {item.note && (
-                              <div className="mt-1.5 bg-[#F8F7F5] rounded-lg px-2.5 py-1.5">
-                                <ExpandableText
-                                  text={item.note}
-                                  threshold={STOP_PREVIEW}
-                                  lines={3}
-                                  className="text-[12px] text-[#6B6B6B] leading-relaxed"
-                                  actionClassName="text-[11px] text-[#5B4FCF]"
-                                />
-                              </div>
-                            )}
 
-                            {/* review-ul autorului despre oprirea asta */}
-                            {item.location && stopExperiences[item.location.id] && (
-                              /* nu mai e link pe tot blocul: „Citește tot" e un
-                                 buton, iar un buton n-are ce căuta într-un <a>.
-                                 Lectura se face aici; numele opririi rămâne
-                                 drumul spre pagina locului. */
-                              <div className="mt-2.5 border border-[rgba(232,68,10,0.2)] bg-[#FFFBF9] rounded-xl p-2.5">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                  <PenLine size={11} className="text-[#E8440A]" />
-                                  <span className="text-[11px] font-outfit font-semibold text-[#E8440A]">
+                          {/* Recenzia autorului despre oprirea asta.
+                              Antetul — cine a scris și cu ce note — stă pe
+                              banda lui, ca pe pagina locului: fără
+                              delimitare, primul rând de poveste părea încă
+                              un rând de metadate. */}
+                          {stopReview(item) && (
+                            <div className="px-3.5 pb-3">
+                              <div className="border border-[rgba(232,68,10,0.18)] rounded-xl overflow-hidden">
+                                <div className="bg-[#FFF1EA] px-2.5 py-1.5 flex items-center gap-1.5">
+                                  <PenLine size={11} className="text-[#E8440A] flex-shrink-0" />
+                                  <span className="text-[11px] font-outfit font-semibold text-[#E8440A] truncate">
                                     Ce a scris {author?.full_name?.split(' ')[0] || 'autorul'}
                                   </span>
-                                  {!!stopExperiences[item.location!.id].rating_experience && (
-                                    <div className="flex gap-0.5 ml-auto">
+                                  {!!stopReview(item)!.rating_experience && (
+                                    <div className="flex gap-0.5 ml-auto flex-shrink-0">
                                       {[1, 2, 3, 4, 5].map(n => (
                                         <Star
                                           key={n}
-                                          size={9}
-                                          className={n <= (stopExperiences[item.location!.id].rating_experience || 0)
+                                          size={10}
+                                          className={n <= (stopReview(item)!.rating_experience || 0)
                                             ? 'text-amber-400 fill-amber-400'
                                             : 'text-gray-200 fill-gray-200'}
                                         />
@@ -409,39 +428,30 @@ export default function TripPage() {
                                     </div>
                                   )}
                                 </div>
-                                <ExpandableText
-                                  text={stopExperiences[item.location.id].content}
-                                  threshold={STOP_PREVIEW}
-                                  lines={3}
-                                  className="text-[12px] text-[#6B6B6B] leading-relaxed"
-                                  actionClassName="text-[11px] text-[#5B4FCF]"
-                                  scrollTo={stopRefs.current[item.id]}
-                                  footer={
-                                    <Link
-                                      href={`/experience/${stopExperiences[item.location.id].id}`}
-                                      className="text-[11px] text-[#9B9B9B] font-medium mt-1 ml-3 inline-block"
-                                    >
-                                      Vezi experiența →
-                                    </Link>
-                                  }
-                                />
-                                {(stopExperiences[item.location.id].images?.length || 0) > 0 && (
-                                  <div className="flex gap-1.5 mt-2">
-                                    {stopExperiences[item.location.id].images!.slice(0, 3).map((img, idx) => (
-                                      <Image
-                                        key={idx}
-                                        src={img}
-                                        alt=""
-                                        width={48}
-                                        height={48}
-                                        className="w-12 h-12 rounded-lg object-cover"
-                                      />
-                                    ))}
-                                  </div>
-                                )}
+                                <div className="bg-[#FFFBF9] px-2.5 py-2">
+                                  <ExpandableText
+                                    text={stopReview(item)!.content}
+                                    threshold={STOP_PREVIEW}
+                                    lines={3}
+                                    className="text-[12px] text-[#6B6B6B] leading-relaxed"
+                                    actionClassName="text-[11px] text-[#5B4FCF]"
+                                    scrollTo={stopRef(item.id)}
+                                    footer={
+                                      <Link
+                                        href={`/experience/${stopReview(item)!.id}`}
+                                        className="text-[11px] text-[#9B9B9B] font-medium mt-1 ml-3 inline-block"
+                                      >
+                                        Vezi experiența →
+                                      </Link>
+                                    }
+                                  />
+                                </div>
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
+
+                          {/* pozele, ca în feed: prima mare, restul dedesubt */}
+                          <PhotoStack images={stopPhotos(item)} className="" />
                         </div>
 
                         {/* doar firul care leagă opririle; transportul nu se

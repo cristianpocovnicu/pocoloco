@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import CoverImage from '@/components/ui/CoverImage'
+import PhotoStack from '@/components/ui/PhotoStack'
 import { Bookmark, Eye, MessageCircle } from 'lucide-react'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo } from '@/lib/utils'
@@ -69,60 +70,6 @@ export function toFeedCardItem(item: FeedItem): FeedCardItem {
     commentCount: item.commentCount,
     saveCount: item.saveCount,
   }
-}
-
-/**
- * Pozele unei postări, în felul în care le-ar aranja orice rețea care
- * trăiește din imagini: prima mare, restul dedesubt.
- *
- * Înainte erau trei timbre de 80px sub text — un card despre o grădină de
- * 70.000 m² arăta ca un anunț mic. Poza oprește scroll-ul, textul e
- * recompensa; deci poza urcă deasupra textului și primește toată lățimea.
- *
- * Aspectul e mai scund pe telefon (3:2) decât pe desktop (16:10): pe 375px
- * o poză 16:10 ar fi împins tot textul sub fold.
- *
- * Toate trec prin `CoverImage`, adică `next/image`: lazy implicit, srcset
- * generat, iar `sizes` spune browserului cât de mare e de fapt locul —
- * fără el ar descărca fișierul original.
- */
-function FeedPhotos({ images }: { images: string[] }) {
-  const [hero, ...rest] = images
-  if (!hero) return null
-
-  // peste 3 rămase, ultimul pătrat devine „încă N" — două se văd întregi
-  const tiles = rest.length > 3 ? rest.slice(0, 3) : rest
-  const hidden = rest.length > 3 ? rest.length - 2 : 0
-
-  return (
-    <div className="mt-1">
-      <div className="relative w-full aspect-[3/2] md:aspect-[16/10] bg-[#F8F7F5]">
-        <CoverImage src={hero} sizes="(max-width: 768px) 100vw, 680px" />
-      </div>
-
-      {/* exact două poze: a doua ia toată lățimea, la jumătate de înălțime */}
-      {rest.length === 1 && (
-        <div className="relative w-full aspect-[3/1] md:aspect-[16/5] bg-[#F8F7F5] mt-1">
-          <CoverImage src={rest[0]} sizes="(max-width: 768px) 100vw, 680px" />
-        </div>
-      )}
-
-      {rest.length > 1 && (
-        <div className="grid grid-cols-3 gap-1 mt-1">
-          {tiles.map((image, index) => (
-            <div key={image} className="relative aspect-square bg-[#F8F7F5]">
-              <CoverImage src={image} sizes="(max-width: 768px) 33vw, 226px" />
-              {hidden > 0 && index === tiles.length - 1 && (
-                <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
-                  <span className="font-outfit text-[18px] font-bold text-white">+{hidden}</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
 }
 
 type Props = {
@@ -197,7 +144,7 @@ export default function FeedCard({ item, myVote = null, variant = 'default' }: P
         </div>
 
         {/* poza înaintea textului: ea oprește scroll-ul */}
-        <FeedPhotos images={item.images} />
+        <PhotoStack images={item.images} />
 
         {(item.title || item.text) && (
           <div className="px-3.5 pt-3 pb-2.5">

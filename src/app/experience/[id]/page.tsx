@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import RichText from '@/components/ui/RichText'
 import { MapPin, Star } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import BackButton from '@/components/ui/BackButton'
@@ -166,7 +167,9 @@ export default async function ExperiencePage({ params }: { params: { id: string 
 
         <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
           {/* textul integral: pagina asta e originalul, nu rezumatul */}
-          <p className="story-text text-[14px] text-[#0F0F0F]">{experience.content}</p>
+          <p className="story-text text-[14px] text-[#0F0F0F]">
+          <RichText text={experience.content} />
+        </p>
 
           {experience.tips && experience.tips.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
