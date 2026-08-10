@@ -24,12 +24,6 @@ type Props = {
   onRegionPicked?: (name: string, asPlace: Partial<StopDraft>) => void
   /** textul din câmpul gol, diferit la intrare față de cardurile de loc */
   placeholder?: string
-  /**
-   * Căutarea pornește scrisă. Vine din „Harta amintirilor": numele zonei
-   * dedus din pozele proprii. Sugestia rămâne sugestie — se șterge ca orice
-   * text tastat.
-   */
-  initialQuery?: string
 }
 
 /**
@@ -45,9 +39,8 @@ export default function SubjectPicker({
   autoFocus,
   onRegionPicked,
   placeholder,
-  initialQuery,
 }: Props) {
-  const [query, setQuery] = useState(initialQuery || '')
+  const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
   const [dbResults, setDbResults] = useState<DbLocation[]>([])
   const [placeResults, setPlaceResults] = useState<PlaceSuggestion[]>([])

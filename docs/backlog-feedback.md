@@ -52,6 +52,29 @@ când poveștile lungi devin regula, nu excepția.
 
 ## NU
 
+### Harta amintirilor din EXIF
+
+**Construit și retras, august 2026** (livrat pe 10, scos pe 12).
+
+O secțiune de pe profilul propriu citea GPS-ul și data din EXIF-ul pozelor
+alese de om, direct în browser, le grupa în „locuri vizitate" și le punea
+pe hartă.
+
+**Motivul retragerii:** GPS-ul din EXIF lipsește pe majoritatea pozelor
+reale — sincronizările, editările și transferurile îl elimină. Testul pe
+date reale a produs o hartă goală, iar un feature de descoperire care nu
+descoperă nimic e mai rău decât lipsa lui.
+
+**Învățăminte dacă se redeschide:**
+
+1. Are sens doar într-o **aplicație nativă**, cu acces real la galerie —
+   acolo metadatele sunt intacte, în Photos API, nu în fișierul exportat.
+2. Sau cu un **fallback care nu depinde de GPS** — dar atunci nu mai e
+   „magie", e formular.
+
+Codul e în istoricul git, la commit-ul livrării **`7d5d7ab`**, dacă e
+vreodată nevoie.
+
 ### Poze inserate în interiorul textului
 
 Ar însemna un editor rich (blocuri, poziții, redimensionare), plus reguli

@@ -112,8 +112,6 @@ function CreateScreen() {
 
       const preLocationId = searchParams.get('location')
       const preName = searchParams.get('name')
-      // doar textul de căutare, nu un loc ales: vine din „Harta amintirilor"
-      const preQuery = searchParams.get('q')
 
       const saved = await listDrafts(supabase, user.id)
       setDrafts(saved)
@@ -127,9 +125,8 @@ function CreateScreen() {
         return
       }
 
-      // venit de pe pagina unui loc sau cu o zonă sugerată: intenția e
-      // limpede, deci bate lista de ciorne
-      if (saved.length > 0 && !preLocationId && !preQuery) {
+      // venit de pe pagina unui loc: locul ales bate lista de ciorne
+      if (saved.length > 0 && !preLocationId) {
         setChoosing(true)
         setLoading(false)
         return
@@ -575,9 +572,6 @@ ${text}` : text,
             if (patch.locationName || patch.activityTitle) startReview(patch)
           }}
           onRegionPicked={startJourney}
-          // sugestia din „Harta amintirilor", dacă vine de acolo: căutarea
-          // pornește scrisă, cu rezultatele deja pe ecran
-          initialQuery={searchParams.get('q') || undefined}
           // fără placeholder propriu: întrebarea e deja în titlu, iar cel
           // implicit spune ce se poate tasta, cu exemple
           autoFocus
