@@ -495,7 +495,13 @@ ${text}` : text,
     try {
       const supabase = createClient()
       // cardurile fără subiect n-au ce căuta în itinerar: ar fi poziții goale
-      const result = await publishStory(supabase, userId, { stops: usableStops, trip })
+      // modul merge mai departe, ca la salvare: fără el, o poveste de zonă
+      // ajungea acolo fără să știe că e zonă
+      const result = await publishStory(supabase, userId, {
+        stops: usableStops,
+        trip,
+        mode: mode || 'review',
+      })
       // doar ciorna asta: celelalte două sloturi rămân ale lor
       if (draftId) await deleteDraft(supabase, draftId)
       // publicat: nu mai e nimic de salvat, iar flush-ul de la demontare

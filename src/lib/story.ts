@@ -75,7 +75,16 @@ export type StoryMode = 'review' | 'journey'
 export type StoryDraft = {
   stops: StopDraft[]
   trip: TripDraft
-  mode?: StoryMode
+  /**
+   * Obligatoriu, nu opțional.
+   *
+   * Cât a fost `mode?`, un apelant îl putea omite fără ca nimic să
+   * protesteze — și chiar asta s-a întâmplat la publicare: povestea unei
+   * zone ajungea în `publishStory` fără modul ei, era luată drept
+   * experiență răzleață și rămânea fără călătorie. Tipul e acum cel care
+   * întreabă, la fiecare apel.
+   */
+  mode: StoryMode
 }
 
 /** Un număr bun sau null — orice altceva dintr-un draft vechi e gunoi. */
@@ -453,9 +462,21 @@ export async function publishStory(
     create_experience: stopHasContent(stop),
   }))
 
-  // O poveste pornită de la o zonă are titlu propriu: chiar cu un singur
-  // loc e o călătorie, nu o experiență răzleață.
-  const isJourney = draft.mode === 'journey' && draft.trip.title.trim().length > 0
+  /*
+   * O poveste pornită de la o zonă are titlu propriu: chiar cu un singur
+   * loc e o călătorie, nu o experiență răzleață.
+   *
+   * Semnul e **titlul**, nu modul. Titlul e ceea ce a scris omul —
+   * numele venit din rutare sau tastat de el în antet —, pe când modul e
+   * o stare de ecran care poate lipsi dintr-un draft vechi sau dintr-un
+   * apel neatent. Aceeași regulă o folosește și `normalizeDraft` când
+   * deduce modul unui draft de dinaintea rutării: titlu completat
+   * înseamnă zonă.
+   *
+   * Pe ramura de recenzie titlul nu există până la al doilea loc — iar
+   * de la al doilea loc nu mai trecem oricum pe aici.
+   */
+  const isJourney = draft.trip.title.trim().length > 0
 
 
   // O singură oprire: un insert, fără călătorie inventată în jurul ei
