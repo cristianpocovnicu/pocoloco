@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase-client'
 import { useAuthGate } from '@/components/auth/AuthGate'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, tripTransports } from '@/lib/utils'
+import { linkifyPlaces } from '@/lib/linkify'
 import { activityLabel } from '@/lib/activities'
 import CoverImage from '@/components/ui/CoverImage'
 import TripKindBadge from '@/components/trip/TripKindBadge'
@@ -151,6 +152,11 @@ export default function TripPage() {
   )
 
   const transports = tripTransports(trip)
+  // numai opririle cu pin: alea au pagină proprie
+  const linkablePlaces = itinerary
+    .map(item => item.location)
+    .filter((place): place is NonNullable<typeof place> => !!place)
+    .map(place => ({ id: place.id, name: place.name }))
   const days = groupByDay(itinerary)
 
   return (
@@ -270,7 +276,25 @@ export default function TripPage() {
 
         {trip.description && (
           <div className="bg-white px-5 py-4 border-b border-[rgba(0,0,0,0.08)]">
-            <p className="text-[14px] text-[#6B6B6B] leading-relaxed whitespace-pre-line">{trip.description}</p>
+            {/* Opririle numite în poveste devin linkuri spre locurile lor.
+                Doar opririle călătoriei: un loc pomenit în treacăt n-are
+                pagină garantată. Prima apariție a fiecăruia, ca textul să
+                nu devină un covor de linkuri. */}
+            <p className="story-text text-[14px] text-[#6B6B6B]">
+              {linkifyPlaces(trip.description, linkablePlaces).map((segment, i) =>
+                segment.placeId ? (
+                  <Link
+                    key={i}
+                    href={`/location/${segment.placeId}`}
+                    className="text-[#5B4FCF] hover:underline"
+                  >
+                    {segment.text}
+                  </Link>
+                ) : (
+                  <span key={i}>{segment.text}</span>
+                )
+              )}
+            </p>
           </div>
         )}
 

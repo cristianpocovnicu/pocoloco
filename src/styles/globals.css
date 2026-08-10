@@ -137,3 +137,32 @@ html, body {
     font-size: 16px;
   }
 }
+
+/**
+ * Corpul unei povești lungi.
+ *
+ * `whitespace: pre-line` păstra întreruperile de linie, dar un rând gol
+ * între paragrafe ajungea tot un rând gol de aceeași înălțime cu textul —
+ * paragrafele se lipeau unul de altul. Aici primesc aer adevărat.
+ *
+ * Trei lucruri, atât:
+ *   - 1,7 înălțime de rând, cât se citește comod un text lung;
+ *   - spațiu între paragrafe, prin distanța dintre blocuri;
+ *   - pe desktop, măsura se oprește la ~68 de caractere. Coloana are 780px,
+ *     iar la 14px un rând întreg ar avea peste 100 de caractere — de două
+ *     ori mai mult decât suportă ochiul fără să piardă rândul.
+ */
+.story-text {
+  line-height: 1.75;
+  white-space: pre-line;
+}
+
+.story-text + .story-text {
+  margin-top: 1em;
+}
+
+@media (min-width: 768px) {
+  .story-text {
+    max-width: 68ch;
+  }
+}
