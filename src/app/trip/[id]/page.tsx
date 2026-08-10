@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { createRef, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -13,6 +13,7 @@ import { useAuthGate } from '@/components/auth/AuthGate'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo, tripTransports } from '@/lib/utils'
 import { linkifyPlaces } from '@/lib/linkify'
+import ExpandableText from '@/components/ui/ExpandableText'
 import { activityLabel } from '@/lib/activities'
 import CoverImage from '@/components/ui/CoverImage'
 import TripKindBadge from '@/components/trip/TripKindBadge'
@@ -22,6 +23,13 @@ import {
   fetchItinerary, groupByDay, isTripSaved, setTripSaved,
   type ItineraryItem, type Trip,
 } from '@/lib/trips'
+
+/**
+ * Sub atâtea caractere, un text de oprire apare întreg: o notă de două
+ * rânduri n-are nevoie de buton. Pragul e mai mic decât pe pagina locului
+ * (300), pentru că aici textele stau unul sub altul, în listă.
+ */
+const STOP_PREVIEW = 200
 
 type StopExperience = {
   id: string
@@ -57,6 +65,16 @@ export default function TripPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [stopExperiences, setStopExperiences] = useState<Record<string, StopExperience>>({})
+
+  /**
+   * Câte un reper per oprire, creat la cerere. La restrângerea unui text
+   * lung ne întoarcem la începutul opririi, nu la mijlocul ei.
+   */
+  const stopRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({})
+  const stopRef = (stopId: string) => {
+    stopRefs.current[stopId] = stopRefs.current[stopId] || createRef<HTMLDivElement>()
+    return stopRefs.current[stopId]
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -321,7 +339,9 @@ export default function TripPage() {
 
                   <div className="flex flex-col">
                     {items.map((item, i) => (
-                      <div key={item.id}>
+                      // ref-ul e pe oprirea întreagă: la restrângere ne
+                      // întoarcem la numele ei, nu la mijlocul textului
+                      <div key={item.id} ref={stopRef(item.id)} className="scroll-mt-16">
                         <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5 flex items-start gap-3">
                           <div className="relative w-11 h-11 rounded-xl bg-[#F8F7F5] flex items-center justify-center overflow-hidden flex-shrink-0">
                             {item.location?.cover_image
@@ -352,17 +372,24 @@ export default function TripPage() {
                                 : `${item.location?.city || 'Fără oraș'}${item.location?.country ? `, ${item.location.country}` : ''}`}
                             </p>
                             {item.note && (
-                              <p className="text-[12px] text-[#6B6B6B] leading-relaxed mt-1.5 bg-[#F8F7F5] rounded-lg px-2.5 py-1.5 whitespace-pre-line">
-                                {item.note}
-                              </p>
+                              <div className="mt-1.5 bg-[#F8F7F5] rounded-lg px-2.5 py-1.5">
+                                <ExpandableText
+                                  text={item.note}
+                                  threshold={STOP_PREVIEW}
+                                  lines={3}
+                                  className="text-[12px] text-[#6B6B6B] leading-relaxed"
+                                  actionClassName="text-[11px] text-[#5B4FCF]"
+                                />
+                              </div>
                             )}
 
                             {/* review-ul autorului despre oprirea asta */}
                             {item.location && stopExperiences[item.location.id] && (
-                              <Link
-                                href={`/location/${item.location.id}`}
-                                className="block mt-2.5 border border-[rgba(232,68,10,0.2)] bg-[#FFFBF9] rounded-xl p-2.5 hover:border-[rgba(232,68,10,0.4)] transition-colors"
-                              >
+                              /* nu mai e link pe tot blocul: „Citește tot" e un
+                                 buton, iar un buton n-are ce căuta într-un <a>.
+                                 Lectura se face aici; numele opririi rămâne
+                                 drumul spre pagina locului. */
+                              <div className="mt-2.5 border border-[rgba(232,68,10,0.2)] bg-[#FFFBF9] rounded-xl p-2.5">
                                 <div className="flex items-center gap-1.5 mb-1">
                                   <PenLine size={11} className="text-[#E8440A]" />
                                   <span className="text-[11px] font-outfit font-semibold text-[#E8440A]">
@@ -382,9 +409,22 @@ export default function TripPage() {
                                     </div>
                                   )}
                                 </div>
-                                <p className="text-[12px] text-[#6B6B6B] leading-relaxed line-clamp-3 whitespace-pre-line">
-                                  {stopExperiences[item.location.id].content}
-                                </p>
+                                <ExpandableText
+                                  text={stopExperiences[item.location.id].content}
+                                  threshold={STOP_PREVIEW}
+                                  lines={3}
+                                  className="text-[12px] text-[#6B6B6B] leading-relaxed"
+                                  actionClassName="text-[11px] text-[#5B4FCF]"
+                                  scrollTo={stopRefs.current[item.id]}
+                                  footer={
+                                    <Link
+                                      href={`/experience/${stopExperiences[item.location.id].id}`}
+                                      className="text-[11px] text-[#9B9B9B] font-medium mt-1 ml-3 inline-block"
+                                    >
+                                      Vezi experiența →
+                                    </Link>
+                                  }
+                                />
                                 {(stopExperiences[item.location.id].images?.length || 0) > 0 && (
                                   <div className="flex gap-1.5 mt-2">
                                     {stopExperiences[item.location.id].images!.slice(0, 3).map((img, idx) => (
@@ -399,10 +439,7 @@ export default function TripPage() {
                                     ))}
                                   </div>
                                 )}
-                                <span className="text-[11px] text-[#5B4FCF] font-medium mt-1.5 inline-block">
-                                  Citește tot →
-                                </span>
-                              </Link>
+                              </div>
                             )}
                           </div>
                         </div>

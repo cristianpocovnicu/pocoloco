@@ -15,6 +15,7 @@ import HiddenByVotes from './HiddenByVotes'
 import CommentThread, { type CommentViewer } from './CommentThread'
 import FollowButton from '@/components/profile/FollowButton'
 import ExperienceEditModal, { type EditableExperience } from './ExperienceEditModal'
+import ExpandableText from '@/components/ui/ExpandableText'
 
 const LABELS = ratingLabels('place_visit')
 /** Cât se arată din text înainte de „Citește tot". */
@@ -53,21 +54,7 @@ export default function ExperienceCard({ experience, comments, locationId }: Pro
   const [row, setRow] = useState(experience)
   const [deleted, setDeleted] = useState(false)
   const [commentCount, setCommentCount] = useState(experience.comment_count)
-  const [expanded, setExpanded] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
-
-  /**
-   * La restrângere, un text lung dispare de sub degete și rămâi în mijlocul
-   * paginii, fără reper. Dacă începutul cardului a ieșit din ecran, îl
-   * aducem înapoi.
-   */
-  const toggle = () => {
-    const next = !expanded
-    setExpanded(next)
-    if (!next && cardRef.current && cardRef.current.getBoundingClientRect().top < 0) {
-      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }
 
   // cine se uită se află abia în browser: pagina e aceeași pentru toți
   useEffect(() => {
@@ -111,8 +98,6 @@ export default function ExperienceCard({ experience, comments, locationId }: Pro
 
   const period = formatVisitedPeriod(row.visited_year, row.visited_month)
   const text = row.content.trim()
-  // sub prag n-are ce fi expandat: butonul nici nu apare
-  const long = text.length > PREVIEW
 
   const ratings = [
     { label: LABELS.experience, value: row.rating_experience },
@@ -201,37 +186,26 @@ export default function ExperienceCard({ experience, comments, locationId }: Pro
           </div>
         )}
 
-        {/* Textul e întreg în DOM, tăiat doar vizual: expandarea comută o
-            clasă, nu aduce nimic de pe server. Așa lectura comparativă se
-            face aici, fără drum dus-întors. */}
-        <p
-          className={`text-[13px] text-[#6B6B6B] leading-relaxed whitespace-pre-line ${
-            long && !expanded ? 'line-clamp-[7]' : ''
-          }`}
-        >
-          {text}
-        </p>
-
-        {long && (
-          <button
-            type="button"
-            onClick={toggle}
-            className="text-[12px] text-[#5B4FCF] font-medium mt-1 inline-block"
-          >
-            {expanded ? 'Restrânge' : 'Citește tot'}
-          </button>
-        )}
-
-        {/* pagina proprie rămâne destinația pentru vot și comentarii în
-            contextul lor, nu pentru citit */}
-        {expanded && (
-          <Link
-            href={`/experience/${row.id}`}
-            className="text-[12px] text-[#9B9B9B] font-medium mt-1 ml-3 inline-block"
-          >
-            Vezi experiența →
-          </Link>
-        )}
+        {/* Aceeași componentă ca în itinerarul unei călătorii: textul e
+            întreg în DOM, tăiat doar vizual, iar „Citește tot" comută o
+            clasă. Pagina proprie rămâne destinația pentru vot și
+            comentarii în contextul lor, nu pentru citit. */}
+        <ExpandableText
+          text={text}
+          threshold={PREVIEW}
+          lines={7}
+          className="text-[13px] text-[#6B6B6B] leading-relaxed"
+          actionClassName="text-[12px] text-[#5B4FCF]"
+          scrollTo={cardRef}
+          footer={
+            <Link
+              href={`/experience/${row.id}`}
+              className="text-[12px] text-[#9B9B9B] font-medium mt-1 ml-3 inline-block"
+            >
+              Vezi experiența →
+            </Link>
+          }
+        />
 
         {row.tips && row.tips.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
