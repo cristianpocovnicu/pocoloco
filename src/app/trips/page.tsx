@@ -153,7 +153,9 @@ export default function TripsPage() {
       <div className="bg-white border-b border-[rgba(0,0,0,0.08)] px-5 pt-3.5 pb-3 sticky top-0 z-30">
         <div className="max-w-[780px] mx-auto">
           <div className="flex items-center gap-2 mb-3">
-            <Route size={18} className="text-[#E8440A]" />
+            {/* iconița spune ce entitate e pagina, deci poartă violetul
+                călătoriei; butonul de adăugat rămâne portocaliul de brand */}
+            <Route size={18} className="text-[#5B4FCF]" />
             <span className="font-outfit text-[17px] font-semibold text-[#0F0F0F]">Călătorii</span>
             <Link
               href="/add-experience"

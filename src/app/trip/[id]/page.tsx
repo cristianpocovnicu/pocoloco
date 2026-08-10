@@ -459,7 +459,9 @@ export default function TripPage() {
                             una la alta */}
                         {i < items.length - 1 && (
                           <div className="py-1.5 pl-[26px]">
-                            <div className="w-px h-5 bg-[rgba(0,0,0,0.12)]" />
+                            {/* firul e chiar metafora: călătoria e linia
+                                care leagă punctele */}
+                            <div className="w-[2px] h-5 rounded-full bg-[rgba(91,79,207,0.45)]" />
                           </div>
                         )}
                       </div>

@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import CoverImage from '@/components/ui/CoverImage'
 import PhotoStack from '@/components/ui/PhotoStack'
-import { Bookmark, Eye, MessageCircle } from 'lucide-react'
+import { Bookmark, Eye, MapPin, MessageCircle } from 'lucide-react'
 import { colorFor, initialsOf } from '@/lib/profiles'
 import { formatCount, timeAgo } from '@/lib/utils'
 import { activityLabel } from '@/lib/activities'
@@ -102,6 +102,11 @@ export default function FeedCard({ item, myVote = null, variant = 'default' }: P
 
   return (
     <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl overflow-hidden hover:border-[rgba(0,0,0,0.15)] transition-colors">
+      {/* Semnalul care se prinde din derulat, fără citit: o călătorie are
+          dunga ei violet în capul cardului. Experiențele n-au — absența e
+          semnalul lor, iar o a doua dungă n-ar mai însemna nimic. */}
+      {item.kind === 'trip' && <div className="h-[3px] bg-[#5B4FCF]" />}
+
       <Link href={item.href} className="block">
         <div className="p-3.5 pb-2.5">
           <div className="flex items-center gap-2 mb-2">
@@ -129,13 +134,17 @@ export default function FeedCard({ item, myVote = null, variant = 'default' }: P
                 {item.kind === 'trip' ? (
                   <TripKindBadge isGuide={item.isGuide} />
                 ) : item.isActivity ? (
-                  <span className="bg-[#EEEDFB] text-[#5B4FCF] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
+                  <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">
                     {activityLabel(item.activityCategory) || '🪂 Activitate'}
                   </span>
                 ) : (
                   <span className="bg-[#FFF0EB] text-[#E8440A] px-1.5 py-0.5 rounded-full font-outfit font-semibold text-[10px]">Experiența</span>
                 )}
-                {item.place && <span className="truncate">📍 {item.place}</span>}
+                {item.place && (
+                  <span className="truncate flex items-center gap-0.5">
+                    <MapPin size={10} className="flex-shrink-0" /> {item.place}
+                  </span>
+                )}
               </div>
             </div>
             <span className="text-[11px] text-[#9B9B9B] flex-shrink-0">{timeAgo(item.createdAt)}</span>

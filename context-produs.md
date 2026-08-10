@@ -196,6 +196,19 @@ acolo.**
 
 ## 4. Alte decizii
 
+- **Cod vizual al entităților** (12 august 2026): călătorie = **violet
+  `#5B4FCF` + traseu** (iconița `Route`, banda de sus a cardului, firul
+  itinerarului), loc/experiență = **portocaliu `#E8440A` + pin**. Ghidul e
+  tot călătorie, deci tot violet, dar conturat, nu plin — altă entitate,
+  aceeași familie. **Se aplică la orice suprafață nouă.**
+  *Motivul:* violetul exista deja, dar risipit (accentul „Urmăresc",
+  „GHID"), iar „CALATORIE" purta chiar portocaliul locului — cine derula
+  feedul învăța culoarea greșită.
+  Culoarea nu duce singură semnalul: perechea violet/portocaliu are
+  contrast de 1,52:1 între ele, adică se deosebesc prin nuanță, nu prin
+  luminozitate. De asta fiecare entitate are și **formă** — iconiță
+  proprie, bandă prezentă sau absentă — pentru cine nu vede nuanța.
+
 - **„Harta amintirilor" — construită și retrasă în aceeași săptămână**
   (10 august 2026). O secțiune de pe profilul propriu citea GPS-ul și data
   din EXIF-ul pozelor alese de om, direct în browser, le grupa în „locuri

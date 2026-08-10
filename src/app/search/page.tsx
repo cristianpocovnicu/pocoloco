@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, Loader2, Clock, X, LayoutList, Map as MapIcon, Bookmark, Calendar, ChevronRight, Globe } from 'lucide-react'
+import { Search, Loader2, Clock, X, LayoutList, Map as MapIcon, Bookmark, Calendar, ChevronRight, Globe, MapPin } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import NotificationBell from '@/components/layout/NotificationBell'
 import UserSuggestionList from '@/components/profile/UserSuggestionList'
@@ -394,7 +394,10 @@ export default function SearchPage() {
                       </div>
                       <div className="flex-1 p-3.5 min-w-0">
                         <h3 className="font-outfit text-[15px] font-semibold text-[#0F0F0F] leading-tight mb-1">{loc.name}</h3>
-                        <p className="text-[12px] text-[#9B9B9B] mb-1.5 truncate">📍 {loc.city}{loc.country ? `, ${loc.country}` : ''}</p>
+                        <p className="text-[12px] text-[#9B9B9B] mb-1.5 truncate flex items-center gap-1">
+                          <MapPin size={11} className="text-[#E8440A] flex-shrink-0" />
+                          {loc.city}{loc.country ? `, ${loc.country}` : ''}
+                        </p>
                         <span className="text-[11px] text-[#9B9B9B]">{experienceCountLabel(loc.experience_count)}</span>
                       </div>
                       <ChevronRight size={16} className="text-[#C9C5BD] group-hover:text-[#E8440A] transition-colors flex-shrink-0 mr-3.5" />

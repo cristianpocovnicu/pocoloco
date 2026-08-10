@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Bookmark, ArrowUp, PenLine, Loader2 } from 'lucide-react'
+import { ArrowUp, Bookmark, ChevronLeft, ChevronRight, Loader2, MapPin, PenLine } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { fetchProfilesMap, colorFor, initialsOf, type MiniProfile } from '@/lib/profiles'
 import { formatCount } from '@/lib/utils'
@@ -284,12 +284,15 @@ export default function FeaturedSection() {
             {card.kind === 'trip' ? (
               <TripKindBadge isGuide={card.isGuide} onCover className="absolute top-2.5 left-2.5" />
             ) : card.kind === 'location' ? (
-              <span className="absolute top-2.5 left-2.5 bg-[#0F0F0F] text-white text-[10px] font-outfit font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
-                Loc
+              /* locul și experiența sunt aceeași familie: aceeași culoare,
+                 iconițe diferite. Negrul de dinainte îl scotea pe „Loc" din
+                 sistem cu totul. */
+              <span className="absolute top-2.5 left-2.5 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                <MapPin size={9} /> Loc
               </span>
             ) : (
-              <span className="absolute top-2.5 left-2.5 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
-                Experiența
+              <span className="absolute top-2.5 left-2.5 bg-[#E8440A] text-white text-[10px] font-outfit font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                <PenLine size={9} /> Experiența
               </span>
             )}
             {card.metric > 0 && (
