@@ -47,7 +47,8 @@ http://localhost:3000/*
 A doua linie acoperă preview-urile de pe Vercel, a treia dezvoltarea locală.
 Scoate-le pe amândouă când nu-ți mai trebuie.
 
-**API restrictions → Restrict key** → bifează doar **Places API (New)**.
+**API restrictions → Restrict key** → bifează **Places API (New)** și, dacă
+vrei „Harta amintirilor" completă, și **Geocoding API** (vezi secțiunea 7).
 
 > Cheia ajunge în browser — de asta se numește `NEXT_PUBLIC_`. Nu există
 > variantă „secretă" pentru autocomplete apelat din client; protecția reală
@@ -137,3 +138,45 @@ Poza se facturează separat de autocomplete (Place Details cu field mask
 `photos`, plus descărcarea propriu-zisă), o singură dată per locație. „Poze
 pentru toate" face câte două cereri pentru fiecare locație fără copertă —
 pornește-l cu banii în minte dacă ai sute de locații.
+
+---
+
+## 7. Geocoding API — pentru „Harta amintirilor"
+
+Secțiunea din profil care citește locul din EXIF-ul pozelor are un singur
+punct de contact cu Google: butonul **„Povestește despre asta →"** de pe
+fiecare grup de poze. Din centrul grupului (o pereche de coordonate) ne
+trebuie un nume de zonă, ca să deschidem „Povestește" cu căutarea deja
+scrisă.
+
+**E alt API decât restul fișierului.** Places API (New) caută după text, nu
+după punct; drumul invers — din coordonate în nume — se face cu **Geocoding
+API**, care se activează separat, chiar dacă folosește aceeași cheie.
+
+1. **APIs & Services → Library** → **Geocoding API** → **Enable**.
+2. **Credentials → cheia ta → API restrictions** → adaugă **Geocoding API**
+   la lista bifată. Fără pasul ăsta, cheia răspunde `REQUEST_DENIED` chiar
+   dacă API-ul e activat pe proiect.
+
+**Dacă nu-l activezi, nu se strică nimic:** funcția întoarce `null`, iar
+butonul deschide „Povestește" cu câmpul de căutare gol. Restul hărții —
+citirea pozelor, grupurile, pinurile, miniaturile — nu atinge Google deloc
+și merge și offline.
+
+Costul: **o cerere per apăsare pe buton**, nu una per poză și nici una per
+grup afișat. Numele nu se cere până nu-l cere omul.
+
+### Ce nume iese
+
+Cerem doar nivelurile administrative (`result_type` taie adresele
+stradale), apoi alegem primul care există: localitate → județ → regiune →
+țară. Practic:
+
+| Unde ai fotografiat | Ce nume iese | Cât de bun e |
+|---|---|---|
+| În oraș | „Funchal" | exact ce trebuie — căutarea îl găsește direct |
+| Pe un munte, la 20 km de sate | „Madeira" (regiunea) | orientativ; fluxul îl citește ca zonă și pornește pe ramura de călătorie, ceea ce e corect |
+| Pe mare, la feribot | nimic | butonul deschide fluxul gol |
+
+Sugestia rămâne sugestie: e text în câmpul de căutare, se șterge ca orice
+altceva tastat.

@@ -10,6 +10,7 @@ import ExperienceEditModal, { type EditableExperience } from '@/components/exper
 import BadgeGrid from '@/components/profile/BadgeGrid'
 import SavedLocationList from '@/components/profile/SavedLocationList'
 import TravelMap from '@/components/profile/TravelMap'
+import MemoryMap from '@/components/profile/MemoryMap'
 import PointsProgress from '@/components/profile/PointsProgress'
 import UnfinishedStory from '@/components/profile/UnfinishedStory'
 import FollowListSheet from '@/components/profile/FollowListSheet'
@@ -260,6 +261,10 @@ export default function ProfilePage() {
 
         {/* Harta călătorului — locurile bifate „Am fost" */}
         <TravelMap userId={profile.id} isOwn />
+
+        {/* Harta din pozele proprii, citite local. Doar aici, pe profilul
+            propriu: pozele cuiva nu se citesc de pe profilul altcuiva. */}
+        <MemoryMap />
 
         {/* Tabs */}
         <div className="flex bg-white border-b border-[rgba(0,0,0,0.08)] sticky top-[57px] z-20">

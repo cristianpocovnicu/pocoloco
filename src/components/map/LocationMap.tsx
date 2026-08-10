@@ -16,6 +16,12 @@ export type MapMarker = {
   href?: string
   /** 'want' desenează un pin violet, mai mic — locurile pe listă, nu bifate */
   variant?: 'visited' | 'want'
+  /**
+   * Miniaturi arătate în popup. Pe „Harta amintirilor" sunt object URL-uri
+   * locale, deci nu trec prin next/image: n-au ce optimiza, iar loader-ul
+   * ar încerca să le ceară de pe server.
+   */
+  thumbnails?: string[]
 }
 
 type Props = {
@@ -120,6 +126,19 @@ export default function LocationMap({
                 <div className="font-sans">
                   <p className="font-outfit text-[13px] font-semibold text-[#0F0F0F] mb-0.5">{marker.name}</p>
                   {marker.subtitle && <p className="text-[11px] text-[#9B9B9B] mb-1">{marker.subtitle}</p>}
+                  {marker.thumbnails && marker.thumbnails.length > 0 && (
+                    <div className="flex gap-1 mb-1.5">
+                      {marker.thumbnails.map(src => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={src}
+                          src={src}
+                          alt=""
+                          className="w-12 h-12 rounded-lg object-cover bg-[#F0EDE8]"
+                        />
+                      ))}
+                    </div>
+                  )}
                   {(marker.score || 0) > 0 && (
                     <p className="text-[11px] text-[#E8440A] font-semibold mb-1">{marker.score?.toFixed(1)} / 10</p>
                   )}

@@ -196,6 +196,18 @@ acolo.**
 
 ## 4. Alte decizii
 
+- **„Harta amintirilor" — descoperire fără upload** (10 august 2026).
+  Pe profilul propriu, o secțiune citește GPS-ul și data din EXIF-ul
+  pozelor alese de om, direct în browser (exifr, import dinamic), le
+  grupează în „locuri vizitate" (sub 30 km și sub 14 zile, praguri în
+  `lib/memory-map.ts`) și le pune pe hartă.
+  *Motivul:* întrebarea „unde am fost?" are deja răspunsul în telefonul
+  fiecăruia. Costul de pornire al unei povești scade de la „amintește-ți"
+  la „alege pozele".
+  **Trei limite asumate:** nimic nu urcă pe server, nimic nu se salvează
+  (vezi §5), iar pozele **nu** călătoresc în fluxul de creare — butonul
+  „Povestește despre asta →" duce doar numele zonei, dedus din centrul
+  grupului. Restul rămâne cum era.
 - **Moderarea locurilor, doar unde chiar decide ceva** (11 august 2026).
   Un loc ales din Google intră direct `approved`; doar cele scrise de mână,
   fără `google_place_id`, așteaptă un administrator (migrarea 45).
@@ -273,6 +285,7 @@ Lucruri decise, dar nefăcute — niciunul nu blochează altceva.
 
 | Ce | De ce e amânat |
 |---|---|
+| Păstrarea „Hărții amintirilor" | v1 (10 august 2026) e **efemeră**: pozele se citesc în browser, harta trăiește cât ține pagina, nimic nu urcă și nimic nu se salvează. Persistența e o decizie de încredere, nu una tehnică — o hartă din pozele cuiva e un jurnal întreg, cu case, spitale și adrese de oameni în ea. **v2 doar cu acord explicit:** ce anume se salvează (doar centrele grupurilor și perioadele, niciodată pozele), unde se vede, cum se șterge tot dintr-un buton. Până atunci, rândul de sub hartă spune limpede că nu se salvează nimic |
 | Ponturi salvabile individual | azi sunt un `text[]` pe experiență; ca să fie salvate și recompensate separat (1/5 în economia de puncte) au nevoie de tabel propriu |
 | Push notifications | pentru moderare avem deja emailul (august 2026) și badge-urile din interfață. Push-ul ar cere service worker, permisiuni cerute la momentul potrivit și un serviciu de livrare — de luat în calcul când notificările devin despre conținut, nu despre o coadă de lucru a echipei |
 | Rezumat AI al poveștilor per loc (à la IMDb) | amânat până la succes/volum. **Design decis aug. 2026:** Claude Haiku; generare la publicarea sau modificarea unei experiențe, **server-side, niciodată din client**; cache în `locations.ai_summary` + timestamp; prag de activare **3+ experiențe** pe loc; marcat vizibil „Rezumat din N povești"; prompt strict — doar despre loc, niciodată despre persoane, rezistent la prompt injection. Până atunci, blocul de sub numele locului afișează **doar nota agregată** |

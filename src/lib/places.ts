@@ -286,6 +286,73 @@ export async function geocodePlace(query: string): Promise<GeocodeResult | null>
   }
 }
 
+export type ReverseArea = {
+  /** numele zonei, cât mai aproape de cum i-ar zice un om: „Funchal" */
+  name: string
+  /** contextul, pentru afișare: „Madeira, Portugalia" */
+  context: string
+}
+
+/** Geocoding API întoarce componentele în alt format decât Places (New). */
+type LegacyComponent = { long_name?: string; short_name?: string; types?: string[] }
+
+/**
+ * Invers față de restul fișierului: din coordonate, un nume de zonă.
+ *
+ * Atenție, e alt API decât tot ce e mai sus. Places API (New) știe să
+ * caute după text, nu după punct; pentru drumul invers Google are
+ * **Geocoding API**, care se activează separat în consolă, chiar dacă
+ * folosește aceeași cheie. Fără activare, răspunsul vine cu
+ * `REQUEST_DENIED`, funcția întoarce null, iar cine o cheamă continuă
+ * fără nume — vezi docs/google-places-setup.md.
+ *
+ * `result_type` taie adresele stradale: dintr-un punct în mijlocul unui
+ * oraș vrem „Funchal", nu „Rua da Alfândega 12".
+ */
+export async function reverseGeocodeArea(
+  latitude: number,
+  longitude: number
+): Promise<ReverseArea | null> {
+  if (!API_KEY) return null
+
+  const params = new URLSearchParams({
+    latlng: `${latitude},${longitude}`,
+    language: 'ro',
+    result_type: 'locality|administrative_area_level_2|administrative_area_level_1|country',
+    key: API_KEY,
+  })
+
+  try {
+    const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params}`)
+    if (!res.ok) return null
+
+    const data = await res.json()
+    if (data.status !== 'OK' || !data.results?.length) return null
+
+    // toate componentele din toate rezultatele, de la cel mai precis în jos
+    const components: AddressComponent[] = (data.results as { address_components?: LegacyComponent[] }[])
+      .flatMap(result => result.address_components || [])
+      .map(component => ({
+        longText: component.long_name,
+        shortText: component.short_name,
+        types: component.types,
+      }))
+
+    const geo = extractGeography(components)
+    const name = geo.locality || geo.adminArea2 || geo.adminArea1 || geo.country
+    if (!name) return null
+
+    const context = [
+      geo.locality ? geo.adminArea1 : null,
+      geo.country && geo.country !== name ? geo.country : null,
+    ].filter(Boolean).join(', ')
+
+    return { name, context }
+  } catch {
+    return null
+  }
+}
+
 export async function getPlaceDetails(
   placeId: string,
   sessionToken: string
