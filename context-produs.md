@@ -196,6 +196,18 @@ acolo.**
 
 ## 4. Alte decizii
 
+- **Nota per oprire — retrasă din interfață** (12 august 2026), consecvent
+  cu fluxul: **un singur text per oprire = povestea experienței**. Câmpul
+  „Notă (opțional)" din editarea călătoriei dispare; lângă un loc despre
+  care omul avea deja poveste scrisă, caseta goală arăta ca un text lipsă,
+  iar fluxul de creare nu mai scria note de la iterația 8.
+  **Coloana `trip_locations.note` rămâne** și notele vechi se afișează în
+  continuare pe pagina călătoriei — editarea nu le mai atinge. Dacă
+  numărătoarea din
+  [`supabase/checks/inspect_stop_notes.sql`](./supabase/checks/inspect_stop_notes.sql)
+  dă zero, se scoate și afișarea.
+  În locul câmpului, rândul opririi cu poveste proprie duce direct la
+  editarea ei, fără să părăsească itinerarul nesalvat.
 - **Cod vizual al entităților** (12 august 2026): călătorie = **violet
   `#5B4FCF` + traseu** (iconița `Route`, banda de sus a cardului, firul
   itinerarului), loc/experiență = **portocaliu `#E8440A` + pin**. Ghidul e

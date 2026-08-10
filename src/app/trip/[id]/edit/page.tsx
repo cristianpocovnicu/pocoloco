@@ -2,15 +2,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import {
-  ArrowLeft, ArrowDown, ArrowUp, Camera, Check, Loader2, Trash2, X,
-} from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Camera, Check, Loader2, PenLine, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
 import { fetchItinerary, type Trip } from '@/lib/trips'
 import { TRANSPORT_TYPES } from '@/lib/utils'
 import CountryPicker from '@/components/trip/CountryPicker'
 import ItineraryLocationPicker, { type PickedLocation } from '@/components/trip/ItineraryLocationPicker'
 import CharCounter from '@/components/ui/CharCounter'
+import ExperienceEditModal, { type EditableExperience } from '@/components/experience/ExperienceEditModal'
 import { useToast } from '@/components/ui/Toast'
 
 type Row = {
@@ -23,7 +22,6 @@ type Row = {
   name: string
   city: string | null
   day: number
-  note: string
 }
 
 export default function EditTripPage() {
@@ -32,6 +30,10 @@ export default function EditTripPage() {
   const toast = useToast()
 
   const [loading, setLoading] = useState(true)
+  /** poveștile proprii de la opririle itinerarului, după loc și după activitate */
+  const [storiesByPlace, setStoriesByPlace] = useState<Record<string, EditableExperience>>({})
+  const [storiesByActivity, setStoriesByActivity] = useState<Record<string, EditableExperience>>({})
+  const [editingStory, setEditingStory] = useState<EditableExperience | null>(null)
   const [allowed, setAllowed] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -96,9 +98,46 @@ export default function EditTripPage() {
           name: item.location?.name || item.experience?.title || 'Oprire ștearsă',
           city: item.location?.city || item.experience?.activity_area || null,
           day: item.day,
-          note: item.note || '',
         })))
         setInitialRowIds(itinerary.map(item => item.id))
+
+        /*
+         * Poveștile pe care omul le-a scris deja la opririle astea.
+         * Le aducem ca să putem oferi drumul spre ele — un loc din
+         * itinerar cu recenzie proprie n-are nevoie de o a doua casetă
+         * de text, are nevoie de o cale spre prima.
+         */
+        // „Ai scris" are sens doar pentru autor. Un admin care repară
+        // itinerarul altcuiva n-are ce edita aici — poveștile nu-s ale lui.
+        const author = user && user.id === trip.author_id ? user.id : null
+        const locationIds = author
+          ? itinerary.map(item => item.location?.id).filter(Boolean) as string[]
+          : []
+        const activityIds = author
+          ? itinerary.map(item => item.experience?.id).filter(Boolean) as string[]
+          : []
+        const columns = 'id, kind, location_id, content, images, visited_year, visited_month, rating_experience, rating_access, rating_crowd'
+
+        const [byPlace, byActivity] = await Promise.all([
+          locationIds.length > 0
+            ? supabase.from('experiences').select(columns)
+                .eq('author_id', author as string).eq('status', 'active').in('location_id', locationIds)
+            : Promise.resolve({ data: [] }),
+          activityIds.length > 0
+            ? supabase.from('experiences').select(columns)
+                .eq('author_id', author as string).eq('status', 'active').in('id', activityIds)
+            : Promise.resolve({ data: [] }),
+        ])
+
+        const places: Record<string, EditableExperience> = {}
+        for (const row of (byPlace.data || []) as EditableExperience[]) {
+          if (row.location_id && !places[row.location_id]) places[row.location_id] = row
+        }
+        const activities: Record<string, EditableExperience> = {}
+        for (const row of (byActivity.data || []) as EditableExperience[]) activities[row.id] = row
+
+        setStoriesByPlace(places)
+        setStoriesByActivity(activities)
       }
 
       setLoading(false)
@@ -114,9 +153,14 @@ export default function EditTripPage() {
       name: loc.name,
       city: loc.city,
       day: Math.min(prev.length > 0 ? Math.max(...prev.map(r => r.day)) : 1, durationDays),
-      note: '',
     }])
   }
+
+  /** Povestea scrisă la oprirea asta, dacă există vreuna. */
+  const storyFor = (row: Row): EditableExperience | null =>
+    (row.locationId ? storiesByPlace[row.locationId] : null)
+    || (row.experienceId ? storiesByActivity[row.experienceId] : null)
+    || null
 
   const updateRow = (key: string, patch: Partial<Row>) =>
     setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)))
@@ -206,7 +250,7 @@ export default function EditTripPage() {
       for (const row of withPositions.filter(r => r.rowId)) {
         const { error: updateError } = await supabase
           .from('trip_locations')
-          .update({ day_number: row.day, note: row.note.trim() || null, position: row.position })
+          .update({ day_number: row.day, position: row.position })
           .eq('id', row.rowId as string)
         if (updateError) throw new Error(`Nu am putut actualiza itinerarul: ${updateError.message}`)
       }
@@ -219,7 +263,6 @@ export default function EditTripPage() {
             location_id: row.locationId,
             experience_id: row.experienceId,
             day_number: row.day,
-            note: row.note.trim() || null,
             position: row.position,
           }))
         )
@@ -454,12 +497,21 @@ export default function EditTripPage() {
                   >
                     {days.map(d => <option key={d} value={d}>Ziua {d} (opțional)</option>)}
                   </select>
-                  <input
-                    value={row.note}
-                    onChange={e => updateRow(row.key, { note: e.target.value.slice(0, 1000) })}
-                    placeholder="Notă (opțional)"
-                    className="flex-1 min-w-0 bg-[#F8F7F5] border border-[rgba(0,0,0,0.08)] rounded-lg px-3 py-2 text-[12px] outline-none focus:border-[#E8440A] transition-colors"
-                  />
+                  {/* Aici a stat „Notă (opțional)" până pe 12 august 2026.
+                      Lângă un loc despre care omul avea deja poveste scrisă,
+                      câmpul gol arăta ca un text lipsă — al doilea loc pentru
+                      text, într-un flux care a decis demult că e unul singur.
+                      În locul lui, drumul spre povestea care chiar există. */}
+                  {storyFor(row) && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingStory(storyFor(row)!)}
+                      className="flex-1 min-w-0 flex items-center gap-1.5 bg-[#ECFDF5] border border-[rgba(5,150,105,0.25)] rounded-lg px-3 py-2 text-[12px] font-medium text-[#059669] hover:bg-[#DCFCE7] transition-colors"
+                    >
+                      <PenLine size={12} className="flex-shrink-0" />
+                      <span className="truncate">Ai scris despre el — modifică</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -470,6 +522,25 @@ export default function EditTripPage() {
           )}
         </section>
       </div>
+
+      {/* Povestea se editează aici, nu în altă pagină: o navigare ar
+          arunca reordonarea nesalvată a itinerarului. */}
+      {editingStory && (
+        <ExperienceEditModal
+          experience={editingStory}
+          onClose={() => setEditingStory(null)}
+          onSaved={updated => {
+            setStoriesByPlace(prev => (updated.location_id
+              ? { ...prev, [updated.location_id]: { ...prev[updated.location_id], ...updated } }
+              : prev))
+            setStoriesByActivity(prev => (prev[updated.id]
+              ? { ...prev, [updated.id]: { ...prev[updated.id], ...updated } }
+              : prev))
+            setEditingStory(null)
+            toast('Povestea e actualizată')
+          }}
+        />
+      )}
     </div>
   )
 }
