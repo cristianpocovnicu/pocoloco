@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import Avatar from '@/components/ui/Avatar'
 import { useEffect, useState } from 'react'
 import { Loader2, Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
@@ -89,16 +90,12 @@ export default function GuidesSection() {
           <div key={guide.id} className="bg-white border border-[rgba(0,0,0,0.08)] rounded-2xl p-3.5 flex items-center gap-3">
             <Link href={`/profile/${guide.username}`} className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="relative flex-shrink-0">
-                {guide.avatar_url ? (
-                  <Image src={guide.avatar_url} alt="" width={44} height={44} className="w-11 h-11 rounded-full object-cover" />
-                ) : (
-                  <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center font-outfit text-[14px] font-bold text-white"
-                    style={{ background: colorFor(guide.id) }}
-                  >
-                    {initialsOf(guide.full_name || guide.username)}
-                  </div>
-                )}
+                <Avatar
+                  id={guide.id}
+                  name={guide.full_name || guide.username}
+                  src={guide.avatar_url}
+                  size={44}
+                />
                 <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#5B4FCF] rounded-full border-2 border-white flex items-center justify-center">
                   <Star size={9} className="text-white fill-white" />
                 </div>

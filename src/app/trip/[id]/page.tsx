@@ -1,5 +1,6 @@
 'use client'
 import { createRef, useEffect, useRef, useState } from 'react'
+import Avatar from '@/components/ui/Avatar'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -46,6 +47,7 @@ type Author = {
   id: string
   username: string | null
   full_name: string | null
+  avatar_url: string | null
   is_guide: boolean | null
   role: string | null
 }
@@ -93,7 +95,7 @@ export default function TripPage() {
       setIsOwner(!!user && user.id === t.author_id)
 
       const [prof, stops, alreadySaved] = await Promise.all([
-        supabase.from('profiles').select('id, username, full_name, is_guide, role').eq('id', t.author_id).maybeSingle(),
+        supabase.from('profiles').select('id, username, full_name, avatar_url, is_guide, role').eq('id', t.author_id).maybeSingle(),
         fetchItinerary(supabase, t.id),
         user ? isTripSaved(supabase, user.id, t.id) : Promise.resolve(false),
       ])
@@ -278,12 +280,12 @@ export default function TripPage() {
         {author && (
           <div className="bg-white px-5 py-3 flex items-center gap-2.5 border-b border-[rgba(0,0,0,0.08)]">
             <Link href={`/profile/${author.username}`} className="flex items-center gap-2.5 flex-1 min-w-0">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
-                style={{ background: colorFor(author.id) }}
-              >
-                {initialsOf(author.full_name || author.username)}
-              </div>
+              <Avatar
+                id={author.id}
+                name={author.full_name || author.username}
+                src={author.avatar_url}
+                size={36}
+              />
               <div className="min-w-0">
                 <div className="text-[13px] font-semibold text-[#0F0F0F] truncate flex items-center gap-1.5 flex-wrap">
                   {author.full_name || author.username}

@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import Avatar from '@/components/ui/Avatar'
 import { useEffect, useState } from 'react'
 import { Bookmark, Calendar, Globe, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
@@ -98,12 +99,7 @@ export default function PopularTripsSection() {
                       : <span className="text-[#9B9B9B]">Călătorie</span>}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1.5">
-                  <div
-                    className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
-                    style={{ background: colorFor(trip.author_id) }}
-                  >
-                    {initialsOf(author?.full_name || author?.username)}
-                  </div>
+                  <Avatar id={trip.author_id} name={author?.full_name || author?.username} src={author?.avatar_url} size={16} />
                   <span className="text-[11px] text-[#9B9B9B] truncate">
                     {author?.full_name || author?.username || 'Călător'}
                   </span>

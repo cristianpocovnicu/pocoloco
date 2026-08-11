@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import Avatar from '@/components/ui/Avatar'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, Bookmark, ChevronLeft, ChevronRight, Loader2, MapPin, PenLine } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
@@ -310,12 +311,7 @@ export default function FeaturedSection() {
                 {/* locul n-are autor — atunci rândul de jos e doar despre el */}
                 {card.author && (
                   <>
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                      style={{ background: colorFor(card.author.id || card.id) }}
-                    >
-                      {initialsOf(card.author.full_name || card.author.username)}
-                    </div>
+                    <Avatar id={card.author.id} name={card.author.full_name || card.author.username} src={card.author.avatar_url} size={20} />
                     <span className="text-[11px] text-white/85 truncate">
                       {card.author.full_name || card.author.username || 'Călător'}
                     </span>

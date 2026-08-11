@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Avatar from '@/components/ui/Avatar'
 import Link from 'next/link'
 import { Loader2, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
@@ -95,12 +96,12 @@ export default function FollowListSheet({
                     onClick={onClose}
                     className="flex items-center gap-3 flex-1 min-w-0"
                   >
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold text-white flex-shrink-0"
-                      style={{ background: colorFor(person.id) }}
-                    >
-                      {initialsOf(person.full_name || person.username)}
-                    </div>
+                    <Avatar
+                      id={person.id}
+                      name={person.full_name || person.username}
+                      src={person.avatar_url}
+                      size={40}
+                    />
                     <div className="min-w-0">
                       <p className="text-[13px] font-semibold text-[#0F0F0F] truncate flex items-center gap-1">
                         {person.full_name || person.username || 'Călător'}

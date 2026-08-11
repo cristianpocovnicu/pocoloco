@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Avatar from '@/components/ui/Avatar'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CornerDownRight, Loader2, Pencil, Send, Trash2 } from 'lucide-react'
@@ -192,15 +193,12 @@ export default function CommentThread({
 
     return (
     <div key={comment.id} className={cn('flex gap-2', isReply && 'pl-4 border-l-2 border-[rgba(0,0,0,0.06)]')}>
-      <div
-        className={cn(
-          'rounded-full flex items-center justify-center font-bold text-white flex-shrink-0',
-          isReply ? 'w-6 h-6 text-[9px]' : 'w-7 h-7 text-[10px]'
-        )}
-        style={{ background: colorFor(comment.author_id) }}
-      >
-        {initialsOf(comment.author?.full_name || comment.author?.username)}
-      </div>
+      <Avatar
+        id={comment.author_id}
+        name={comment.author?.full_name || comment.author?.username}
+        src={comment.author?.avatar_url}
+        size={isReply ? 24 : 28}
+      />
 
       <div className="flex-1 min-w-0">
         <div className="bg-[#F8F7F5] border border-[rgba(0,0,0,0.06)] rounded-2xl px-3 py-2">

@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import Avatar from '@/components/ui/Avatar'
 import Link from 'next/link'
 import { Bookmark, Calendar, Globe, Loader2, MapPin, Plus, Route, Search } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
@@ -127,12 +128,7 @@ export default function TripsPage() {
           )}
 
           <div className="flex items-center gap-1.5">
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-              style={{ background: colorFor(trip.author_id) }}
-            >
-              {initialsOf(author?.full_name || author?.username)}
-            </div>
+            <Avatar id={trip.author_id} name={author?.full_name || author?.username} src={author?.avatar_url} size={20} />
             <span className="text-[12px] text-[#6B6B6B] truncate">
               {author?.full_name || author?.username || 'Călător'}
             </span>

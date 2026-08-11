@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Avatar from '@/components/ui/Avatar'
 import { MapPin, MessageCircle, Pencil, Route, Star } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import BackButton from '@/components/ui/BackButton'
@@ -200,9 +201,12 @@ export default async function LocationView({
         {location.adder && (
           <div className="bg-white px-5 py-3 flex items-center gap-2 border-b border-[rgba(0,0,0,0.08)]">
             <span className="text-[12px] text-[#9B9B9B]">Adăugat de</span>
-            <div className="w-6 h-6 rounded-full bg-[#5B4FCF] flex items-center justify-center text-[10px] font-bold text-white">
-              {initials(location.adder.full_name)}
-            </div>
+            <Avatar
+              id={location.adder.id}
+              name={location.adder.full_name}
+              src={location.adder.avatar_url}
+              size={24}
+            />
             <span className="text-[13px] font-medium text-[#0F0F0F]">{location.adder.full_name}</span>
             {location.adder.is_guide && (
               <span className="text-[10px] bg-[#EEEDFB] text-[#5B4FCF] px-2 py-0.5 rounded-full font-medium">Ghid Experimentat</span>

@@ -41,10 +41,10 @@ export default function PointsPage() {
     if (actorIds.length > 0) {
       const { data } = await supabase
         .from('profiles')
-        .select('id, username, full_name')
+        .select('id, username, full_name, avatar_url')
         .in('id', actorIds)
       const map: Record<string, string> = {}
-      for (const p of (data || []) as { id: string; username: string | null; full_name: string | null }[]) {
+      for (const p of (data || []) as { id: string; username: string | null; full_name: string | null; avatar_url: string | null }[]) {
         map[p.id] = p.full_name || (p.username ? `@${p.username}` : 'Cineva')
       }
       setNames(prev => ({ ...prev, ...map }))

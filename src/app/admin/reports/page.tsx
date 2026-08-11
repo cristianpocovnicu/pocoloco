@@ -89,7 +89,7 @@ export default function AdminReportsPage() {
         ? supabase.from('trips').select('id, title, status').in('id', idsByType.trip)
         : Promise.resolve({ data: [] }),
       idsByType.user?.length
-        ? supabase.from('profiles').select('id, username, full_name, status').in('id', idsByType.user)
+        ? supabase.from('profiles').select('id, username, full_name, avatar_url, status').in('id', idsByType.user)
         : Promise.resolve({ data: [] }),
     ])
 

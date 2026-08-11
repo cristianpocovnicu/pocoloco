@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Avatar from '@/components/ui/Avatar'
 import Link from 'next/link'
 import { ArrowUp, UserPlus, MessageCircle, CornerDownRight, Bell, Loader2, CheckCheck, MapPin } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
@@ -113,12 +114,12 @@ export default function NotificationsPage() {
               const body = (
                 <>
                   <div className="relative flex-shrink-0">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-bold text-white"
-                      style={{ background: colorFor(n.actor_id || n.id) }}
-                    >
-                      {initialsOf(n.actor?.full_name || n.actor?.username)}
-                    </div>
+                    <Avatar
+                      id={n.actor_id || n.id}
+                      name={n.actor?.full_name || n.actor?.username}
+                      src={n.actor?.avatar_url}
+                      size={40}
+                    />
                     <div
                       className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center"
                       style={{ background: bg }}

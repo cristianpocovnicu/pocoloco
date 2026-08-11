@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import Avatar from '@/components/ui/Avatar'
 import CoverImage from '@/components/ui/CoverImage'
 import PhotoStack from '@/components/ui/PhotoStack'
 import { Bookmark, Eye, MapPin, MessageCircle } from 'lucide-react'
@@ -20,6 +21,7 @@ export type FeedCardItem = {
     id?: string | null
     full_name?: string | null
     username?: string | null
+    avatar_url?: string | null
     is_guide?: boolean | null
   } | null
   /** locul sau zona — rândul de sub numele autorului */
@@ -97,7 +99,6 @@ type Props = {
  */
 export default function FeedCard({ item, myVote = null, variant = 'default' }: Props) {
   const name = item.author?.full_name || item.author?.username || 'Călător'
-  const avatar = item.author?.id ? colorFor(item.author.id) : '#E8440A'
   const followed = variant === 'following'
 
   return (
@@ -110,14 +111,13 @@ export default function FeedCard({ item, myVote = null, variant = 'default' }: P
       <Link href={item.href} className="block">
         <div className="p-3.5 pb-2.5">
           <div className="flex items-center gap-2 mb-2">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0 ${
-                followed ? 'ring-2 ring-[#5B4FCF] ring-offset-1 ring-offset-white' : ''
-              }`}
-              style={{ background: avatar }}
-            >
-              {initialsOf(name)}
-            </div>
+            <Avatar
+              id={item.author?.id}
+              name={name}
+              src={item.author?.avatar_url}
+              size={32}
+              ring={followed ? 'ring-2 ring-[#5B4FCF] ring-offset-1 ring-offset-white' : ''}
+            />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-[13px] font-semibold text-[#0F0F0F] truncate">{name}</span>

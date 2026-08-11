@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Avatar from '@/components/ui/Avatar'
 import RichText from '@/components/ui/RichText'
 import { MapPin, Star } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
@@ -109,12 +110,12 @@ export default async function ExperiencePage({ params }: { params: { id: string 
               href={experience.author.username ? `/profile/${experience.author.username}` : '#'}
               className="flex items-center gap-2.5 flex-1 min-w-0"
             >
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
-                style={{ background: colorFor(experience.author.id) }}
-              >
-                {initialsOf(experience.author.full_name || experience.author.username)}
-              </div>
+              <Avatar
+                id={experience.author.id}
+                name={experience.author.full_name || experience.author.username}
+                src={experience.author.avatar_url}
+                size={36}
+              />
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold text-[#0F0F0F] truncate">
                   {experience.author.full_name || experience.author.username}

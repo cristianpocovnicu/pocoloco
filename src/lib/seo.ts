@@ -80,7 +80,7 @@ export const getExperienceSeo = cache(async (id: string) => {
       id, kind, title, activity_category, activity_area, content, images, tips,
       rating_experience, rating_access, rating_crowd, visited_year, visited_month,
       upvotes, downvotes, comment_count, created_at, status, author_id, location_id,
-      author:profiles!author_id(id, username, full_name, is_guide),
+      author:profiles!author_id(id, username, full_name, avatar_url, is_guide),
       location:locations!location_id(id, name, city, country, status)
     `)
     .eq('id', id)
@@ -121,7 +121,7 @@ export type ExperienceSeo = {
   status: string
   author_id: string
   location_id: string | null
-  author: { id: string; username: string | null; full_name: string | null; is_guide: boolean | null } | null
+  author: { id: string; username: string | null; full_name: string | null; avatar_url: string | null; is_guide: boolean | null } | null
   location: { id: string; name: string; city: string | null; country: string | null; status: string } | null
 }
 
@@ -139,7 +139,7 @@ export type LocationExperience = {
   downvotes: number
   comment_count: number
   created_at: string
-  author: { id: string; username: string | null; full_name: string | null; is_guide: boolean | null } | null
+  author: { id: string; username: string | null; full_name: string | null; avatar_url: string | null; is_guide: boolean | null } | null
 }
 
 /**
@@ -148,7 +148,7 @@ export type LocationExperience = {
 export const getLocationPage = cache(async (id: string) => {
   const { data } = await supabase
     .from('locations')
-    .select('*, adder:profiles!added_by(full_name, is_guide)')
+    .select('*, adder:profiles!added_by(id, full_name, avatar_url, is_guide)')
     .eq('id', id)
     .eq('status', 'approved')
     .maybeSingle()
@@ -171,14 +171,14 @@ export type LocationPage = {
   trip_count: number
   status: string
   added_by: string
-  adder?: { full_name: string; is_guide: boolean } | null
+  adder?: { id: string; full_name: string; avatar_url: string | null; is_guide: boolean } | null
 }
 
 /** Experiențele locului, votate bine sus — aceeași ordine ca înainte. */
 export const getLocationExperiences = cache(async (locationId: string) => {
   const { data } = await supabase
     .from('experiences')
-    .select('*, author:profiles!author_id(id, username, full_name, is_guide)')
+    .select('*, author:profiles!author_id(id, username, full_name, avatar_url, is_guide)')
     .eq('location_id', locationId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })

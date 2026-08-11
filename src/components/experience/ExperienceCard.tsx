@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import Avatar from '@/components/ui/Avatar'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MessageCircle, Pencil, Star, Trash2 } from 'lucide-react'
@@ -113,9 +114,12 @@ export default function ExperienceCard({ experience, comments, locationId }: Pro
             href={row.author?.username ? `/profile/${row.author.username}` : '#'}
             className="flex items-center gap-2 min-w-0 flex-1"
           >
-            <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0">
-              {initials(row.author?.full_name || '')}
-            </div>
+            <Avatar
+              id={row.author?.id}
+              name={row.author?.full_name}
+              src={row.author?.avatar_url}
+              size={32}
+            />
             <div className="min-w-0">
               <span className="text-[13px] font-semibold text-[#0F0F0F]">{row.author?.full_name}</span>
               {row.author?.is_guide && (

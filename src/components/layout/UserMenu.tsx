@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase-client'
 import { User } from '@supabase/supabase-js'
 import { LogOut, User as UserIcon, ChevronDown } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
+import Avatar from '@/components/ui/Avatar'
+import { useCurrentProfile } from '@/lib/useCurrentProfile'
 
 interface UserMenuProps {
   sidebar?: boolean
@@ -14,6 +16,9 @@ interface UserMenuProps {
 export default function UserMenu({ sidebar }: UserMenuProps) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  // poza încărcată stă în profil, nu în metadatele de autentificare —
+  // acolo ajunge doar ce dă furnizorul OAuth
+  const { profile } = useCurrentProfile()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -57,9 +62,7 @@ export default function UserMenu({ sidebar }: UserMenuProps) {
     return (
       <div className="relative">
         <button onClick={() => setOpen(!open)} className="flex items-center gap-2.5 w-full cursor-pointer hover:bg-[#F8F7F5] rounded-xl p-1.5 transition-colors">
-          <div className="w-9 h-9 rounded-full bg-[#E8440A] flex items-center justify-center font-outfit text-[13px] font-bold text-white flex-shrink-0">
-            {initials}
-          </div>
+          <Avatar id={user.id} name={name} src={profile?.avatarUrl} size={36} />
           <div className="flex-1 text-left">
             <div className="text-[13px] font-semibold text-[#0F0F0F] truncate max-w-[110px]">{name}</div>
             <div className="text-[11px] text-[#9B9B9B] truncate max-w-[110px]">{user.email}</div>
@@ -98,7 +101,7 @@ export default function UserMenu({ sidebar }: UserMenuProps) {
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)} className="flex items-center gap-2 cursor-pointer">
-        <div className="w-8 h-8 rounded-full bg-[#E8440A] flex items-center justify-center font-outfit text-[12px] font-bold text-white">{initials}</div>
+        <Avatar id={user.id} name={name} src={profile?.avatarUrl} size={32} />
         <ChevronDown size={14} className="text-[#6B6B6B]" />
       </button>
       {open && (
