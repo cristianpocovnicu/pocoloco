@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Search, Check, X, Trash2, RotateCcw, MapPin, Crosshair, ImagePlus, Globe, Star, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import { geographyLabel, hasSearchableGeography } from '@/lib/geography'
 import { fetchProfilesMap, statusStyle, type MiniProfile } from '@/lib/admin'
 import { cn, timeAgo } from '@/lib/utils'
 import AdminHeader from '@/components/admin/AdminHeader'
@@ -290,35 +291,54 @@ ${detalii}`)) {
    * Geografia unei locații existente. Cu place_id o cerem direct; fără
    * el, îl căutăm întâi după nume, ca la butonul de poze.
    */
-  const geographyOne = async (loc: LocationRow): Promise<boolean> => {
+  const geographyOne = async (loc: LocationRow): Promise<PlaceGeography | null> => {
     let placeId = loc.google_place_id || null
 
     if (!placeId) {
       const query = [loc.name, loc.city, loc.country].filter(Boolean).join(', ')
       const result = await geocodePlace(query)
-      if (!result) return false
+      if (!result) return null
       placeId = result.placeId
       if (placeId) await savePlaceId(loc.id, placeId)
       // geocodePlace aduce deja componentele: nu mai plătim o cerere
-      return await saveGeography(loc.id, result)
+      return (await saveGeography(loc.id, result)) ? result : null
     }
 
     const geo = await fetchPlaceGeography(placeId)
-    if (!geo) return false
-    return await saveGeography(loc.id, geo)
+    if (!geo) return null
+    return (await saveGeography(loc.id, geo)) ? geo : null
   }
+
+  /**
+   * Ce a venit de la Google, citit cu aceeași măsură ca bannerul.
+   *
+   * Scrierea poate reuși fără ca problema să fie rezolvată: pentru un loc
+   * care e propria regiune, răspunsul are localitate și țară, iar
+   * `admin_area_1` rămâne gol. Până acum, asta se număra drept succes —
+   * de aici „rulează și nu rezolvă".
+   */
+  const resolved = (geo: PlaceGeography | null): boolean => !!geo && hasSearchableGeography({
+    locality: geo.locality,
+    admin_area_1: geo.adminArea1,
+    admin_area_2: geo.adminArea2,
+  })
 
   const handleGeographyOne = async (loc: LocationRow) => {
     setGeoId(loc.id)
     setError(null)
-    const ok = await geographyOne(loc)
-    if (!ok) setError(`Nu am găsit regiunea pentru „${loc.name}".`)
+    const geo = await geographyOne(loc)
+    if (!geo) {
+      setError(`Nu am găsit nimic pentru „${loc.name}" — verifică numele sau completează-i coordonatele.`)
+    } else if (!resolved(geo)) {
+      setError(`Google nu dă niciun nivel sub țară pentru „${loc.name}"${geo.country ? ` (doar ${geo.country})` : ''}. Nu e de reparat de aici.`)
+    }
     setGeoId(null)
   }
 
   /** Ca la geocodare și la poze: secvențial, cu pauză între cereri. */
   const handleGeographyAll = async () => {
-    const missing = locations.filter(l => !l.admin_area_1)
+    // aceeași condiție ca a bannerului: nu se mai pot despărți
+    const missing = locations.filter(l => !hasSearchableGeography(l))
     if (missing.length === 0) return
     if (!window.confirm(`Caut regiunea pentru ${missing.length} locații. Poate dura câteva minute. Continui?`)) return
 
@@ -326,11 +346,18 @@ ${detalii}`)) {
     setGeoBulk({ done: 0, total: missing.length, found: 0 })
 
     let found = 0
+    const rebele: string[] = []
     for (let i = 0; i < missing.length; i++) {
-      const ok = await geographyOne(missing[i])
-      if (ok) found++
+      const geo = await geographyOne(missing[i])
+      if (resolved(geo)) found++
+      else rebele.push(missing[i].name)
       setGeoBulk({ done: i + 1, total: missing.length, found })
       if (i < missing.length - 1) await new Promise(r => setTimeout(r, 250))
+    }
+
+    // spunem pe nume ce n-a mers, în loc să lăsăm bannerul să persiste mut
+    if (rebele.length > 0) {
+      setError(`${rebele.length} ${rebele.length === 1 ? "locație a rămas" : "locații au rămas"} fără niciun nivel sub țară: ${rebele.slice(0, 5).join(', ')}${rebele.length > 5 ? " și altele" : ""}. Google n-are ce da pentru ele.`)
     }
 
     setTimeout(() => setGeoBulk(null), 4000)
@@ -429,7 +456,7 @@ ${detalii}`)) {
   const missingCoords = locations.filter(l => l.latitude == null || l.longitude == null).length
   const withoutCover = locations.filter(l => !l.cover_image)
   const missingCovers = withoutCover.length
-  const withoutGeo = locations.filter(l => !l.admin_area_1)
+  const withoutGeo = locations.filter(l => !hasSearchableGeography(l))
   const missingGeo = withoutGeo.length
 
   const counts = {
@@ -660,7 +687,7 @@ ${detalii}`)) {
                     </div>
                     <p className="text-[12px] text-[#6B6B6B] truncate">
                       📍 {loc.city || 'Fără oraș'}{loc.country ? `, ${loc.country}` : ''}
-                      {loc.admin_area_1 ? ` · regiune: ${loc.admin_area_1}` : ''}
+                      {geographyLabel(loc) ? ` · ${geographyLabel(loc)}` : ''}
                       {loc.category ? ` · ${loc.category}` : ''}
                     </p>
                     <p className="text-[11px] text-[#9B9B9B] mt-0.5 mb-2">
